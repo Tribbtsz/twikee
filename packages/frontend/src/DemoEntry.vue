@@ -9,7 +9,7 @@ import CardContent from './components/ui/CardContent.vue'
 import { useTwikoo } from './composables/useTwikoo'
 import { MessageSquare, Calendar, Eye } from 'lucide-vue-next'
 
-const envId = ref((window as any).TWIKOO_API_URL || 'http://localhost:3001')
+const envId = ref((window as any).TWIKOO_API_URL || 'http://localhost:3000')
 const currentUrl = ref('')
 const page = ref(1)
 const total = ref(0)
@@ -27,14 +27,14 @@ const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
 
 const buildCommentTree = (commentsList: any[]) => {
   if (!Array.isArray(commentsList)) return []
-  
+
   const commentMap = new Map<string, any>()
   const rootComments: any[] = []
-  
+
   commentsList.forEach(comment => {
     commentMap.set(comment.id, { ...comment, children: [] })
   })
-  
+
   commentsList.forEach(comment => {
     const node = commentMap.get(comment.id)
     if (comment.rid) {
@@ -48,7 +48,7 @@ const buildCommentTree = (commentsList: any[]) => {
       rootComments.push(node)
     }
   })
-  
+
   return rootComments
 }
 
@@ -124,7 +124,7 @@ watch(page, loadComments)
                 @submit="handleSubmit"
               />
             </div>
-            
+
             <div class="space-y-4">
               <TkComment
                 v-for="comment in commentTree"
@@ -134,7 +134,7 @@ watch(page, loadComments)
                 @load="loadComments"
               />
             </div>
-            
+
             <div v-if="totalPages > 1" class="flex justify-center gap-2 mt-6">
               <Button
                 variant="outline"
@@ -156,11 +156,11 @@ watch(page, loadComments)
                 下一页
               </Button>
             </div>
-            
+
             <div v-if="loading" class="text-center py-8 text-muted-foreground">
               加载中...
             </div>
-            
+
             <div v-if="error" class="text-center py-8 text-destructive">
               {{ error }}
               <div class="text-sm mt-2">请确保后端服务运行在 {{ envId }}</div>
@@ -172,8 +172,8 @@ watch(page, loadComments)
 
     <footer class="border-t py-6 mt-8">
       <div class="max-w-4xl mx-auto px-4 text-center text-sm text-muted-foreground">
-        <a 
-          href="https://github.com/twikoojs/twikoo" 
+        <a
+          href="https://github.com/twikoojs/twikoo"
           target="_blank"
           class="text-primary hover:underline"
         >

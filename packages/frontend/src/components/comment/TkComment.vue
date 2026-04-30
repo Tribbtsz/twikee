@@ -16,7 +16,7 @@ const props = defineProps({
   replyId: { type: String, default: '' },
   replying: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
-  apiUrl: { type: String, default: 'http://localhost:3001' }
+  apiUrl: { type: String, default: 'http://localhost:3000' }
 })
 
 const emit = defineEmits<{
@@ -38,7 +38,7 @@ const displayTime = computed(() => {
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
-  
+
   if (minutes < 1) return '刚刚'
   if (minutes < 60) return `${minutes} 分钟前`
   if (hours < 24) return `${hours} 小时前`
@@ -96,27 +96,27 @@ const onExpand = () => {
     <Card class="transition-all duration-200 hover:shadow-md">
       <CardContent class="p-4">
         <div class="flex gap-3">
-          <TkAvatar 
-            :nick="comment.nick" 
-            :mail="comment.mail" 
+          <TkAvatar
+            :nick="comment.nick"
+            :mail="comment.mail"
             :link="convertedLink"
             size="md"
           />
-          
+
           <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2 flex-wrap">
-                <a 
-                  v-if="convertedLink" 
-                  :href="convertedLink" 
-                  target="_blank" 
+                <a
+                  v-if="convertedLink"
+                  :href="convertedLink"
+                  target="_blank"
                   rel="noopener noreferrer nofollow"
                   class="font-medium hover:text-primary transition-colors"
                 >
                   {{ comment.nick }}
                 </a>
                 <span v-else class="font-medium">{{ comment.nick }}</span>
-                
+
                 <Badge v-if="comment.master" variant="default" class="text-xs">
                   博主
                 </Badge>
@@ -127,26 +127,26 @@ const onExpand = () => {
                   待审核
                 </Badge>
               </div>
-              
+
               <time class="text-xs text-muted-foreground shrink-0">
                 {{ displayTime }}
               </time>
             </div>
-            
-            <div 
+
+            <div
               class="mt-2 text-sm leading-relaxed break-words"
               :class="{ 'line-clamp-4': !isContentExpanded }"
               v-html="renderedContent"
             />
-            
-            <button 
+
+            <button
               v-if="!isContentExpanded && comment.content.length > 200"
               @click="isContentExpanded = true"
               class="mt-1 text-xs text-muted-foreground hover:text-primary transition-colors"
             >
               展开全文
             </button>
-            
+
             <div v-if="showReplyBox" class="mt-3">
               <TkSubmit
                 :url="comment.url"
@@ -155,7 +155,7 @@ const onExpand = () => {
                 @cancel="showReplyBox = false"
               />
             </div>
-            
+
             <div class="mt-3 flex items-center justify-between">
               <TkAction
                 :liked="liked"
@@ -163,9 +163,9 @@ const onExpand = () => {
                 @like="onLike"
                 @reply="onReply"
               />
-              
+
               <div v-if="isAdmin" class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button 
+                <Button
                   v-if="comment.isSpam"
                   variant="ghost"
                   size="sm"
@@ -173,7 +173,7 @@ const onExpand = () => {
                 >
                   显示
                 </Button>
-                <Button 
+                <Button
                   v-else
                   variant="ghost"
                   size="sm"
@@ -181,7 +181,7 @@ const onExpand = () => {
                 >
                   隐藏
                 </Button>
-                <Button 
+                <Button
                   v-if="!comment.rid"
                   variant="ghost"
                   size="sm"
@@ -195,7 +195,7 @@ const onExpand = () => {
         </div>
       </CardContent>
     </Card>
-    
+
     <div v-if="comment.children && comment.children.length > 0" class="ml-12 mt-2 space-y-2">
       <TkComment
         v-for="child in comment.children"

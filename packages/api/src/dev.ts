@@ -1,11 +1,12 @@
-import { serve } from '@hono/node-server'
-import app from './index'
+import { serve } from "@hono/node-server";
+import app from "./index";
 
-const port = Number(process.env.PORT) || 3000
+const port = Number(process.env.PORT) || 3000;
 
-console.log(`🚀 Server is running on http://localhost:${port}`)
+console.log(`🚀 Server is running on http://localhost:${port}`);
+console.log("📝 Auto-create data directory enabled");
 
 serve({
   fetch: app.fetch,
-  port
-})
+  port,
+});
