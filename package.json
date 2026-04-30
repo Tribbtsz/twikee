@@ -1,0 +1,31 @@
+{
+  "name": "twikoo-v3",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A modern comment system - Vue3 + Hono + Turso",
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "keywords": [
+    "twikoo",
+    "comment",
+    "comment-system",
+    "vue3",
+    "hono",
+    "serverless"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@hono/node-server": "^2.0.0",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.21.0"
+  }
+}

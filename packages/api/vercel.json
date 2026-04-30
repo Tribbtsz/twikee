@@ -1,0 +1,9 @@
+{
+  "buildCommand": "cd ../frontend && pnpm build",
+  "outputDirectory": "../frontend/dist",
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs22.x"
+    }
+  }
+}

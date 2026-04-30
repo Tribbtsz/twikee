@@ -1,0 +1,9 @@
+{
+  "buildCommand": "pnpm -F @twikoo/frontend build",
+  "outputDirectory": "packages/frontend/dist",
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs22.x"
+    }
+  }
+}
