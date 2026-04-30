@@ -32,15 +32,18 @@ const buildCommentTree = (commentsList: any[]) => {
   const rootComments: any[] = []
 
   commentsList.forEach(comment => {
-    commentMap.set(comment.id, { ...comment, children: [] })
+    commentMap.set(comment.id, { ...comment, children: [], replyToNick: '' })
   })
 
   commentsList.forEach(comment => {
     const node = commentMap.get(comment.id)
     if (comment.rid) {
-      const parent = commentMap.get(comment.rid)
-      if (parent) {
-        parent.children.push(node)
+      const rootId = findRootId(comment.rid, commentMap)
+      const root = commentMap.get(rootId)
+      if (root && rootId !== comment.id) {
+        const parentComment = commentMap.get(comment.rid)
+        node.replyToNick = parentComment ? parentComment.nick : ''
+        root.children.push(node)
       } else {
         rootComments.push(node)
       }
@@ -50,6 +53,16 @@ const buildCommentTree = (commentsList: any[]) => {
   })
 
   return rootComments
+}
+
+const findRootId = (rid: string, commentMap: Map<string, any>): string => {
+  let current = commentMap.get(rid)
+  let currentId = rid
+  while (current && current.rid) {
+    currentId = current.id
+    current = commentMap.get(current.rid)
+  }
+  return current ? current.id : rid
 }
 
 const commentTree = computed(() => buildCommentTree(comments.value))
@@ -116,7 +129,7 @@ watch(page, loadComments)
       </Card>
 
       <Card>
-        <CardContent class="p-4">
+        <CardContent class="p-4 sm:p-6">
           <div id="twikee-comment" class="twikee-container">
             <div class="mb-6">
               <TkSubmit
@@ -125,17 +138,30 @@ watch(page, loadComments)
               />
             </div>
 
-            <div class="space-y-4">
+            <div class="tk-comments-header">
+              <h3 class="tk-comments-title">
+                <MessageSquare class="w-4 h-4" />
+                评论
+                <span v-if="total > 0" class="tk-comments-count">{{ total }}</span>
+              </h3>
+            </div>
+
+            <div class="tk-comments">
               <TkComment
-                v-for="comment in commentTree"
+                v-for="(comment, index) in commentTree"
                 :key="comment.id"
                 :comment="comment"
                 :all-comments="comments"
+                :show-divider="index < commentTree.length - 1"
                 @load="loadComments"
               />
             </div>
 
-            <div v-if="totalPages > 1" class="flex justify-center gap-2 mt-6">
+            <div v-if="!loading && !error && commentTree.length === 0" class="tk-comments-empty">
+              暂无评论，来发表第一条评论吧~
+            </div>
+
+            <div v-if="totalPages > 1" class="tk-comments-pagination">
               <Button
                 variant="outline"
                 size="sm"
@@ -144,7 +170,7 @@ watch(page, loadComments)
               >
                 上一页
               </Button>
-              <span class="flex items-center text-sm text-muted-foreground px-2">
+              <span class="text-sm text-muted-foreground">
                 {{ page }} / {{ totalPages }}
               </span>
               <Button
@@ -157,11 +183,11 @@ watch(page, loadComments)
               </Button>
             </div>
 
-            <div v-if="loading" class="text-center py-8 text-muted-foreground">
+            <div v-if="loading" class="tk-comments-loading">
               加载中...
             </div>
 
-            <div v-if="error" class="text-center py-8 text-destructive">
+            <div v-if="error" class="tk-comments-error">
               {{ error }}
               <div class="text-sm mt-2">请确保后端服务运行在 {{ envId }}</div>
             </div>
@@ -187,3 +213,70 @@ watch(page, loadComments)
     </footer>
   </div>
 </template>
+
+<style scoped>
+.tk-comments-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tk-comments-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.tk-comments-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.tk-comments {
+  display: flex;
+  flex-direction: column;
+}
+
+.tk-comments-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.tk-comments-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.tk-comments-loading {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.tk-comments-error {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--destructive);
+  font-size: 0.875rem;
+}
+</style>

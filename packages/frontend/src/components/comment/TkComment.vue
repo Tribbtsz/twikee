@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, inject, type PropType } from 'vue'
-import Card from '@/components/ui/Card.vue'
-import CardContent from '@/components/ui/CardContent.vue'
+import { computed, ref } from 'vue'
+import type { PropType } from 'vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
@@ -10,13 +9,17 @@ import TkSubmit from './TkSubmit.vue'
 import { marked } from 'marked'
 import type { Comment } from '@twikee/core'
 
+type CommentNode = Comment & { children?: CommentNode[], replyToNick?: string }
+
 const props = defineProps({
-  comment: { type: Object as PropType<Comment>, required: true },
+  comment: { type: Object as PropType<CommentNode>, required: true },
   allComments: { type: Array as PropType<Comment[]>, default: () => [] },
   replyId: { type: String, default: '' },
   replying: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
-  apiUrl: { type: String, default: 'http://localhost:3000' }
+  apiUrl: { type: String, default: 'http://localhost:3000' },
+  isReply: { type: Boolean, default: false },
+  showDivider: { type: Boolean, default: false }
 })
 
 const emit = defineEmits<{
@@ -26,15 +29,15 @@ const emit = defineEmits<{
   top: [id: string, top: boolean]
 }>()
 
-const isExpanded = ref(false)
 const isContentExpanded = ref(false)
 const liked = ref(false)
 const likeCount = ref(0)
 const showReplyBox = ref(false)
+const replyingToChildId = ref<string | null>(null)
 
-const displayTime = computed(() => {
+const formatTime = (timestamp: number) => {
   const now = Date.now()
-  const diff = now - props.comment.createdAt
+  const diff = now - timestamp
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
@@ -43,15 +46,18 @@ const displayTime = computed(() => {
   if (minutes < 60) return `${minutes} 分钟前`
   if (hours < 24) return `${hours} 小时前`
   if (days < 30) return `${days} 天前`
-  return new Date(props.comment.createdAt).toLocaleDateString()
-})
+  return new Date(timestamp).toLocaleDateString()
+}
 
-const convertedLink = computed(() => {
-  const link = props.comment.link
-  if (!link) return null
+const displayTime = computed(() => formatTime(props.comment.createdAt))
+
+const convertLink = (link?: string): string | undefined => {
+  if (!link) return undefined
   if (link.startsWith('http://') || link.startsWith('https://')) return link
   return `https://${link}`
-})
+}
+
+const convertedLink = computed(() => convertLink(props.comment.link))
 
 const renderedContent = computed(() => {
   return marked(props.comment.content) as string
@@ -64,6 +70,10 @@ const onLike = () => {
 
 const onReply = () => {
   showReplyBox.value = !showReplyBox.value
+}
+
+const onChildReply = (childId: string) => {
+  replyingToChildId.value = replyingToChildId.value === childId ? null : childId
 }
 
 const handleReplySubmit = async (data: any) => {
@@ -86,125 +96,355 @@ const handleReplySubmit = async (data: any) => {
   }
 }
 
-const onExpand = () => {
-  isExpanded.value = true
+const handleChildReplySubmit = async (data: any, childId: string) => {
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...data,
+        url: props.comment.url,
+        rid: childId
+      })
+    })
+    if (res.ok) {
+      replyingToChildId.value = null
+      emit('load')
+    }
+  } catch (e) {
+    console.error('回复失败:', e)
+  }
 }
 </script>
 
 <template>
-  <div :id="comment.id" class="group">
-    <Card class="transition-all duration-200 hover:shadow-md">
-      <CardContent class="p-4">
-        <div class="flex gap-3">
-          <TkAvatar
-            :nick="comment.nick"
-            :mail="comment.mail"
-            :link="convertedLink"
-            size="md"
+  <div :id="comment.id" class="tk-comment" :class="{ 'tk-comment--reply': isReply, 'tk-comment--divider': showDivider }">
+    <div class="tk-comment__inner">
+      <div class="tk-comment__avatar">
+        <TkAvatar
+          :nick="comment.nick"
+          :mail="comment.mail"
+          :link="convertedLink"
+          :size="isReply ? 'sm' : 'md'"
+        />
+      </div>
+
+      <div class="tk-comment__body">
+        <div class="tk-comment__header">
+          <div class="tk-comment__meta">
+            <a
+              v-if="convertedLink"
+              :href="convertedLink"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              class="tk-comment__nick tk-comment__nick--link"
+            >
+              {{ comment.nick }}
+            </a>
+            <span v-else class="tk-comment__nick">{{ comment.nick }}</span>
+
+            <span v-if="comment.replyToNick" class="tk-comment__reply-to">
+              回复 <span class="tk-comment__reply-to-name">@{{ comment.replyToNick }}</span>
+            </span>
+
+            <Badge v-if="comment.master" variant="default" class="tk-badge">博主</Badge>
+            <Badge v-if="comment.top" variant="secondary" class="tk-badge">置顶</Badge>
+            <Badge v-if="comment.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
+          </div>
+
+          <time class="tk-comment__time">{{ displayTime }}</time>
+        </div>
+
+        <div
+          class="tk-comment__content"
+          :class="{ 'tk-comment__content--collapsed': !isContentExpanded }"
+          v-html="renderedContent"
+        />
+
+        <button
+          v-if="!isContentExpanded && comment.content.length > 200"
+          @click="isContentExpanded = true"
+          class="tk-comment__expand"
+        >
+          展开全文
+        </button>
+
+        <div v-if="showReplyBox" class="tk-comment__reply-box">
+          <TkSubmit
+            :url="comment.url"
+            :rid="comment.id"
+            @submit="handleReplySubmit"
+            @cancel="showReplyBox = false"
+          />
+        </div>
+
+        <div class="tk-comment__actions">
+          <TkAction
+            :liked="liked"
+            :like-count="likeCount"
+            @like="onLike"
+            @reply="onReply"
           />
 
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 flex-wrap">
+          <div v-if="isAdmin" class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              v-if="comment.isSpam"
+              variant="ghost"
+              size="sm"
+              class="h-6 text-xs"
+              @click="emit('moderate', comment.id, 'approve')"
+            >
+              显示
+            </Button>
+            <Button
+              v-else
+              variant="ghost"
+              size="sm"
+              class="h-6 text-xs"
+              @click="emit('moderate', comment.id, 'spam')"
+            >
+              隐藏
+            </Button>
+            <Button
+              v-if="!comment.rid"
+              variant="ghost"
+              size="sm"
+              class="h-6 text-xs"
+              @click="emit('top', comment.id, !comment.top)"
+            >
+              {{ comment.top ? '取消置顶' : '置顶' }}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="comment.children && comment.children.length > 0" class="tk-comment__replies">
+      <div
+        v-for="child in comment.children"
+        :key="child.id"
+        :id="child.id"
+        class="tk-comment tk-comment--reply"
+      >
+        <div class="tk-comment__inner">
+          <div class="tk-comment__avatar">
+            <TkAvatar
+              :nick="child.nick"
+              :mail="child.mail"
+              :link="convertLink(child.link)"
+              size="sm"
+            />
+          </div>
+
+          <div class="tk-comment__body">
+            <div class="tk-comment__header">
+              <div class="tk-comment__meta">
                 <a
-                  v-if="convertedLink"
-                  :href="convertedLink"
+                  v-if="child.link"
+                  :href="convertLink(child.link)!"
                   target="_blank"
                   rel="noopener noreferrer nofollow"
-                  class="font-medium hover:text-primary transition-colors"
+                  class="tk-comment__nick tk-comment__nick--link"
                 >
-                  {{ comment.nick }}
+                  {{ child.nick }}
                 </a>
-                <span v-else class="font-medium">{{ comment.nick }}</span>
+                <span v-else class="tk-comment__nick">{{ child.nick }}</span>
 
-                <Badge v-if="comment.master" variant="default" class="text-xs">
-                  博主
-                </Badge>
-                <Badge v-if="comment.top" variant="secondary" class="text-xs">
-                  置顶
-                </Badge>
-                <Badge v-if="comment.isSpam" variant="destructive" class="text-xs">
-                  待审核
-                </Badge>
+                <span v-if="child.replyToNick" class="tk-comment__reply-to">
+                  回复 <span class="tk-comment__reply-to-name">@{{ child.replyToNick }}</span>
+                </span>
+
+                <Badge v-if="child.master" variant="default" class="tk-badge">博主</Badge>
+                <Badge v-if="child.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
               </div>
 
-              <time class="text-xs text-muted-foreground shrink-0">
-                {{ displayTime }}
-              </time>
+              <time class="tk-comment__time">{{ formatTime(child.createdAt) }}</time>
             </div>
 
-            <div
-              class="mt-2 text-sm leading-relaxed break-words"
-              :class="{ 'line-clamp-4': !isContentExpanded }"
-              v-html="renderedContent"
-            />
+            <div class="tk-comment__content" v-html="marked(child.content)" />
 
-            <button
-              v-if="!isContentExpanded && comment.content.length > 200"
-              @click="isContentExpanded = true"
-              class="mt-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-            >
-              展开全文
-            </button>
-
-            <div v-if="showReplyBox" class="mt-3">
+            <div v-if="replyingToChildId === child.id" class="tk-comment__reply-box">
               <TkSubmit
                 :url="comment.url"
-                :rid="comment.id"
-                @submit="handleReplySubmit"
-                @cancel="showReplyBox = false"
+                :rid="child.id"
+                @submit="(data: any) => handleChildReplySubmit(data, child.id)"
+                @cancel="replyingToChildId = null"
               />
             </div>
 
-            <div class="mt-3 flex items-center justify-between">
-              <TkAction
-                :liked="liked"
-                :like-count="likeCount"
-                @like="onLike"
-                @reply="onReply"
-              />
-
-              <div v-if="isAdmin" class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  v-if="comment.isSpam"
-                  variant="ghost"
-                  size="sm"
-                  @click="emit('moderate', comment.id, 'approve')"
-                >
-                  显示
-                </Button>
-                <Button
-                  v-else
-                  variant="ghost"
-                  size="sm"
-                  @click="emit('moderate', comment.id, 'spam')"
-                >
-                  隐藏
-                </Button>
-                <Button
-                  v-if="!comment.rid"
-                  variant="ghost"
-                  size="sm"
-                  @click="emit('top', comment.id, !comment.top)"
-                >
-                  {{ comment.top ? '取消置顶' : '置顶' }}
-                </Button>
-              </div>
+            <div class="tk-comment__actions">
+              <TkAction @like="() => {}" @reply="onChildReply(child.id)" />
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
-
-    <div v-if="comment.children && comment.children.length > 0" class="ml-12 mt-2 space-y-2">
-      <TkComment
-        v-for="child in comment.children"
-        :key="child.id"
-        :comment="child"
-        :all-comments="allComments"
-        :api-url="apiUrl"
-        @load="emit('load')"
-      />
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.tk-comment {
+  position: relative;
+}
+
+.tk-comment--divider {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tk-comment__inner {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.tk-comment--reply .tk-comment__inner {
+  padding: 0.5rem 0;
+}
+
+.tk-comment__avatar {
+  flex-shrink: 0;
+}
+
+.tk-comment__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tk-comment__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.tk-comment__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tk-badge {
+  font-size: 10px;
+  padding: 0 6px;
+  height: 16px;
+}
+
+.tk-comment__nick {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.tk-comment__nick--link {
+  color: var(--foreground);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.tk-comment__nick--link:hover {
+  color: var(--primary);
+}
+
+.tk-comment__reply-to {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.tk-comment__reply-to-name {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.tk-comment__time {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.tk-comment__content {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--foreground);
+  word-break: break-word;
+}
+
+.tk-comment__content--collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tk-comment__content :deep(p) {
+  margin: 0 0 0.5rem;
+}
+
+.tk-comment__content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.tk-comment__content :deep(code) {
+  font-size: 0.8125rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  background: var(--muted);
+}
+
+.tk-comment__content :deep(pre) {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--muted);
+  overflow-x: auto;
+}
+
+.tk-comment__content :deep(pre code) {
+  padding: 0;
+  background: none;
+}
+
+.tk-comment__content :deep(blockquote) {
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.75rem;
+  border-left: 3px solid var(--primary);
+  color: var(--muted-foreground);
+}
+
+.tk-comment__expand {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.tk-comment__expand:hover {
+  color: var(--primary);
+}
+
+.tk-comment__reply-box {
+  margin-top: 0.75rem;
+}
+
+.tk-comment__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+.tk-comment__replies {
+  margin-left: 2.5rem;
+}
+
+.tk-comment--reply .tk-comment__content {
+  font-size: 0.8125rem;
+}
+</style>
