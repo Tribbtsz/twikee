@@ -15,7 +15,7 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Twikoo',
       formats: ['es', 'umd'],
-      fileName: (format) => `twikoo.${format}.js`
+      fileName: (format) => `twikee.${format}.js`
     },
     rollupOptions: {
       external: ['vue'],

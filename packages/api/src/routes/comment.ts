@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import { CommentService } from '@twikoo/core'
-import type { DatabaseAdapter } from '@twikoo/core'
+import { CommentService } from '@twikee/core'
+import type { DatabaseAdapter } from '@twikee/core'
 
 export function createCommentRoutes(db: DatabaseAdapter) {
   const app = new Hono()

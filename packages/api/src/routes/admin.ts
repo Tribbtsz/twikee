@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import { CommentService, AuthService } from '@twikoo/core'
-import type { DatabaseAdapter } from '@twikoo/core'
+import { CommentService, AuthService } from '@twikee/core'
+import type { DatabaseAdapter } from '@twikee/core'
 
 export function createAdminRoutes(db: DatabaseAdapter) {
   const app = new Hono()

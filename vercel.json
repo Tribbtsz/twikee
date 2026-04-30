@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm -F @twikoo/frontend build",
+  "buildCommand": "pnpm -F @twikee/frontend build",
   "outputDirectory": "packages/frontend/dist",
   "functions": {
     "api/index.ts": {

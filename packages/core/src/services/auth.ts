@@ -31,7 +31,7 @@ export class AuthService {
   generateToken(userId: string): string {
     const timestamp = Date.now()
     const hash = createHash('sha256')
-      .update(`${userId}:${timestamp}:${process.env.TWIKOO_SECRET ?? 'twikoo-secret'}`)
+      .update(`${userId}:${timestamp}:${process.env.TWIKOO_SECRET ?? 'twikee-secret'}`)
       .digest('hex')
     return `${userId}:${timestamp}:${hash}`
   }
@@ -43,7 +43,7 @@ export class AuthService {
     }
     
     const expectedHash = createHash('sha256')
-      .update(`${userId}:${timestamp}:${process.env.TWIKOO_SECRET ?? 'twikoo-secret'}`)
+      .update(`${userId}:${timestamp}:${process.env.TWIKOO_SECRET ?? 'twikee-secret'}`)
       .digest('hex')
     
     const valid = hash === expectedHash && Date.now() - Number(timestamp) < 7 * 24 * 60 * 60 * 1000

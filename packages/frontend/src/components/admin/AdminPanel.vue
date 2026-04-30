@@ -13,7 +13,7 @@ const props = defineProps<{
   apiUrl: string
 }>()
 
-const token = ref(localStorage.getItem('twikoo_admin_token') || '')
+const token = ref(localStorage.getItem('twikee_admin_token') || '')
 const activeTab = ref('comments')
 const stats = ref({ total: 0, approved: 0, pending: 0 })
 
@@ -21,12 +21,12 @@ const isLoggedIn = computed(() => !!token.value)
 
 const handleLogin = (newToken: string) => {
   token.value = newToken
-  localStorage.setItem('twikoo_admin_token', newToken)
+  localStorage.setItem('twikee_admin_token', newToken)
 }
 
 const handleLogout = () => {
   token.value = ''
-  localStorage.removeItem('twikoo_admin_token')
+  localStorage.removeItem('twikee_admin_token')
 }
 
 const fetchStats = async () => {

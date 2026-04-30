@@ -1,5 +1,5 @@
 {
-  "name": "@twikoo/api",
+  "name": "@twikee/api",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,7 +10,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@twikoo/core": "workspace:*",
+    "@twikee/core": "workspace:*",
     "hono": "^4.6.0"
   },
   "devDependencies": {

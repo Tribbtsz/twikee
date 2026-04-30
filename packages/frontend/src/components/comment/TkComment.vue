@@ -6,7 +6,7 @@ import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
-import type { Comment } from '@twikoo/core'
+import type { Comment } from '@twikee/core'
 
 const props = defineProps({
   comment: { type: Object as PropType<Comment>, required: true },

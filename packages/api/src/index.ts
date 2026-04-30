@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { TursoAdapter, CommentService, AuthService } from '@twikoo/core'
+import { TursoAdapter, CommentService, AuthService } from '@twikee/core'
 
 const app = new Hono()
 
@@ -15,7 +15,7 @@ let authService: AuthService | null = null
 const initDb = async () => {
   if (db) return
   
-  const tursoUrl = process.env.TURSO_DATABASE_URL || 'file:./data/twikoo.db'
+  const tursoUrl = process.env.TURSO_DATABASE_URL || 'file:./data/twikee.db'
   const tursoToken = process.env.TURSO_AUTH_TOKEN || ''
   
   db = new TursoAdapter({ url: tursoUrl, authToken: tursoToken })

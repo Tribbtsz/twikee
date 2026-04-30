@@ -26,5 +26,5 @@ export function initAdmin(options: { el: string | Element; envId: string }) {
 }
 
 if (typeof window !== 'undefined') {
-  (window as any).twikoo = { init, initAdmin }
+  (window as any).twikee = { init, initAdmin }
 }

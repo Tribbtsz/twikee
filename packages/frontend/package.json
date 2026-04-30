@@ -1,14 +1,14 @@
 {
-  "name": "@twikoo/frontend",
+  "name": "@twikee/frontend",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/twikoo.umd.js",
-  "module": "./dist/twikoo.es.js",
+  "main": "./dist/twikee.umd.js",
+  "module": "./dist/twikee.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/twikoo.es.js",
-      "require": "./dist/twikoo.umd.js",
+      "import": "./dist/twikee.es.js",
+      "require": "./dist/twikee.umd.js",
       "types": "./dist/index.d.ts"
     },
     "./style.css": "./dist/style.css"

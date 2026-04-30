@@ -12,7 +12,7 @@
 ## 项目结构
 
 ```
-twikoo-v3/
+twikee-v3/
 ├── packages/
 │   ├── core/           # 核心业务逻辑
 │   ├── frontend/       # Vue 3 前端
@@ -57,10 +57,10 @@ pnpm deploy
 在网站中引入:
 
 ```html
-<script src="https://your-vercel-app.vercel.app/twikoo.es.js"></script>
+<script src="https://your-vercel-app.vercel.app/twikee.es.js"></script>
 <link rel="stylesheet" href="https://your-vercel-app.vercel.app/style.css">
 <script>
-twikoo.init({
+twikee.init({
   el: '#comment',
   envId: 'https://your-vercel-app.vercel.app',
   lang: 'zh-CN'

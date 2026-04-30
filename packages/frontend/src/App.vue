@@ -23,7 +23,7 @@ const replyingTo = ref<string | null>(null)
 
 const { loading, comments, fetchComments, submitComment } = useTwikoo({
   envId: props.envId,
-  el: '#twikoo-comment',
+  el: '#twikee-comment',
   lang: props.lang,
   dark: props.dark
 })
@@ -55,7 +55,7 @@ watch(page, loadComments)
 </script>
 
 <template>
-  <div id="twikoo-comment" class="twikoo-container max-w-3xl mx-auto">
+  <div id="twikee-comment" class="twikee-container max-w-3xl mx-auto">
     <div class="mb-6">
       <TkSubmit
         v-if="!replyingTo"

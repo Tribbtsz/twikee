@@ -1,5 +1,5 @@
 {
-  "name": "twikoo-v3",
+  "name": "twikee-v3",
   "version": "1.0.0",
   "private": true,
   "description": "A modern comment system - Vue3 + Hono + Turso",
@@ -14,7 +14,7 @@
   },
   "packageManager": "pnpm@9.0.0",
   "keywords": [
-    "twikoo",
+    "twikee",
     "comment",
     "comment-system",
     "vue3",
