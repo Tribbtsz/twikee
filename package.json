@@ -4,7 +4,9 @@
   "private": true,
   "description": "A modern comment system - Vue3 + Hono + Turso",
   "scripts": {
-    "dev": "pnpm -r dev",
+    "dev": "tsx scripts/dev.ts",
+    "dev:api": "pnpm --filter @twikee/api dev",
+    "dev:frontend": "pnpm --filter @twikee/frontend dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test"

@@ -6,13 +6,17 @@ import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
+import TkSubmit from './TkSubmit.vue'
+import { marked } from 'marked'
 import type { Comment } from '@twikee/core'
 
 const props = defineProps({
   comment: { type: Object as PropType<Comment>, required: true },
+  allComments: { type: Array as PropType<Comment[]>, default: () => [] },
   replyId: { type: String, default: '' },
   replying: { type: Boolean, default: false },
-  isAdmin: { type: Boolean, default: false }
+  isAdmin: { type: Boolean, default: false },
+  apiUrl: { type: String, default: 'http://localhost:3001' }
 })
 
 const emit = defineEmits<{
@@ -26,6 +30,7 @@ const isExpanded = ref(false)
 const isContentExpanded = ref(false)
 const liked = ref(false)
 const likeCount = ref(0)
+const showReplyBox = ref(false)
 
 const displayTime = computed(() => {
   const now = Date.now()
@@ -48,13 +53,37 @@ const convertedLink = computed(() => {
   return `https://${link}`
 })
 
+const renderedContent = computed(() => {
+  return marked(props.comment.content) as string
+})
+
 const onLike = () => {
   liked.value = !liked.value
   likeCount.value += liked.value ? 1 : -1
 }
 
 const onReply = () => {
-  emit('reply', props.comment.id)
+  showReplyBox.value = !showReplyBox.value
+}
+
+const handleReplySubmit = async (data: any) => {
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...data,
+        url: props.comment.url,
+        rid: props.comment.id
+      })
+    })
+    if (res.ok) {
+      showReplyBox.value = false
+      emit('load')
+    }
+  } catch (e) {
+    console.error('回复失败:', e)
+  }
 }
 
 const onExpand = () => {
@@ -107,7 +136,7 @@ const onExpand = () => {
             <div 
               class="mt-2 text-sm leading-relaxed break-words"
               :class="{ 'line-clamp-4': !isContentExpanded }"
-              v-html="comment.content"
+              v-html="renderedContent"
             />
             
             <button 
@@ -117,6 +146,15 @@ const onExpand = () => {
             >
               展开全文
             </button>
+            
+            <div v-if="showReplyBox" class="mt-3">
+              <TkSubmit
+                :url="comment.url"
+                :rid="comment.id"
+                @submit="handleReplySubmit"
+                @cancel="showReplyBox = false"
+              />
+            </div>
             
             <div class="mt-3 flex items-center justify-between">
               <TkAction
@@ -157,5 +195,16 @@ const onExpand = () => {
         </div>
       </CardContent>
     </Card>
+    
+    <div v-if="comment.children && comment.children.length > 0" class="ml-12 mt-2 space-y-2">
+      <TkComment
+        v-for="child in comment.children"
+        :key="child.id"
+        :comment="child"
+        :all-comments="allComments"
+        :api-url="apiUrl"
+        @load="emit('load')"
+      />
+    </div>
   </div>
 </template>

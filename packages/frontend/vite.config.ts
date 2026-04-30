@@ -10,6 +10,9 @@ export default defineConfig({
     tailwindcss(),
     dts({ include: ['src/**/*.ts', 'src/**/*.vue'] })
   ],
+  define: {
+    'process.env': {}
+  },
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
@@ -18,14 +21,15 @@ export default defineConfig({
       fileName: (format) => `twikee.${format}.js`
     },
     rollupOptions: {
-      external: ['vue'],
       output: {
-        globals: { vue: 'Vue' },
         assetFileNames: 'style.[ext]'
       }
     }
   },
   resolve: {
     alias: { '@': resolve(__dirname, 'src') }
+  },
+  server: {
+    open: '/demo.html'
   }
 })
