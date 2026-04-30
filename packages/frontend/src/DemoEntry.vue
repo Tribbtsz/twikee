@@ -7,7 +7,7 @@ import Card from './components/ui/Card.vue'
 import CardHeader from './components/ui/CardHeader.vue'
 import CardContent from './components/ui/CardContent.vue'
 import { useTwikoo } from './composables/useTwikoo'
-import { MessageSquare, Calendar, Eye } from 'lucide-vue-next'
+import { MessageSquare, Calendar, Eye, ShieldCheck } from 'lucide-vue-next'
 
 const envId = ref((window as any).TWIKOO_API_URL || 'http://localhost:3000')
 const currentUrl = ref('')
@@ -89,11 +89,17 @@ watch(page, loadComments)
 <template>
   <div class="min-h-screen bg-background">
     <header class="border-b bg-card sticky top-0 z-10">
-      <div class="max-w-4xl mx-auto px-4 py-4">
-        <h1 class="text-xl font-bold text-center">Twikee 评论系统</h1>
-        <p class="text-sm text-muted-foreground text-center mt-1">
-          基于 Vue 3 + Hono + Turso 构建的现代化评论系统
-        </p>
+      <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-center">Twikee 评论系统</h1>
+          <p class="text-sm text-muted-foreground text-center mt-1">
+            基于 Vue 3 + Hono + Turso 构建的现代化评论系统
+          </p>
+        </div>
+        <a href="/admin.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 shrink-0">
+          <ShieldCheck class="w-4 h-4" />
+          管理后台
+        </a>
       </div>
     </header>
 

@@ -82,6 +82,31 @@ app.post("/api/comment/:id/like", async (c) => {
 });
 
 // 认证 API
+app.get("/api/auth/status", async (c) => {
+  await initDb();
+  const adminPassword = await db!.config.get("ADMIN_PASSWORD");
+  return c.json({ initialized: !!adminPassword });
+});
+
+app.post("/api/auth/setup", async (c) => {
+  await initDb();
+  const adminPassword = await db!.config.get("ADMIN_PASSWORD");
+  if (adminPassword) {
+    return c.json({ error: "Password already set" }, 400);
+  }
+
+  const body = await c.req.json();
+  const { password } = body;
+
+  if (!password || password.length < 6) {
+    return c.json({ error: "Password must be at least 6 characters" }, 400);
+  }
+
+  await db!.config.set("ADMIN_PASSWORD", password);
+  const token = authService!.generateToken("admin");
+  return c.json({ token });
+});
+
 app.post("/api/auth/login", async (c) => {
   await initDb();
   const body = await c.req.json();

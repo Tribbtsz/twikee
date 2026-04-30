@@ -7,7 +7,7 @@ import AdminImportExport from './AdminImportExport.vue'
 import Card from '@/components/ui/Card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
-import { MessageSquare, Settings, LogOut, BarChart3, Database } from 'lucide-vue-next'
+import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft } from 'lucide-vue-next'
 
 const props = defineProps<{
   apiUrl: string
@@ -61,6 +61,10 @@ const tabs = [
       <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <h1 class="text-xl font-bold">Twikoo 管理后台</h1>
         <div class="flex items-center gap-4">
+          <a href="/demo.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
+            <ArrowLeft class="w-4 h-4" />
+            返回演示
+          </a>
           <span class="text-sm text-muted-foreground">{{ stats.total }} 条评论</span>
           <Button variant="ghost" size="sm" @click="handleLogout">
             <LogOut class="w-4 h-4 mr-2" />

@@ -76,6 +76,14 @@ const onChildReply = (childId: string) => {
   replyingToChildId.value = replyingToChildId.value === childId ? null : childId
 }
 
+const handleReplyBoxFocusOut = (e: FocusEvent) => {
+  const currentTarget = e.currentTarget as HTMLElement
+  const relatedTarget = e.relatedTarget as HTMLElement | null
+  if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+    replyingToChildId.value = null
+  }
+}
+
 const handleReplySubmit = async (data: any) => {
   try {
     const res = await fetch(`${props.apiUrl}/api/comment`, {
@@ -263,7 +271,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 
             <div class="tk-comment__content" v-html="marked(child.content)" />
 
-            <div v-if="replyingToChildId === child.id" class="tk-comment__reply-box">
+            <div v-if="replyingToChildId === child.id" class="tk-comment__reply-box" @focusout="handleReplyBoxFocusOut">
               <TkSubmit
                 :url="comment.url"
                 :rid="child.id"
@@ -288,9 +296,19 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 }
 
 .tk-comment--divider {
-  border-bottom: 1px solid var(--border);
   padding-bottom: 0.5rem;
   margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.tk-comment--divider::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 3.25rem;
+  right: 0;
+  height: 1px;
+  background: var(--border);
 }
 
 .tk-comment__inner {
