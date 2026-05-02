@@ -123,6 +123,10 @@ class TursoCommentRepository implements CommentRepository {
       sets.push("top = ?");
       args.push(data.top ? 1 : 0);
     }
+    if (data.master !== undefined) {
+      sets.push("master = ?");
+      args.push(data.master ? 1 : 0);
+    }
 
     sets.push("updated_at = ?");
     args.push(Date.now());
@@ -147,13 +151,34 @@ class TursoCommentRepository implements CommentRepository {
 
   async like(id: string, userId: string): Promise<boolean> {
     try {
+      const existing = await this.client.execute({
+        sql: "SELECT 1 FROM likes WHERE comment_id = ? AND user_id = ?",
+        args: [id, userId],
+      })
+
+      if (existing.rows.length > 0) {
+        await this.client.execute({
+          sql: "DELETE FROM likes WHERE comment_id = ? AND user_id = ?",
+          args: [id, userId],
+        })
+        await this.client.execute({
+          sql: "UPDATE comments SET likes = MAX(0, likes - 1) WHERE id = ?",
+          args: [id],
+        })
+        return true
+      }
+
       await this.client.execute({
         sql: "INSERT INTO likes (comment_id, user_id, created_at) VALUES (?, ?, ?)",
         args: [id, userId, Date.now()],
-      });
-      return true;
+      })
+      await this.client.execute({
+        sql: "UPDATE comments SET likes = likes + 1 WHERE id = ?",
+        args: [id],
+      })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 

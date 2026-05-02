@@ -48,6 +48,7 @@ export interface UpdateCommentInput {
   content?: string
   isSpam?: boolean
   top?: boolean
+  master?: boolean
 }
 
 export interface CommentQuery {
