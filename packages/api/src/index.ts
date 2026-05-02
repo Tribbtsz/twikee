@@ -3,7 +3,15 @@ import { dirname } from "node:path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { TursoAdapter, CommentService, AuthService } from "@twikee/core";
+import {
+  TursoAdapter,
+  CommentService,
+  AuthService,
+  NotificationService,
+  TelegramAdapter,
+  WebhookAdapter,
+  EmailAdapter,
+} from "@twikee/core";
 
 const app = new Hono();
 
@@ -13,6 +21,7 @@ app.use("*", logger());
 let db: TursoAdapter | null = null;
 let commentService: CommentService | null = null;
 let authService: AuthService | null = null;
+let notificationService: NotificationService | null = null;
 
 const initDb = async () => {
   if (db) return;
@@ -32,9 +41,50 @@ const initDb = async () => {
 
   commentService = new CommentService(db);
   authService = new AuthService(db);
+
+  await initNotifications();
 };
 
 app.get("/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
+
+const initNotifications = async () => {
+  if (!db) return;
+  notificationService = new NotificationService();
+
+  const enableNotif = await db.config.get("NOTIFICATION_ENABLE");
+  if (enableNotif !== "true") return;
+
+  const type = await db.config.get("NOTIFICATION_TYPE");
+
+  if (type === "telegram") {
+    const botToken = await db.config.get("TELEGRAM_BOT_TOKEN");
+    const chatId = await db.config.get("TELEGRAM_CHAT_ID");
+    if (botToken && chatId) {
+      notificationService.addChannel("telegram", new TelegramAdapter({ botToken, chatId }), [
+        "comment.new",
+        "comment.reply",
+      ]);
+    }
+  } else if (type === "webhook") {
+    const webhookUrl = await db.config.get("WEBHOOK_URL");
+    if (webhookUrl) {
+      notificationService.addChannel("webhook", new WebhookAdapter({ url: webhookUrl }), [
+        "comment.new",
+        "comment.reply",
+      ]);
+    }
+  } else if (type === "email") {
+    const apiKey = await db.config.get("SMTP_PASS");
+    const from = await db.config.get("SMTP_FROM");
+    const to = await db.config.get("SMTP_TO");
+    if (apiKey && from && to) {
+      notificationService.addChannel("email", new EmailAdapter({ apiKey, from, to }), [
+        "comment.new",
+        "comment.reply",
+      ]);
+    }
+  }
+};
 
 // 评论 API
 app.get("/api/comment", async (c) => {
@@ -57,6 +107,14 @@ app.post("/api/comment", async (c) => {
     return c.json({ error: "url, nick, content are required" }, 400);
   }
 
+  let isMaster = false;
+  if (body.mail) {
+    const bloggerEmail = await db!.config.get("BLOGGER_EMAIL");
+    if (bloggerEmail && body.mail.toLowerCase() === bloggerEmail.toLowerCase()) {
+      isMaster = true;
+    }
+  }
+
   const comment = await commentService!.create({
     url: body.url,
     nick: body.nick,
@@ -68,6 +126,23 @@ app.post("/api/comment", async (c) => {
     rid: body.rid,
     pid: body.pid,
   });
+
+  if (isMaster) {
+    await commentService!.update(comment.id, { master: true });
+    comment.master = true;
+  }
+
+  if (notificationService) {
+    const siteName = await db!.config.get("SITE_NAME");
+    const siteUrl = await db!.config.get("SITE_URL");
+    const pageUrl = siteUrl ? `${siteUrl}${body.url}` : body.url;
+    notificationService
+      .send({
+        type: comment.rid ? "comment.reply" : "comment.new",
+        payload: { comment, url: pageUrl, siteName: siteName || undefined },
+      })
+      .catch(() => {});
+  }
 
   return c.json(comment, 201);
 });
@@ -271,6 +346,9 @@ app.post("/api/admin/config", requireAdmin, async (c) => {
   for (const [key, value] of Object.entries(body)) {
     await db!.config.set(key, value as string);
   }
+
+  notificationService = null;
+  await initNotifications();
 
   return c.json({ success: true });
 });
