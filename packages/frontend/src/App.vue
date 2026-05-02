@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useTwikoo, type TwikooOptions } from './composables/useTwikoo'
+import { useTwikoo } from './composables/useTwikoo'
 import TkComment from './components/comment/TkComment.vue'
 import TkSubmit from './components/comment/TkSubmit.vue'
 import Button from './components/ui/Button.vue'
@@ -29,6 +29,47 @@ const { loading, comments, fetchComments, submitComment } = useTwikoo({
 })
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+const buildCommentTree = (commentsList: any[]) => {
+  if (!Array.isArray(commentsList)) return []
+  const commentMap = new Map<string, any>()
+  const rootComments: any[] = []
+
+  commentsList.forEach(comment => {
+    commentMap.set(comment.id, { ...comment, children: [], replyToNick: '' })
+  })
+
+  commentsList.forEach(comment => {
+    const node = commentMap.get(comment.id)
+    if (comment.rid) {
+      const rootId = findRootId(comment.rid, commentMap)
+      const root = commentMap.get(rootId)
+      if (root && rootId !== comment.id) {
+        const parentComment = commentMap.get(comment.rid)
+        node.replyToNick = parentComment ? parentComment.nick : ''
+        root.children.push(node)
+      } else {
+        rootComments.push(node)
+      }
+    } else {
+      rootComments.push(node)
+    }
+  })
+
+  return rootComments
+}
+
+const findRootId = (rid: string, commentMap: Map<string, any>): string => {
+  let current = commentMap.get(rid)
+  let currentId = rid
+  while (current && current.rid) {
+    currentId = current.id
+    current = commentMap.get(current.rid)
+  }
+  return current ? current.id : rid
+}
+
+const commentTree = computed(() => buildCommentTree(comments.value))
 
 const loadComments = async () => {
   const data = await fetchComments(currentUrl.value, page.value)
@@ -63,10 +104,10 @@ watch(page, loadComments)
         @submit="handleSubmit"
       />
     </div>
-    
+
     <div class="space-y-4">
       <TkComment
-        v-for="comment in comments"
+        v-for="comment in commentTree"
         :key="comment.id"
         :comment="comment"
         :replying="replyingTo === comment.id"
@@ -74,7 +115,7 @@ watch(page, loadComments)
         @load="loadComments"
       />
     </div>
-    
+
     <div v-if="totalPages > 1" class="flex justify-center gap-2 mt-6">
       <Button
         variant="outline"
@@ -96,7 +137,7 @@ watch(page, loadComments)
         下一页
       </Button>
     </div>
-    
+
     <div v-if="loading" class="text-center py-8 text-muted-foreground">
       加载中...
     </div>
