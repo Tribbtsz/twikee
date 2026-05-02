@@ -35,8 +35,7 @@ const emit = defineEmits<{
 const isContentExpanded = ref(false)
 const likeCount = ref(props.comment.likes || 0)
 const liked = ref(false)
-const showReplyBox = ref(false)
-const replyingToChildId = ref<string | null>(null)
+const replyingToId = ref<string | null>(null)
 const childLikeStates = ref<Record<string, { liked: boolean; count: number }>>({})
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
@@ -52,6 +51,8 @@ const getChildLikeState = (childId: string, likes?: number) => {
   }
   return childLikeStates.value[childId]
 }
+
+const showReplyBox = computed(() => replyingToId.value === props.comment.id)
 
 const formatTime = (timestamp: number) => {
   const now = Date.now()
@@ -134,18 +135,18 @@ const onChildLike = async (childId: string) => {
 }
 
 const onReply = () => {
-  showReplyBox.value = !showReplyBox.value
+  replyingToId.value = replyingToId.value === props.comment.id ? null : props.comment.id
 }
 
 const onChildReply = (childId: string) => {
-  replyingToChildId.value = replyingToChildId.value === childId ? null : childId
+  replyingToId.value = replyingToId.value === childId ? null : childId
 }
 
 const handleReplyBoxFocusOut = (e: FocusEvent) => {
   const currentTarget = e.currentTarget as HTMLElement
   const relatedTarget = e.relatedTarget as HTMLElement | null
   if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-    replyingToChildId.value = null
+    replyingToId.value = null
   }
 }
 
@@ -161,7 +162,7 @@ const handleReplySubmit = async (data: any) => {
       })
     })
     if (res.ok) {
-      showReplyBox.value = false
+      replyingToId.value = null
       emit('load')
     }
   } catch (e) {
@@ -181,7 +182,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
       })
     })
     if (res.ok) {
-      replyingToChildId.value = null
+      replyingToId.value = null
       emit('load')
     }
   } catch (e) {
@@ -247,7 +248,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             :url="comment.url"
             :rid="comment.id"
             @submit="handleReplySubmit"
-            @cancel="showReplyBox = false"
+            @cancel="replyingToId = null"
           />
         </div>
 
@@ -336,12 +337,12 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 
             <div class="tk-comment__content" v-html="renderChildContent(child.content)" />
 
-            <div v-if="replyingToChildId === child.id" class="tk-comment__reply-box" @focusout="handleReplyBoxFocusOut">
+            <div v-if="replyingToId === child.id" class="tk-comment__reply-box" @focusout="handleReplyBoxFocusOut">
               <TkSubmit
                 :url="comment.url"
                 :rid="child.id"
                 @submit="(data: any) => handleChildReplySubmit(data, child.id)"
-                @cancel="replyingToChildId = null"
+                @cancel="replyingToId = null"
               />
             </div>
 
