@@ -41,45 +41,11 @@ const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
 const fetchPages = async () => {
   loadingPages.value = true
   try {
-    // 先获取第一页拿到 total，再分批拉取
-    const firstRes = await fetch(
-      `${props.apiUrl}/api/admin/comments/all?pageSize=100&includeSpam=true`,
-      { headers: { Authorization: `Bearer ${props.token}` } }
-    )
-    const firstData = await firstRes.json()
-    
-    const allComments = [...firstData.data]
-    const totalComments = firstData.total
-    
-    // 如果还有更多，继续拉取（每次100条）
-    let fetched = firstData.data.length
-    while (fetched < totalComments) {
-      const batchPage = Math.floor(fetched / 100) + 1
-      const res = await fetch(
-        `${props.apiUrl}/api/admin/comments/all?pageSize=100&page=${batchPage}&includeSpam=true`,
-        { headers: { Authorization: `Bearer ${props.token}` } }
-      )
-      const data = await res.json()
-      allComments.push(...data.data)
-      fetched += data.data.length
-      if (data.data.length === 0) break
-    }
-    
-    const pageMap = new Map<string, { count: number; spamCount: number; lastComment: number }>()
-    
-    for (const comment of allComments) {
-      const url = comment.url || '/'
-      const existing = pageMap.get(url) || { count: 0, spamCount: 0, lastComment: 0 }
-      existing.count++
-      if (comment.isSpam) existing.spamCount++
-      if (comment.createdAt > existing.lastComment) existing.lastComment = comment.createdAt
-      pageMap.set(url, existing)
-    }
-    
-    pages.value = Array.from(pageMap.entries())
-      .map(([url, stats]) => ({ url, ...stats }))
-      .sort((a, b) => b.lastComment - a.lastComment)
-    
+    const res = await fetch(`${props.apiUrl}/api/admin/pages`, {
+      headers: { Authorization: `Bearer ${props.token}` }
+    })
+    const data = await res.json()
+    pages.value = data.data || []
   } catch (e) {
     console.error('获取页面列表失败', e)
   } finally {
@@ -91,20 +57,18 @@ const fetchPages = async () => {
 const fetchComments = async (url: string) => {
   loadingComments.value = true
   try {
+    const params = new URLSearchParams({
+      url,
+      pageSize: '1000',
+      includeSpam: includeSpam.value.toString(),
+    })
     const res = await fetch(
-      `${props.apiUrl}/api/admin/comments/all?pageSize=1000&includeSpam=true`,
+      `${props.apiUrl}/api/admin/comments?${params}`,
       { headers: { Authorization: `Bearer ${props.token}` } }
     )
     const data = await res.json()
-    
-    const filtered = data.data.filter((c: any) => c.url === url)
-    
-    if (!includeSpam.value) {
-      comments.value = filtered.filter((c: any) => !c.isSpam)
-    } else {
-      comments.value = filtered
-    }
-    total.value = comments.value.length
+    comments.value = data.data || []
+    total.value = data.total || 0
   } catch (e) {
     console.error('获取评论失败', e)
   } finally {
@@ -124,6 +88,9 @@ const backToPages = () => {
 }
 
 const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
+  if (action === 'delete') {
+    if (!window.confirm('确定要删除这条评论吗？此操作不可恢复。')) return
+  }
   try {
     await fetch(`${props.apiUrl}/api/admin/comment/${id}/moderate`, {
       method: 'POST',
