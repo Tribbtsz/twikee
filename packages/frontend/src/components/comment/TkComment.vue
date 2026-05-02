@@ -7,6 +7,7 @@ import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
 import TkSubmit from './TkSubmit.vue'
 import { marked } from 'marked'
+import { sanitizeHtml } from '@/lib/utils'
 import type { Comment } from '@twikee/core'
 
 type CommentNode = Comment & { children?: CommentNode[], replyToNick?: string }
@@ -30,10 +31,16 @@ const emit = defineEmits<{
 }>()
 
 const isContentExpanded = ref(false)
+const likeCount = ref(props.comment.likes || 0)
 const liked = ref(false)
-const likeCount = ref(0)
 const showReplyBox = ref(false)
 const replyingToChildId = ref<string | null>(null)
+
+const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
+
+if (typeof window !== 'undefined') {
+  liked.value = localStorage.getItem(likeStorageKey.value) === '1'
+}
 
 const formatTime = (timestamp: number) => {
   const now = Date.now()
@@ -60,12 +67,34 @@ const convertLink = (link?: string): string | undefined => {
 const convertedLink = computed(() => convertLink(props.comment.link))
 
 const renderedContent = computed(() => {
-  return marked(props.comment.content) as string
+  return sanitizeHtml(marked(props.comment.content) as string)
 })
 
-const onLike = () => {
-  liked.value = !liked.value
-  likeCount.value += liked.value ? 1 : -1
+const renderChildContent = (content: string) => {
+  return sanitizeHtml(marked(content) as string)
+}
+
+const onLike = async () => {
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment/${props.comment.id}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.success) {
+        liked.value = !liked.value
+        likeCount.value += liked.value ? 1 : -1
+        if (liked.value) {
+          localStorage.setItem(likeStorageKey.value, '1')
+        } else {
+          localStorage.removeItem(likeStorageKey.value)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('点赞失败:', e)
+  }
 }
 
 const onReply = () => {
@@ -269,7 +298,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
               <time class="tk-comment__time">{{ formatTime(child.createdAt) }}</time>
             </div>
 
-            <div class="tk-comment__content" v-html="marked(child.content)" />
+            <div class="tk-comment__content" v-html="renderChildContent(child.content)" />
 
             <div v-if="replyingToChildId === child.id" class="tk-comment__reply-box" @focusout="handleReplyBoxFocusOut">
               <TkSubmit

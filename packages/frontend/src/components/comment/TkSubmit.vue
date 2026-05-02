@@ -5,6 +5,7 @@ import Textarea from '@/components/ui/Textarea.vue'
 import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
 import { marked } from 'marked'
+import { sanitizeHtml } from '@/lib/utils'
 
 const props = defineProps<{
   url: string
@@ -83,7 +84,7 @@ const canSend = computed(() => {
 })
 
 const previewHtml = computed(() => {
-  return marked(content.value) as string
+  return sanitizeHtml(marked(content.value) as string)
 })
 
 const handleSubmit = async () => {
