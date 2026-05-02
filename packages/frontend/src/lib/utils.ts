@@ -116,12 +116,15 @@ export function md5(s: string): string {
 const SAFE_TAGS = new Set([
   'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'blockquote', 'pre', 'code', 'em', 'strong', 'del', 's',
+  'b', 'i', 'u', 'sub', 'sup', 'mark', 'small',
   'a', 'ul', 'ol', 'li', 'img', 'table', 'thead', 'tbody',
   'tr', 'th', 'td', 'details', 'summary', 'span', 'div',
+  'dl', 'dt', 'dd', 'abbr',
 ])
 
 const SAFE_ATTRS = new Set([
   'href', 'title', 'src', 'alt', 'class', 'target', 'rel',
+  'align', 'width', 'height',
 ])
 
 export function sanitizeHtml(html: string): string {
@@ -129,11 +132,13 @@ export function sanitizeHtml(html: string): string {
   template.innerHTML = html
 
   const sanitize = (node: Element) => {
-    const children = Array.from(node.children)
-    for (const child of children) {
+    let i = 0
+    while (i < node.children.length) {
+      const child = node.children[i]
       const tag = child.tagName.toLowerCase()
       if (!SAFE_TAGS.has(tag)) {
-        child.replaceWith(...Array.from(child.childNodes))
+        const childNodes = Array.from(child.childNodes)
+        child.replaceWith(...childNodes)
       } else {
         const attrs = Array.from(child.attributes)
         for (const attr of attrs) {
@@ -148,6 +153,7 @@ export function sanitizeHtml(html: string): string {
           child.setAttribute('rel', 'noopener noreferrer nofollow')
         }
         sanitize(child)
+        i++
       }
     }
   }
