@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, type PropType } from 'vue'
-import { Button } from '@/components/ui/Button'
-import TkAvatar from './TkAvatar.vue'
+import { computed, type PropType } from 'vue'
+import { md5 } from '@/lib/utils'
 
 const props = defineProps({
   nick: { type: String, default: '' },
@@ -21,8 +20,8 @@ const sizeClasses = computed(() => {
 
 const avatarUrl = computed(() => {
   if (props.mail) {
-    const md5 = props.mail.toLowerCase().trim()
-    return `https://cravatar.cn/avatar/${md5}?d=identicon&s=80`
+    const hash = md5(props.mail.toLowerCase().trim())
+    return `https://cravatar.cn/avatar/${hash}?d=identicon&s=80`
   }
   return null
 })
