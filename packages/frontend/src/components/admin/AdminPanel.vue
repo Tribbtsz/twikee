@@ -16,6 +16,7 @@ const props = defineProps<{
 const token = ref(localStorage.getItem('twikee_admin_token') || '')
 const activeTab = ref('comments')
 const stats = ref({ total: 0, approved: 0, pending: 0 })
+const siteUrl = ref('')
 
 const isLoggedIn = computed(() => !!token.value)
 
@@ -42,7 +43,23 @@ const fetchStats = async () => {
   }
 }
 
-onMounted(fetchStats)
+const fetchSiteUrl = async () => {
+  if (!token.value) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/admin/config`, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    const data = await res.json()
+    siteUrl.value = (data.SITE_URL || '').replace(/\/$/, '')
+  } catch (e) {
+    console.error('获取配置失败', e)
+  }
+}
+
+onMounted(() => {
+  fetchStats()
+  fetchSiteUrl()
+})
 
 const tabs = [
   { key: 'comments', label: '评论管理', icon: MessageSquare },
@@ -139,6 +156,7 @@ const tabs = [
         v-if="activeTab === 'comments'"
         :api-url="apiUrl"
         :token="token"
+        :site-url="siteUrl"
         @refresh="fetchStats"
       />
       

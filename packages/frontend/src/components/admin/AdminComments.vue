@@ -7,37 +7,46 @@ import Badge from '@/components/ui/Badge.vue'
 import Input from '@/components/ui/Input.vue'
 import { 
   Eye, EyeOff, Trash2, Pin, PinOff, RefreshCw, Search, 
-  ArrowLeft, FileText, MessageSquare 
+  ArrowLeft, FileText, MessageSquare, ExternalLink 
 } from 'lucide-vue-next'
 
 const props = defineProps<{
   apiUrl: string
   token: string
+  siteUrl?: string
 }>()
 
 const emit = defineEmits<{
   refresh: []
 }>()
 
-// 页面列表
 const pages = ref<{ url: string; count: number; spamCount: number; lastComment: number }[]>([])
 const loadingPages = ref(false)
 
-// 评论列表
 const comments = ref<any[]>([])
 const loadingComments = ref(false)
 const currentUrl = ref<string | null>(null)
 
-// 分页和筛选
-const page = ref(1)
-const pageSize = ref(20)
-const total = ref(0)
-const includeSpam = ref(false)
-const searchQuery = ref('')
+const pagesPage = ref(1)
+const pagesPageSize = ref(20)
+const pagesTotal = ref(0)
+const pagesTotalPages = computed(() => Math.ceil(pagesTotal.value / pagesPageSize.value))
+const pagesSearchQuery = ref('')
 
-const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+const commentsPage = ref(1)
+const commentsPageSize = ref(20)
+const commentsTotal = ref(0)
+const commentsTotalPages = computed(() => Math.ceil(commentsTotal.value / commentsPageSize.value))
 
-// 获取页面列表
+type StatusTab = 'all' | 'approved' | 'spam' | 'deleted'
+const activeTab = ref<StatusTab>('all')
+const tabs: { key: StatusTab; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'approved', label: '已发布' },
+  { key: 'spam', label: '待审核' },
+  { key: 'deleted', label: '已隐藏' },
+]
+
 const fetchPages = async () => {
   loadingPages.value = true
   try {
@@ -46,6 +55,7 @@ const fetchPages = async () => {
     })
     const data = await res.json()
     pages.value = data.data || []
+    pagesTotal.value = data.total || pages.value.length
   } catch (e) {
     console.error('获取页面列表失败', e)
   } finally {
@@ -53,14 +63,14 @@ const fetchPages = async () => {
   }
 }
 
-// 获取某个页面的评论
 const fetchComments = async (url: string) => {
   loadingComments.value = true
   try {
     const params = new URLSearchParams({
       url,
-      pageSize: '1000',
-      includeSpam: includeSpam.value.toString(),
+      page: commentsPage.value.toString(),
+      pageSize: commentsPageSize.value.toString(),
+      includeSpam: 'true',
     })
     const res = await fetch(
       `${props.apiUrl}/api/admin/comments?${params}`,
@@ -68,7 +78,7 @@ const fetchComments = async (url: string) => {
     )
     const data = await res.json()
     comments.value = data.data || []
-    total.value = data.total || 0
+    commentsTotal.value = data.total || 0
   } catch (e) {
     console.error('获取评论失败', e)
   } finally {
@@ -78,7 +88,8 @@ const fetchComments = async (url: string) => {
 
 const viewPageComments = (url: string) => {
   currentUrl.value = url
-  page.value = 1
+  commentsPage.value = 1
+  activeTab.value = 'all'
   fetchComments(url)
 }
 
@@ -86,6 +97,26 @@ const backToPages = () => {
   currentUrl.value = null
   comments.value = []
 }
+
+const switchTab = (tab: StatusTab) => {
+  activeTab.value = tab
+  commentsPage.value = 1
+  if (currentUrl.value) fetchComments(currentUrl.value)
+}
+
+const filteredComments = computed(() => {
+  if (activeTab.value === 'all') return comments.value
+  if (activeTab.value === 'spam') return comments.value.filter(c => c.isSpam)
+  if (activeTab.value === 'deleted') return comments.value.filter(c => !c.isSpam && !c.content)
+  return comments.value.filter(c => !c.isSpam)
+})
+
+const tabCounts = computed(() => {
+  const all = comments.value.length
+  const spam = comments.value.filter(c => c.isSpam).length
+  const approved = all - spam
+  return { all, approved, spam, deleted: 0 }
+})
 
 const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
   if (action === 'delete') {
@@ -131,22 +162,47 @@ const displayUrl = (url: string) => {
   return url.length > 50 ? url.substring(0, 50) + '...' : url
 }
 
+const getPageUrl = (comment: any) => {
+  if (!comment.url) return null
+  if (props.siteUrl) {
+    return `${props.siteUrl}${comment.url}`
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${comment.url}`
+  }
+  return comment.url
+}
+
 const filteredPages = computed(() => {
-  if (!searchQuery.value) return pages.value
-  return pages.value.filter(p => 
-    p.url.toLowerCase().includes(searchQuery.value.toLowerCase())
+  if (!pagesSearchQuery.value) {
+    const start = (pagesPage.value - 1) * pagesPageSize.value
+    return pages.value.slice(start, start + pagesPageSize.value)
+  }
+  const filtered = pages.value.filter(p => 
+    p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase())
   )
+  const start = (pagesPage.value - 1) * pagesPageSize.value
+  return filtered.slice(start, start + pagesPageSize.value)
 })
 
+const filteredPagesTotal = computed(() => {
+  if (!pagesSearchQuery.value) return pages.value.length
+  return pages.value.filter(p => 
+    p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase())
+  ).length
+})
+
+const filteredPagesTotalPages = computed(() => Math.ceil(filteredPagesTotal.value / pagesPageSize.value))
+
 onMounted(fetchPages)
-watch(includeSpam, () => {
+watch(commentsPage, () => {
   if (currentUrl.value) fetchComments(currentUrl.value)
 })
+watch(pagesPage, () => {}, { flush: 'post' })
 </script>
 
 <template>
   <div class="space-y-4">
-    <!-- 页面列表视图 -->
     <div v-if="!currentUrl">
       <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
         <div>
@@ -158,7 +214,7 @@ watch(includeSpam, () => {
         <div class="flex gap-2 items-center">
           <div class="relative">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input v-model="searchQuery" placeholder="搜索页面..." class="pl-9 w-48" />
+            <Input v-model="pagesSearchQuery" placeholder="搜索页面..." class="pl-9 w-48" />
           </div>
           <Button variant="outline" size="sm" @click="fetchPages">
             <RefreshCw class="w-4 h-4" />
@@ -202,12 +258,23 @@ watch(includeSpam, () => {
         </Card>
         
         <div v-if="filteredPages.length === 0" class="text-center py-8 text-muted-foreground">
-          {{ searchQuery ? '未找到匹配的页面' : '暂无评论' }}
+          {{ pagesSearchQuery ? '未找到匹配的页面' : '暂无评论' }}
+        </div>
+
+        <div v-if="filteredPagesTotalPages > 1" class="flex items-center justify-center gap-2 pt-4">
+          <Button variant="outline" size="sm" :disabled="pagesPage <= 1" @click="pagesPage--">
+            上一页
+          </Button>
+          <span class="text-sm text-muted-foreground">
+            {{ pagesPage }} / {{ filteredPagesTotalPages }}
+          </span>
+          <Button variant="outline" size="sm" :disabled="pagesPage >= filteredPagesTotalPages" @click="pagesPage++">
+            下一页
+          </Button>
         </div>
       </div>
     </div>
     
-    <!-- 评论列表视图 -->
     <div v-else>
       <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
         <div class="flex items-center gap-3">
@@ -221,20 +288,31 @@ watch(includeSpam, () => {
           </div>
         </div>
         <div class="flex gap-2 items-center">
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" v-model="includeSpam" class="rounded" />
-            显示待审核
-          </label>
-          <Button variant="outline" size="sm" @click="fetchComments(currentUrl)">
+          <Button variant="outline" size="sm" @click="fetchComments(currentUrl!)">
             <RefreshCw class="w-4 h-4" />
           </Button>
         </div>
       </div>
+
+      <div class="flex gap-1 border-b">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
+          :class="activeTab === tab.key 
+            ? 'border-primary text-primary' 
+            : 'border-transparent text-muted-foreground hover:text-foreground'"
+          @click="switchTab(tab.key)"
+        >
+          {{ tab.label }}
+          <span v-if="tab.key === 'spam' && tabCounts.spam > 0" class="ml-1 text-xs">({{ tabCounts.spam }})</span>
+        </button>
+      </div>
       
       <div v-if="loadingComments" class="text-center py-8 text-muted-foreground">加载中...</div>
       
-      <div v-else class="space-y-3">
-        <Card v-for="comment in comments" :key="comment.id">
+      <div v-else class="space-y-3 mt-3">
+        <Card v-for="comment in filteredComments" :key="comment.id">
           <CardContent class="p-4">
             <div class="flex justify-between items-start gap-4">
               <div class="flex-1 min-w-0">
@@ -244,11 +322,22 @@ watch(includeSpam, () => {
                   <Badge v-if="comment.master" variant="default">博主</Badge>
                   <Badge v-if="comment.top" variant="secondary">置顶</Badge>
                   <Badge v-if="comment.isSpam" variant="destructive">待审核</Badge>
+                  <Badge v-else variant="outline">已发布</Badge>
                 </div>
                 <div class="mt-2 text-sm break-words">{{ comment.content }}</div>
-                <div class="mt-2 text-xs text-muted-foreground">
+                <div class="mt-2 text-xs text-muted-foreground flex items-center gap-2">
                   {{ displayTime(comment.createdAt) }}
                   <span v-if="comment.ip"> · IP: {{ comment.ip }}</span>
+                  <a
+                    v-if="getPageUrl(comment)"
+                    :href="getPageUrl(comment)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    <ExternalLink class="w-3 h-3" />
+                    查看页面
+                  </a>
                 </div>
               </div>
               
@@ -273,7 +362,21 @@ watch(includeSpam, () => {
           </CardContent>
         </Card>
         
-        <div v-if="comments.length === 0" class="text-center py-8 text-muted-foreground">该页面暂无评论</div>
+        <div v-if="filteredComments.length === 0" class="text-center py-8 text-muted-foreground">
+          {{ activeTab === 'spam' ? '暂无待审核评论' : activeTab === 'approved' ? '暂无已发布评论' : '暂无评论' }}
+        </div>
+
+        <div v-if="commentsTotalPages > 1" class="flex items-center justify-center gap-2 pt-4">
+          <Button variant="outline" size="sm" :disabled="commentsPage <= 1" @click="commentsPage--">
+            上一页
+          </Button>
+          <span class="text-sm text-muted-foreground">
+            {{ commentsPage }} / {{ commentsTotalPages }}
+          </span>
+          <Button variant="outline" size="sm" :disabled="commentsPage >= commentsTotalPages" @click="commentsPage++">
+            下一页
+          </Button>
+        </div>
       </div>
     </div>
   </div>
