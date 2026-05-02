@@ -45,6 +45,10 @@ const fetchStats = async () => {
 
 const fetchSiteUrl = async () => {
   if (!token.value) return
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    siteUrl.value = window.location.origin
+    return
+  }
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
       headers: { Authorization: `Bearer ${token.value}` }
