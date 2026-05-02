@@ -84,7 +84,7 @@ const canSend = computed(() => {
 })
 
 const previewHtml = computed(() => {
-  return sanitizeHtml(marked(content.value) as string)
+  return sanitizeHtml(marked.parse(content.value) as string)
 })
 
 const handleSubmit = async () => {

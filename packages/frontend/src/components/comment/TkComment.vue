@@ -10,6 +10,8 @@ import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/utils'
 import type { Comment } from '@twikee/core'
 
+marked.setOptions({ breaks: true, gfm: true })
+
 type CommentNode = Comment & { children?: CommentNode[], replyToNick?: string }
 
 const props = defineProps({
@@ -35,11 +37,20 @@ const likeCount = ref(props.comment.likes || 0)
 const liked = ref(false)
 const showReplyBox = ref(false)
 const replyingToChildId = ref<string | null>(null)
+const childLikeStates = ref<Record<string, { liked: boolean; count: number }>>({})
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
 
 if (typeof window !== 'undefined') {
   liked.value = localStorage.getItem(likeStorageKey.value) === '1'
+}
+
+const getChildLikeState = (childId: string, likes?: number) => {
+  if (!childLikeStates.value[childId]) {
+    const storageLiked = typeof window !== 'undefined' && localStorage.getItem(`twikee_liked_${childId}`) === '1'
+    childLikeStates.value[childId] = { liked: storageLiked, count: likes || 0 }
+  }
+  return childLikeStates.value[childId]
 }
 
 const formatTime = (timestamp: number) => {
@@ -67,11 +78,11 @@ const convertLink = (link?: string): string | undefined => {
 const convertedLink = computed(() => convertLink(props.comment.link))
 
 const renderedContent = computed(() => {
-  return sanitizeHtml(marked(props.comment.content) as string)
+  return sanitizeHtml(marked.parse(props.comment.content) as string)
 })
 
 const renderChildContent = (content: string) => {
-  return sanitizeHtml(marked(content) as string)
+  return sanitizeHtml(marked.parse(content) as string)
 }
 
 const onLike = async () => {
@@ -94,6 +105,31 @@ const onLike = async () => {
     }
   } catch (e) {
     console.error('点赞失败:', e)
+  }
+}
+
+const onChildLike = async (childId: string) => {
+  const state = childLikeStates.value[childId]
+  if (!state) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment/${childId}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.success) {
+        state.liked = !state.liked
+        state.count += state.liked ? 1 : -1
+        if (state.liked) {
+          localStorage.setItem(`twikee_liked_${childId}`, '1')
+        } else {
+          localStorage.removeItem(`twikee_liked_${childId}`)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('子评论点赞失败:', e)
   }
 }
 
@@ -310,7 +346,12 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             </div>
 
             <div class="tk-comment__actions">
-              <TkAction @like="() => {}" @reply="onChildReply(child.id)" />
+              <TkAction
+                :liked="getChildLikeState(child.id, child.likes).liked"
+                :like-count="getChildLikeState(child.id, child.likes).count"
+                @like="onChildLike(child.id)"
+                @reply="onChildReply(child.id)"
+              />
             </div>
           </div>
         </div>
