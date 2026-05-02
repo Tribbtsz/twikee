@@ -208,6 +208,7 @@ app.post("/api/auth/verify", async (c) => {
 
 // 管理员中间件
 const requireAdmin = async (c: any, next: any) => {
+  await initDb();
   const auth = c.req.header("authorization");
   if (!auth?.startsWith("Bearer ")) {
     return c.json({ error: "Unauthorized" }, 401);
