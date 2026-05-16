@@ -20,7 +20,7 @@ dist-admin/
 
 # OS
 .DS_Store
-Thumbs.lock
+Thumbs.db
 
 # Logs
 *.log
