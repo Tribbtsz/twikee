@@ -2,6 +2,14 @@ import type { User } from '../types'
 import type { DatabaseAdapter } from '../adapters/base'
 import { createHash } from 'crypto'
 
+function getJwtSecret(): string {
+  const secret = process.env.TWIKOO_SECRET
+  if (!secret) {
+    throw new Error('TWIKOO_SECRET environment variable is required')
+  }
+  return secret
+}
+
 export class AuthService {
   private db: DatabaseAdapter
   
@@ -31,7 +39,7 @@ export class AuthService {
   generateToken(userId: string): string {
     const timestamp = Date.now()
     const hash = createHash('sha256')
-      .update(`${userId}:${timestamp}:${process.env.TWIKOO_SECRET ?? 'twikee-secret'}`)
+      .update(`${userId}:${timestamp}:${getJwtSecret()}`)
       .digest('hex')
     return `${userId}:${timestamp}:${hash}`
   }
@@ -43,7 +51,7 @@ export class AuthService {
     }
     
     const expectedHash = createHash('sha256')
-      .update(`${userId}:${timestamp}:${process.env.TWIKOO_SECRET ?? 'twikee-secret'}`)
+      .update(`${userId}:${timestamp}:${getJwtSecret()}`)
       .digest('hex')
     
     const valid = hash === expectedHash && Date.now() - Number(timestamp) < 7 * 24 * 60 * 60 * 1000
