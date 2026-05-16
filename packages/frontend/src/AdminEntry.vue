@@ -2,7 +2,7 @@
 import { ref, provide } from 'vue'
 import AdminPanel from './components/admin/AdminPanel.vue'
 
-const apiUrl = ref(window.TWIKEE_API_URL || 'http://localhost:3000')
+const apiUrl = ref(window.TWIKEE_API_URL || '')
 provide('apiUrl', apiUrl)
 </script>
 
