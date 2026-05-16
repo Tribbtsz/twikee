@@ -15,6 +15,10 @@ import {
 
 const app = new Hono();
 
+function sanitize(str: string): string {
+  return str.replace(/<[^>]*>/g, '').trim();
+}
+
 app.use("*", cors());
 app.use("*", logger());
 
@@ -116,11 +120,11 @@ app.post("/api/comment", async (c) => {
   }
 
   const comment = await commentService!.create({
-    url: body.url,
-    nick: body.nick,
-    mail: body.mail,
-    link: body.link,
-    content: body.content,
+    url: sanitize(body.url),
+    nick: sanitize(body.nick),
+    mail: body.mail ? sanitize(body.mail) : undefined,
+    link: body.link ? sanitize(body.link) : undefined,
+    content: sanitize(body.content),
     ua: c.req.header("user-agent"),
     ip: c.req.header("x-forwarded-for") || c.req.header("x-real-ip"),
     rid: body.rid,
