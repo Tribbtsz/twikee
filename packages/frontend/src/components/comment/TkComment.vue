@@ -20,7 +20,7 @@ const props = defineProps({
   replyId: { type: String, default: '' },
   replying: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
-  apiUrl: { type: String, default: 'http://localhost:3000' },
+  apiUrl: { type: String, default: '' },
   isReply: { type: Boolean, default: false },
   showDivider: { type: Boolean, default: false }
 })
