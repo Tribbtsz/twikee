@@ -35,6 +35,9 @@ data/
 # Test
 coverage/
 
+# Deployment
+.vercel/
+
 # Temp
 tmp/
 temp/
