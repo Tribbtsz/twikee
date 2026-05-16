@@ -61,20 +61,12 @@ const settings = [
     name: '安全设置',
     items: [
       { key: 'ADMIN_PASSWORD', label: '管理员密码', placeholder: '', desc: '留空则不修改', secret: true },
-      { key: 'RECAPTCHA_SITE_KEY', label: 'reCAPTCHA Site Key', placeholder: '', desc: 'Google reCAPTCHA' },
-      { key: 'RECAPTCHA_SECRET_KEY', label: 'reCAPTCHA Secret', placeholder: '', desc: 'Google reCAPTCHA', secret: true },
-      { key: 'TURNSTILE_SITE_KEY', label: 'Turnstile Site Key', placeholder: '', desc: 'Cloudflare Turnstile' },
-      { key: 'TURNSTILE_SECRET_KEY', label: 'Turnstile Secret', placeholder: '', desc: 'Cloudflare Turnstile', secret: true },
-      { key: 'AKISMET_KEY', label: 'Akismet Key', placeholder: '', desc: '垃圾评论过滤服务' },
-      { key: 'FORBIDDEN_WORDS', label: '违禁词', placeholder: '敏感词1,敏感词2', desc: '用逗号分隔' },
-      { key: 'IP_BLACKLIST', label: 'IP 黑名单', placeholder: '1.2.3.4,5.6.7.8', desc: '用逗号分隔' },
     ]
   },
   {
     icon: Image,
     name: '图片设置',
     items: [
-      { key: 'GRAVATAR_CDN', label: '头像 CDN', placeholder: 'https://gravatar.com/avatar/', desc: 'Gravatar 头像服务地址' },
       { key: 'IMAGE_CDN', label: '图床类型', placeholder: '', desc: 'qcloud / smms / custom' },
       { key: 'IMAGE_CDN_TOKEN', label: '图床 Token', placeholder: '', desc: '图床 API Token' },
       { key: 'MAX_IMAGE_SIZE', label: '最大图片大小', placeholder: '5', desc: '单位 MB' },
