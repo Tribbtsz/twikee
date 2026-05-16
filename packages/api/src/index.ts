@@ -177,7 +177,8 @@ app.post("/api/auth/setup", async (c) => {
     return c.json({ error: "Password must be at least 6 characters" }, 400);
   }
 
-  await db!.config.set("ADMIN_PASSWORD", password);
+  const hashed = await AuthService.hashPassword(password);
+  await db!.config.set("ADMIN_PASSWORD", hashed);
   const token = authService!.generateToken("admin");
   return c.json({ token });
 });
@@ -345,7 +346,12 @@ app.post("/api/admin/config", requireAdmin, async (c) => {
   const body = await c.req.json();
 
   for (const [key, value] of Object.entries(body)) {
-    await db!.config.set(key, value as string);
+    if (key === "ADMIN_PASSWORD" && value) {
+      const hashed = await AuthService.hashPassword(value as string);
+      await db!.config.set(key, hashed);
+    } else {
+      await db!.config.set(key, value as string);
+    }
   }
 
   notificationService = null;

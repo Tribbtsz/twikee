@@ -24,7 +24,8 @@ export function createAuthRoutes(db: DatabaseAdapter) {
       return c.json({ error: 'Password must be at least 6 characters' }, 400)
     }
 
-    await db.config.set('ADMIN_PASSWORD', password)
+    const hashed = await AuthService.hashPassword(password)
+    await db.config.set('ADMIN_PASSWORD', hashed)
     const token = authService.generateToken('admin')
     return c.json({ token })
   })

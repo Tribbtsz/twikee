@@ -1,6 +1,7 @@
 import type { User } from '../types'
 import type { DatabaseAdapter } from '../adapters/base'
 import { createHash } from 'crypto'
+import bcrypt from 'bcryptjs'
 
 function getJwtSecret(): string {
   const secret = process.env.TWIKOO_SECRET
@@ -33,7 +34,20 @@ export class AuthService {
   async verifyAdminPassword(password: string): Promise<boolean> {
     const adminPassword = await this.db.config.get('ADMIN_PASSWORD')
     if (!adminPassword) return false
-    return password === adminPassword
+    if (adminPassword.startsWith('$2')) {
+      return bcrypt.compare(password, adminPassword)
+    }
+    // Legacy plaintext fallback: verify and upgrade to bcrypt hash
+    if (password === adminPassword) {
+      const hashed = await bcrypt.hash(password, 10)
+      await this.db.config.set('ADMIN_PASSWORD', hashed)
+      return true
+    }
+    return false
+  }
+
+  static async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10)
   }
   
   generateToken(userId: string): string {
