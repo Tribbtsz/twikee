@@ -205,7 +205,7 @@ watch(page, loadComments)
     <footer class="border-t py-6 mt-8">
       <div class="max-w-4xl mx-auto px-4 text-center text-sm text-muted-foreground">
         <a
-          href="https://github.com/twikoojs/twikoo"
+          href="https://github.com/Tribbtsz/twikee"
           target="_blank"
           class="text-primary hover:underline"
         >
