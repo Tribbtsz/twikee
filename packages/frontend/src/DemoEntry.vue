@@ -6,7 +6,7 @@ import Button from './components/ui/Button.vue'
 import Card from './components/ui/Card.vue'
 import CardHeader from './components/ui/CardHeader.vue'
 import CardContent from './components/ui/CardContent.vue'
-import { useTwikoo } from './composables/useTwikoo'
+import { useTwikee } from './composables/useTwikee'
 import { MessageSquare, Calendar, Eye, ShieldCheck } from 'lucide-vue-next'
 
 const envId = ref((window as any).TWIKOO_API_URL || 'http://localhost:3000')
@@ -16,7 +16,7 @@ const total = ref(0)
 const pageSize = ref(10)
 const replyingTo = ref<string | null>(null)
 
-const { loading, error, comments, fetchComments, submitComment } = useTwikoo({
+const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: envId.value,
   el: '#twikee-comment',
   lang: 'zh-CN',

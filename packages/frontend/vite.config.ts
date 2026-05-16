@@ -16,7 +16,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'Twikoo',
+      name: 'Twikee',
       formats: ['es', 'umd'],
       fileName: (format) => `twikee.${format}.js`
     },

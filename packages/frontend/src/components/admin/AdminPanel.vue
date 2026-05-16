@@ -80,7 +80,7 @@ const tabs = [
   <div v-else class="min-h-screen bg-background">
     <header class="border-b bg-card sticky top-0 z-10">
       <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold">Twikoo 管理后台</h1>
+        <h1 class="text-xl font-bold">Twikee 管理后台</h1>
         <div class="flex items-center gap-4">
           <a href="/demo.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
             <ArrowLeft class="w-4 h-4" />

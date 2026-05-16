@@ -29,7 +29,7 @@ cp .env.example .env
 
 ```bash
 # 本地 SQLite（默认即可，无需修改）
-TURSO_DATABASE_URL=file:./data/twikoo.db
+TURSO_DATABASE_URL=file:./data/twikee.db
 TURSO_AUTH_TOKEN=
 
 # 必填：管理员密码和 JWT 密钥

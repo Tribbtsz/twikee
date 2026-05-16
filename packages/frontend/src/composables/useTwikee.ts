@@ -1,14 +1,14 @@
 import type { Ref } from 'vue'
 import { ref, computed } from 'vue'
 
-export interface TwikooOptions {
+export interface TwikeeOptions {
   envId: string
   el: string | Element
   lang?: 'zh-CN' | 'en-US'
   dark?: 'auto' | 'light' | 'dark'
 }
 
-export function useTwikoo(options: TwikooOptions) {
+export function useTwikee(options: TwikeeOptions) {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const comments = ref<any[]>([])
@@ -39,7 +39,7 @@ export function useTwikoo(options: TwikooOptions) {
       }
     } catch (e) {
       error.value = '加载评论失败'
-      console.error('[Twikoo] Failed to fetch comments:', e)
+      console.error('[Twikee] Failed to fetch comments:', e)
       return {
         data: [],
         total: 0,
@@ -71,7 +71,7 @@ export function useTwikoo(options: TwikooOptions) {
       const result = await res.json()
       return result
     } catch (e) {
-      console.error('[Twikoo] Failed to submit comment:', e)
+      console.error('[Twikee] Failed to submit comment:', e)
       throw e
     }
   }

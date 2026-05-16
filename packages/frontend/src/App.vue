@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useTwikoo } from './composables/useTwikoo'
+import { useTwikee } from './composables/useTwikee'
 import TkComment from './components/comment/TkComment.vue'
 import TkSubmit from './components/comment/TkSubmit.vue'
 import Button from './components/ui/Button.vue'
@@ -21,7 +21,7 @@ const total = ref(0)
 const pageSize = ref(10)
 const replyingTo = ref<string | null>(null)
 
-const { loading, comments, fetchComments, submitComment } = useTwikoo({
+const { loading, comments, fetchComments, submitComment } = useTwikee({
   envId: props.envId,
   el: '#twikee-comment',
   lang: props.lang,

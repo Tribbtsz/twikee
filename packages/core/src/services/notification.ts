@@ -31,7 +31,7 @@ export class TelegramAdapter implements ChannelAdapter {
   private formatMessage(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
     const type = comment.rid ? '回复' : '新评论'
     return `
-<b>[${siteName ?? 'Twikoo'}] ${type}通知</b>
+<b>[${siteName ?? 'Twikee'}] ${type}通知</b>
 
 <b>昵称:</b> ${comment.nick}
 ${comment.mail ? `<b>邮箱:</b> ${comment.mail}\n` : ''}${comment.link ? `<b>网站:</b> ${comment.link}\n` : ''}
@@ -79,7 +79,7 @@ export class EmailAdapter implements ChannelAdapter {
   
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
-    const subject = `[${siteName ?? 'Twikoo'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`
+    const subject = `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`
     
     await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -98,7 +98,7 @@ export class EmailAdapter implements ChannelAdapter {
   
   private formatHtml(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
     return `
-      <h2>${siteName ?? 'Twikoo'} - ${comment.rid ? '新回复' : '新评论'}</h2>
+      <h2>${siteName ?? 'Twikee'} - ${comment.rid ? '新回复' : '新评论'}</h2>
       <p><strong>昵称:</strong> ${comment.nick}</p>
       ${comment.mail ? `<p><strong>邮箱:</strong> ${comment.mail}</p>` : ''}
       ${comment.link ? `<p><strong>网站:</strong> <a href="${comment.link}">${comment.link}</a></p>` : ''}
