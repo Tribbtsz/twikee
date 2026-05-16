@@ -3,12 +3,19 @@ import type { DatabaseAdapter } from '../adapters/base'
 import { createHash } from 'crypto'
 import bcrypt from 'bcryptjs'
 
+let cachedSecret: string | null = null
+
 function getJwtSecret(): string {
+  if (cachedSecret) return cachedSecret
   const secret = process.env.TWIKOO_SECRET
-  if (!secret) {
-    throw new Error('TWIKOO_SECRET environment variable is required')
+  if (secret) {
+    cachedSecret = secret
+    return secret
   }
-  return secret
+  // Local dev: auto-generate a random secret
+  console.warn('[Twikee] TWIKOO_SECRET not set, using auto-generated secret (not suitable for production)')
+  cachedSecret = createHash('sha256').update(`twikee-dev-${Date.now()}`).digest('hex')
+  return cachedSecret
 }
 
 export class AuthService {

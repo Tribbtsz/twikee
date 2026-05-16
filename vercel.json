@@ -1,5 +1,6 @@
 {
-  "buildCommand": "pnpm -F @twikee/frontend build",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm -F @twikee/core build && pnpm -F @twikee/api build && pnpm -F @twikee/frontend build",
   "outputDirectory": "packages/frontend/dist",
   "functions": {
     "api/index.ts": {
