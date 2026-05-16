@@ -319,6 +319,37 @@ app.delete("/api/admin/comment/:id", requireAdmin, async (c) => {
   return c.json({ success: true });
 });
 
+app.post("/api/admin/import", requireAdmin, async (c) => {
+  await initDb();
+  const body = await c.req.json();
+
+  if (!Array.isArray(body)) {
+    return c.json({ error: "Expected an array of comments" }, 400);
+  }
+
+  let success = 0;
+  let failed = 0;
+
+  for (const item of body) {
+    try {
+      await commentService!.create({
+        url: sanitize(item.url || "/"),
+        nick: sanitize(item.nick || "Anonymous"),
+        mail: item.mail ? sanitize(item.mail) : undefined,
+        link: item.link ? sanitize(item.link) : undefined,
+        content: sanitize(item.content || ""),
+        rid: item.rid,
+        pid: item.pid,
+      });
+      success++;
+    } catch {
+      failed++;
+    }
+  }
+
+  return c.json({ success, failed });
+});
+
 app.post("/api/admin/comment/:id/moderate", requireAdmin, async (c) => {
   await initDb();
   const id = c.req.param("id");
@@ -375,19 +406,8 @@ app.get("/api/config", async (c) => {
 
 app.get("/api/admin/stats", requireAdmin, async (c) => {
   await initDb();
-  // 统计评论数
-  const allComments = await db!.comments.getList({
-    url: "",
-    page: 1,
-    pageSize: 1000,
-    includeSpam: true,
-  });
-  const total = allComments.total;
-  const spam = allComments.data.filter((c) => c.isSpam).length;
-  const pending = spam;
-  const approved = total - spam;
-
-  return c.json({ total, approved, pending });
+  const stats = await db!.comments.getStats();
+  return c.json(stats);
 });
 
 export default app;

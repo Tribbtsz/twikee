@@ -8,12 +8,7 @@ import './styles/index.css'
 
 const props = withDefaults(defineProps<{
   envId: string
-  lang?: 'zh-CN' | 'en-US'
-  dark?: 'auto' | 'light' | 'dark'
-}>(), {
-  lang: 'zh-CN',
-  dark: 'auto'
-})
+}>(), {})
 
 const currentUrl = ref('')
 const page = ref(1)
@@ -23,9 +18,7 @@ const replyingTo = ref<string | null>(null)
 
 const { loading, comments, fetchComments, submitComment } = useTwikee({
   envId: props.envId,
-  el: '#twikee-comment',
-  lang: props.lang,
-  dark: props.dark
+  el: '#twikee-comment'
 })
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))

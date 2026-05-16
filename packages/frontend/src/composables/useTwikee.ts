@@ -4,8 +4,6 @@ import { ref, computed } from 'vue'
 export interface TwikeeOptions {
   envId: string
   el: string | Element
-  lang?: 'zh-CN' | 'en-US'
-  dark?: 'auto' | 'light' | 'dark'
 }
 
 export function useTwikee(options: TwikeeOptions) {

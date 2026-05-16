@@ -190,6 +190,18 @@ class TursoCommentRepository implements CommentRepository {
     return Number(result.rows[0].count);
   }
 
+  async getStats(): Promise<{ total: number; approved: number; pending: number }> {
+    const result = await this.client.execute(
+      "SELECT COUNT(*) as total, SUM(CASE WHEN is_spam = 0 THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as pending FROM comments"
+    );
+    const row = result.rows[0];
+    return {
+      total: Number(row.total),
+      approved: Number(row.approved),
+      pending: Number(row.pending),
+    };
+  }
+
   private rowToComment(row: any): Comment {
     return {
       id: row.id as string,

@@ -1,5 +1,11 @@
 import type { Comment, User, Config, CreateCommentInput, UpdateCommentInput, CommentQuery, PaginatedResult } from '../types'
 
+export interface CommentStats {
+  total: number
+  approved: number
+  pending: number
+}
+
 export interface CommentRepository {
   create(data: CreateCommentInput): Promise<Comment>
   getById(id: string): Promise<Comment | null>
@@ -8,6 +14,7 @@ export interface CommentRepository {
   delete(id: string): Promise<void>
   like(id: string, userId: string): Promise<boolean>
   getCount(url: string): Promise<number>
+  getStats(): Promise<CommentStats>
 }
 
 export interface UserRepository {

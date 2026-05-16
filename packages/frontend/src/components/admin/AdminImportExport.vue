@@ -60,26 +60,17 @@ const handleFileChange = async (e: Event) => {
     let success = 0
     let failed = 0
     
-    for (const comment of comments) {
-      try {
-        await fetch(`${props.apiUrl}/api/comment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: comment.url,
-            nick: comment.nick,
-            mail: comment.mail,
-            link: comment.link,
-            content: comment.content,
-            rid: comment.rid,
-            pid: comment.pid
-          })
-        })
-        success++
-      } catch {
-        failed++
-      }
-    }
+    const res = await fetch(`${props.apiUrl}/api/admin/import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${props.token}`
+      },
+      body: JSON.stringify(comments)
+    })
+    const result = await res.json()
+    success = result.success || 0
+    failed = result.failed || 0
     
     importResult.value = `导入完成：成功 ${success} 条，失败 ${failed} 条`
   } catch (e) {
