@@ -33,8 +33,8 @@ TURSO_DATABASE_URL=file:./data/twikee.db
 TURSO_AUTH_TOKEN=
 
 # 必填：管理员密码和 JWT 密钥
-TWIKOO_ADMIN_PASSWORD=your-password
-TWIKOO_SECRET=your-secret-key
+TWIKEE_ADMIN_PASSWORD=your-password
+TWIKEE_SECRET=your-secret-key
 ```
 
 启动开发服务器:
@@ -54,8 +54,8 @@ API 服务运行在 `http://localhost:3000`，首次启动会自动创建 SQLite
 ```bash
 TURSO_DATABASE_URL=libsql://your-db.turso.io
 TURSO_AUTH_TOKEN=your-turso-auth-token
-TWIKOO_ADMIN_PASSWORD=your-admin-password
-TWIKOO_SECRET=your-secret-key
+TWIKEE_ADMIN_PASSWORD=your-admin-password
+TWIKEE_SECRET=your-secret-key
 ```
 
 ## 前端使用
