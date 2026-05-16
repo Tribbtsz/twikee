@@ -401,8 +401,10 @@ app.post("/api/admin/config", requireAdmin, async (c) => {
 app.get("/api/config", async (c) => {
   await initDb();
   const gravatarCdn = await db!.config.get("GRAVATAR_CDN");
+  const demoEnabled = await db!.config.get("DEMO_ENABLED");
   return c.json({
     GRAVATAR_CDN: gravatarCdn || "",
+    DEMO_ENABLED: demoEnabled !== "false",
   });
 });
 

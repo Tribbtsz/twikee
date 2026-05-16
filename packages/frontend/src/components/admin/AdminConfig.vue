@@ -31,6 +31,7 @@ const settings = [
       { key: 'GRAVATAR_CDN', label: 'Gravatar CDN', placeholder: 'cravatar.cn', desc: '头像 CDN 地址' },
       { key: 'DEFAULT_GRAVATAR', label: '默认头像', placeholder: 'identicon', desc: '无头像时的默认样式' },
       { key: 'COMMENT_PLACEHOLDER', label: '评论占位符', placeholder: '说点什么吧...', desc: '评论框提示文字' },
+      { key: 'DEMO_ENABLED', label: '启用 Demo 页面', placeholder: 'true', desc: '设为 false 可禁用 Demo 页面访问' },
     ]
   },
   {

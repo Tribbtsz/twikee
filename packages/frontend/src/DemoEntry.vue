@@ -15,6 +15,8 @@ const page = ref(1)
 const total = ref(0)
 const pageSize = ref(10)
 const replyingTo = ref<string | null>(null)
+const demoEnabled = ref(true)
+const demoCheckDone = ref(false)
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: envId.value,
@@ -76,9 +78,19 @@ const handleSubmit = async (data: any) => {
   await loadComments()
 }
 
-onMounted(() => {
+onMounted(async () => {
   currentUrl.value = window.location.pathname
-  loadComments()
+  try {
+    const res = await fetch(`${envId.value}/api/config`)
+    const cfg = await res.json()
+    demoEnabled.value = cfg.DEMO_ENABLED !== false
+  } catch {
+    // If config fetch fails, allow demo
+  }
+  demoCheckDone.value = true
+  if (demoEnabled.value) {
+    loadComments()
+  }
 })
 
 watch(page, loadComments)
@@ -102,6 +114,12 @@ watch(page, loadComments)
     </header>
 
     <main class="max-w-4xl mx-auto px-4 py-6">
+      <div v-if="demoCheckDone && !demoEnabled" class="text-center py-20">
+        <h2 class="text-xl font-semibold mb-2">Demo 页面已禁用</h2>
+        <p class="text-muted-foreground">管理员已在后台关闭了 Demo 页面显示。</p>
+      </div>
+
+      <template v-if="demoCheckDone && demoEnabled">
       <Card class="mb-6">
         <CardHeader>
           <h2 class="text-lg font-semibold">欢迎使用 Twikee 评论系统</h2>
@@ -198,6 +216,7 @@ watch(page, loadComments)
           </div>
         </CardContent>
       </Card>
+      </template>
     </main>
 
     <footer class="border-t py-6 mt-8">
