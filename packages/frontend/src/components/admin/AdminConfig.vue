@@ -74,6 +74,7 @@ const settings = [
     icon: Image,
     name: '图片设置',
     items: [
+      { key: 'GRAVATAR_CDN', label: '头像 CDN', placeholder: 'https://gravatar.com/avatar/', desc: 'Gravatar 头像服务地址' },
       { key: 'IMAGE_CDN', label: '图床类型', placeholder: '', desc: 'qcloud / smms / custom' },
       { key: 'IMAGE_CDN_TOKEN', label: '图床 Token', placeholder: '', desc: '图床 API Token' },
       { key: 'MAX_IMAGE_SIZE', label: '最大图片大小', placeholder: '5', desc: '单位 MB' },

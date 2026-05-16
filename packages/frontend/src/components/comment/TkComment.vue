@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import type { PropType } from 'vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
@@ -31,6 +31,15 @@ const emit = defineEmits<{
   moderate: [id: string, action: 'approve' | 'spam']
   top: [id: string, top: boolean]
 }>()
+
+const publicConfig = ref<Record<string, string>>({})
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`${props.apiUrl}/api/config`)
+    if (res.ok) publicConfig.value = await res.json()
+  } catch {}
+})
 
 const isContentExpanded = ref(false)
 const likeCount = ref(props.comment.likes || 0)
@@ -200,6 +209,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
           :mail="comment.mail"
           :link="convertedLink"
           :size="isReply ? 'sm' : 'md'"
+          :gravatar-cdn="publicConfig.GRAVATAR_CDN"
         />
       </div>
 
@@ -307,6 +317,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
               :mail="child.mail"
               :link="convertLink(child.link)"
               size="sm"
+              :gravatar-cdn="publicConfig.GRAVATAR_CDN"
             />
           </div>
 

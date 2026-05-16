@@ -6,7 +6,8 @@ const props = defineProps({
   nick: { type: String, default: '' },
   mail: { type: String, default: '' },
   link: { type: String, default: '' },
-  size: { type: String as PropType<'sm' | 'md' | 'lg'>, default: 'md' }
+  size: { type: String as PropType<'sm' | 'md' | 'lg'>, default: 'md' },
+  gravatarCdn: { type: String, default: 'https://gravatar.com/avatar/' }
 })
 
 const sizeClasses = computed(() => {
@@ -21,7 +22,8 @@ const sizeClasses = computed(() => {
 const avatarUrl = computed(() => {
   if (props.mail) {
     const hash = md5(props.mail.toLowerCase().trim())
-    return `https://cravatar.cn/avatar/${hash}?d=identicon&s=80`
+    const cdn = props.gravatarCdn.endsWith('/') ? props.gravatarCdn : `${props.gravatarCdn}/`
+    return `${cdn}${hash}?d=identicon&s=80`
   }
   return null
 })

@@ -360,6 +360,15 @@ app.post("/api/admin/config", requireAdmin, async (c) => {
   return c.json({ success: true });
 });
 
+// 公开配置（不含敏感信息）
+app.get("/api/config", async (c) => {
+  await initDb();
+  const gravatarCdn = await db!.config.get("GRAVATAR_CDN");
+  return c.json({
+    GRAVATAR_CDN: gravatarCdn || "",
+  });
+});
+
 app.get("/api/admin/stats", requireAdmin, async (c) => {
   await initDb();
   // 统计评论数
