@@ -9,7 +9,7 @@ import CardContent from './components/ui/CardContent.vue'
 import { useTwikee } from './composables/useTwikee'
 import { MessageSquare, Calendar, Eye, ShieldCheck } from 'lucide-vue-next'
 
-const envId = ref((window as any).TWIKOO_API_URL || 'http://localhost:3000')
+const envId = ref((window as any).TWIKEE_API_URL || 'http://localhost:3000')
 const currentUrl = ref('')
 const page = ref(1)
 const total = ref(0)
@@ -18,9 +18,7 @@ const replyingTo = ref<string | null>(null)
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: envId.value,
-  el: '#twikee-comment',
-  lang: 'zh-CN',
-  dark: 'auto'
+  el: '#twikee-comment'
 })
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
