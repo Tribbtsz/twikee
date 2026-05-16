@@ -13,12 +13,22 @@ const emit = defineEmits<{
 
 <template>
   <div class="tk-action">
-    <button class="tk-action__btn" :class="{ 'tk-action__btn--liked': liked }" @click="emit('like')">
+    <button
+      class="tk-action__btn"
+      :class="{ 'tk-action__btn--liked': liked }"
+      :aria-label="liked ? '取消点赞' : '点赞'"
+      :aria-pressed="liked"
+      @click="emit('like')"
+    >
       {{ liked ? '已赞' : '赞' }}
       <span v-if="likeCount > 0" class="tk-action__count">{{ likeCount }}</span>
     </button>
 
-    <button class="tk-action__btn" @click="emit('reply')">
+    <button
+      class="tk-action__btn"
+      aria-label="回复评论"
+      @click="emit('reply')"
+    >
       回复
       <span v-if="repliesCount > 0" class="tk-action__count">{{ repliesCount }}</span>
     </button>

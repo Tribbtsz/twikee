@@ -267,6 +267,8 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
           v-if="!isContentExpanded && comment.content.length > 200"
           @click="isContentExpanded = true"
           class="tk-comment__expand"
+          aria-expanded="false"
+          aria-label="展开完整评论内容"
         >
           展开全文
         </button>

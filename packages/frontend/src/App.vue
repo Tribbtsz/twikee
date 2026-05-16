@@ -138,7 +138,7 @@ watch(page, loadComments)
       </Button>
     </div>
 
-    <div v-if="loading" class="text-center py-8 text-muted-foreground">
+    <div v-if="loading" class="text-center py-8 text-muted-foreground" aria-live="polite" role="status">
       加载中...
     </div>
   </div>
