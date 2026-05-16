@@ -373,7 +373,9 @@ app.post("/api/admin/comment/:id/top", requireAdmin, async (c) => {
 app.get("/api/admin/config", requireAdmin, async (c) => {
   await initDb();
   const config = await db!.config.getAll();
-  return c.json(config);
+  // Filter sensitive fields from response
+  const { ADMIN_PASSWORD, SMTP_PASS, TELEGRAM_BOT_TOKEN, ...safeConfig } = config;
+  return c.json(safeConfig);
 });
 
 app.post("/api/admin/config", requireAdmin, async (c) => {
