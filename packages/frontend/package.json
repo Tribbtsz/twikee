@@ -22,6 +22,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@twikee/core": "workspace:*",
     "vue": "^3.4.0",
     "@vueuse/core": "^11.0.0",
     "class-variance-authority": "^0.7.0",

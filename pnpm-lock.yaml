@@ -77,6 +77,9 @@ importers:
 
   packages/frontend:
     dependencies:
+      '@twikee/core':
+        specifier: workspace:*
+        version: link:../core
       '@vueuse/core':
         specifier: ^11.0.0
         version: 11.3.0(vue@3.5.33(typescript@5.9.3))
