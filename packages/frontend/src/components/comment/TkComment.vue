@@ -46,6 +46,9 @@ const likeCount = ref(props.comment.likes || 0)
 const liked = ref(false)
 const replyingToId = ref<string | null>(null)
 const childLikeStates = ref<Record<string, { liked: boolean; count: number }>>({})
+const liking = ref(false)
+const childLiking = ref<Record<string, boolean>>({})
+const replyError = ref<string | null>(null)
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
 
@@ -96,6 +99,8 @@ const renderChildContent = (content: string) => {
 }
 
 const onLike = async () => {
+  if (liking.value) return
+  liking.value = true
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${props.comment.id}/like`, {
       method: 'POST',
@@ -115,12 +120,15 @@ const onLike = async () => {
     }
   } catch (e) {
     console.error('点赞失败:', e)
+  } finally {
+    liking.value = false
   }
 }
 
 const onChildLike = async (childId: string) => {
   const state = childLikeStates.value[childId]
-  if (!state) return
+  if (!state || childLiking.value[childId]) return
+  childLiking.value[childId] = true
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${childId}/like`, {
       method: 'POST',
@@ -140,6 +148,8 @@ const onChildLike = async (childId: string) => {
     }
   } catch (e) {
     console.error('子评论点赞失败:', e)
+  } finally {
+    childLiking.value[childId] = false
   }
 }
 
@@ -160,6 +170,7 @@ const handleReplyBoxFocusOut = (e: FocusEvent) => {
 }
 
 const handleReplySubmit = async (data: any) => {
+  replyError.value = null
   try {
     const res = await fetch(`${props.apiUrl}/api/comment`, {
       method: 'POST',
@@ -173,13 +184,17 @@ const handleReplySubmit = async (data: any) => {
     if (res.ok) {
       replyingToId.value = null
       emit('load')
+    } else {
+      const err = await res.json().catch(() => null)
+      replyError.value = err?.error || '回复失败，请重试'
     }
   } catch (e) {
-    console.error('回复失败:', e)
+    replyError.value = '网络错误，请重试'
   }
 }
 
 const handleChildReplySubmit = async (data: any, childId: string) => {
+  replyError.value = null
   try {
     const res = await fetch(`${props.apiUrl}/api/comment`, {
       method: 'POST',
@@ -193,9 +208,12 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
     if (res.ok) {
       replyingToId.value = null
       emit('load')
+    } else {
+      const err = await res.json().catch(() => null)
+      replyError.value = err?.error || '回复失败，请重试'
     }
   } catch (e) {
-    console.error('回复失败:', e)
+    replyError.value = '网络错误，请重试'
   }
 }
 </script>
@@ -254,6 +272,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
         </button>
 
         <div v-if="showReplyBox" class="tk-comment__reply-box">
+          <div v-if="replyError" class="tk-comment__error">{{ replyError }}</div>
           <TkSubmit
             :url="comment.url"
             :rid="comment.id"
@@ -349,6 +368,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             <div class="tk-comment__content" v-html="renderChildContent(child.content)" />
 
             <div v-if="replyingToId === child.id" class="tk-comment__reply-box" @focusout="handleReplyBoxFocusOut">
+              <div v-if="replyError" class="tk-comment__error">{{ replyError }}</div>
               <TkSubmit
                 :url="comment.url"
                 :rid="child.id"
@@ -531,6 +551,12 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 
 .tk-comment__reply-box {
   margin-top: 0.75rem;
+}
+
+.tk-comment__error {
+  font-size: 0.8125rem;
+  color: var(--destructive, #ef4444);
+  margin-bottom: 0.5rem;
 }
 
 .tk-comment__actions {
