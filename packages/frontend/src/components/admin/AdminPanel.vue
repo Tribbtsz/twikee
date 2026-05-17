@@ -7,7 +7,7 @@ import AdminImportExport from './AdminImportExport.vue'
 import Card from '@/components/ui/Card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
-import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft } from 'lucide-vue-next'
+import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
 
 const props = defineProps<{
   apiUrl: string
@@ -181,15 +181,19 @@ const tabs = [
           </CardContent>
         </Card>
 
-        <button
-          class="rounded-lg border-2 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium"
+        <Card
+          class="cursor-pointer transition-colors"
           :class="commentsClosed
-            ? 'border-green-500 bg-green-500/10 text-green-600 hover:bg-green-500/20'
-            : 'border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20'"
+            ? 'hover:border-green-500/50'
+            : 'hover:border-destructive/50'"
           @click="toggleCommentsClosed"
         >
-          {{ commentsClosed ? '一键开启' : '一键关停' }}
-        </button>
+          <CardContent class="p-4 h-full flex flex-col items-center justify-center gap-2">
+            <ShieldCheck v-if="commentsClosed" class="w-6 h-6 text-green-500" />
+            <ShieldAlert v-else class="w-6 h-6 text-destructive" />
+            <div class="text-sm font-medium">{{ commentsClosed ? '一键开启' : '一键关停' }}</div>
+          </CardContent>
+        </Card>
       </div>
       
       <!-- 标签页 -->
