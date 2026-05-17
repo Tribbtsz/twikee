@@ -23,23 +23,22 @@
   },
   "dependencies": {
     "@twikee/core": "workspace:*",
-    "vue": "^3.4.0",
     "@vueuse/core": "^11.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "tailwind-merge": "^2.5.0",
     "lucide-vue-next": "^0.460.0",
-    "radix-vue": "^1.9.0",
     "marked": "^14.0.0",
-    "prismjs": "^1.29.0"
+    "radix-vue": "^1.9.0",
+    "tailwind-merge": "^2.5.0",
+    "vue": "^3.4.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-vue": "^5.2.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.0",
     "vite": "^6.0.0",
     "vite-plugin-dts": "^4.2.0",
-    "typescript": "^5.6.0",
-    "vue-tsc": "^2.2.0",
-    "tailwindcss": "^4.0.0",
-    "@tailwindcss/vite": "^4.0.0"
+    "vue-tsc": "^2.2.0"
   }
 }
