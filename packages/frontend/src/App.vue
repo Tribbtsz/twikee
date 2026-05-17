@@ -21,6 +21,16 @@ const { loading, comments, fetchComments, submitComment } = useTwikee({
   el: '#twikee-comment'
 })
 
+const commentsClosed = ref(false)
+
+const fetchConfig = async () => {
+  try {
+    const res = await fetch(`${props.envId}/api/config`)
+    const cfg = await res.json()
+    commentsClosed.value = cfg.COMMENTS_CLOSED === true
+  } catch {}
+}
+
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
 
 const buildCommentTree = (commentsList: any[]) => {
@@ -82,6 +92,7 @@ const handleReply = (id: string) => {
 
 onMounted(() => {
   currentUrl.value = window.location.pathname
+  fetchConfig()
   loadComments()
 })
 
@@ -90,7 +101,10 @@ watch(page, loadComments)
 
 <template>
   <div id="twikee-comment" class="twikee-container max-w-3xl mx-auto">
-    <div class="mb-6">
+    <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
+      评论已关闭
+    </div>
+    <div v-else class="mb-6">
       <TkSubmit
         v-if="!replyingTo"
         :url="currentUrl"

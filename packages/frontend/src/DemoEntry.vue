@@ -17,6 +17,7 @@ const pageSize = ref(10)
 const replyingTo = ref<string | null>(null)
 const demoEnabled = ref(true)
 const demoCheckDone = ref(false)
+const commentsClosed = ref(false)
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: envId.value,
@@ -84,6 +85,7 @@ onMounted(async () => {
     const res = await fetch(`${envId.value}/api/config`)
     const cfg = await res.json()
     demoEnabled.value = cfg.DEMO_ENABLED !== false
+    commentsClosed.value = cfg.COMMENTS_CLOSED === true
   } catch {
     // If config fetch fails, allow demo
   }
@@ -139,7 +141,10 @@ watch(page, loadComments)
       <Card>
         <CardContent class="p-4 sm:p-6">
           <div id="twikee-comment" class="twikee-container">
-            <div class="mb-6">
+            <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
+              评论已关闭
+            </div>
+            <div v-else class="mb-6">
               <TkSubmit
                 :url="currentUrl"
                 @submit="handleSubmit"

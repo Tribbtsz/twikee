@@ -418,9 +418,11 @@ app.get("/api/config", async (c) => {
   await initDb();
   const gravatarCdn = await db!.config.get("GRAVATAR_CDN");
   const demoEnabled = await db!.config.get("DEMO_ENABLED");
+  const commentsClosed = await db!.config.get("COMMENTS_CLOSED");
   return c.json({
     GRAVATAR_CDN: gravatarCdn || "",
     DEMO_ENABLED: demoEnabled !== "false",
+    COMMENTS_CLOSED: commentsClosed === "true",
   });
 });
 
