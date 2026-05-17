@@ -321,6 +321,7 @@ watch(pagesPage, () => {}, { flush: 'post' })
                   <span v-if="comment.mail" class="text-sm text-muted-foreground">{{ comment.mail }}</span>
                   <Badge v-if="comment.master" variant="default">博主</Badge>
                   <Badge v-if="comment.top" variant="secondary">置顶</Badge>
+                  <span v-if="comment.pinnedFromId" class="text-xs text-muted-foreground">回复自评论</span>
                   <Badge v-if="comment.isSpam" variant="destructive">待审核</Badge>
                   <Badge v-else variant="outline">已发布</Badge>
                 </div>

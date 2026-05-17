@@ -103,6 +103,7 @@ watch(page, loadComments)
         v-for="comment in commentTree"
         :key="comment.id"
         :comment="comment"
+        :all-comments="comments"
         :replying="replyingTo === comment.id"
         @reply="handleReply"
         @load="loadComments"

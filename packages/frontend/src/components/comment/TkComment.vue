@@ -52,6 +52,11 @@ const replyError = ref<string | null>(null)
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
 
+const pinnedFromComment = computed(() => {
+  if (!props.comment.pinnedFromId) return null
+  return props.allComments.find(c => c.id === props.comment.pinnedFromId) || null
+})
+
 if (typeof window !== 'undefined') {
   liked.value = localStorage.getItem(likeStorageKey.value) === '1'
 }
@@ -169,6 +174,15 @@ const handleReplyBoxFocusOut = (e: FocusEvent) => {
   }
 }
 
+const scrollToComment = (id: string) => {
+  const el = document.getElementById(`comment-${id}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('tk-comment--highlight')
+    setTimeout(() => el.classList.remove('tk-comment--highlight'), 2000)
+  }
+}
+
 const handleReplySubmit = async (data: any) => {
   replyError.value = null
   try {
@@ -219,7 +233,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 </script>
 
 <template>
-  <div :id="comment.id" class="tk-comment" :class="{ 'tk-comment--reply': isReply, 'tk-comment--divider': showDivider }">
+  <div :id="`comment-${comment.id}`" class="tk-comment" :class="{ 'tk-comment--reply': isReply, 'tk-comment--divider': showDivider, 'tk-comment--pinned-copy': comment.pinnedFromId }">
     <div class="tk-comment__inner">
       <div class="tk-comment__avatar">
         <TkAvatar
@@ -251,6 +265,14 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 
             <Badge v-if="comment.master" variant="default" class="tk-badge">博主</Badge>
             <Badge v-if="comment.top" variant="secondary" class="tk-badge">置顶</Badge>
+            <a
+              v-if="comment.pinnedFromId && pinnedFromComment"
+              :href="`#comment-${comment.pinnedFromId}`"
+              class="tk-comment__pinned-from"
+              @click.prevent="scrollToComment(comment.pinnedFromId!)"
+            >
+              回复自 @{{ pinnedFromComment.nick }}
+            </a>
             <Badge v-if="comment.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
           </div>
 
@@ -453,6 +475,24 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
   font-size: 10px;
   padding: 0 6px;
   height: 16px;
+}
+
+.tk-comment__pinned-from {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.tk-comment__pinned-from:hover {
+  color: var(--foreground);
+}
+
+.tk-comment--highlight {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+  transition: outline-color 0.3s;
 }
 
 .tk-comment__nick {

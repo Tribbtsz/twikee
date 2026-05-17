@@ -66,6 +66,51 @@ class TursoCommentRepository implements CommentRepository {
     };
   }
 
+  async createPinnedCopy(original: Comment): Promise<Comment> {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await this.client.execute({
+      sql: `INSERT INTO comments (id, url, nick, mail, link, content, ua, ip, master, top, rid, pid, pinned_from_id, is_spam, likes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        id,
+        original.url,
+        original.nick,
+        original.mail ?? null,
+        original.link ?? null,
+        original.content,
+        original.ua ?? null,
+        original.ip ?? null,
+        0,
+        1,
+        null,
+        null,
+        original.id,
+        0,
+        0,
+        now,
+      ],
+    });
+
+    return {
+      id,
+      url: original.url,
+      nick: original.nick,
+      mail: original.mail,
+      link: original.link,
+      content: original.content,
+      ua: original.ua,
+      ip: original.ip,
+      master: false,
+      top: true,
+      pinnedFromId: original.id,
+      isSpam: false,
+      likes: 0,
+      createdAt: now,
+    };
+  }
+
   async getById(id: string): Promise<Comment | null> {
     const result = await this.client.execute({
       sql: "SELECT * FROM comments WHERE id = ?",
@@ -216,6 +261,7 @@ class TursoCommentRepository implements CommentRepository {
       top: Boolean(row.top),
       rid: row.rid as string | undefined,
       pid: row.pid as string | undefined,
+      pinnedFromId: row.pinned_from_id as string | undefined,
       isSpam: Boolean(row.is_spam),
       likes: Number(row.likes ?? 0),
       createdAt: row.created_at as number,
@@ -386,6 +432,7 @@ export class TursoAdapter extends DatabaseAdapter {
         top INTEGER DEFAULT 0,
         rid TEXT,
         pid TEXT,
+        pinned_from_id TEXT,
         is_spam INTEGER DEFAULT 0,
         likes INTEGER DEFAULT 0,
         created_at INTEGER NOT NULL,
@@ -417,6 +464,13 @@ export class TursoAdapter extends DatabaseAdapter {
         PRIMARY KEY (comment_id, user_id)
       )`,
     ]);
+
+    // Ensure pinned_from_id column exists for existing databases
+    try {
+      await this.client.execute("ALTER TABLE comments ADD COLUMN pinned_from_id TEXT");
+    } catch {
+      // Column already exists, ignore
+    }
   }
 
   async close(): Promise<void> {

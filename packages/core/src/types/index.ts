@@ -11,6 +11,7 @@ export interface Comment {
   top: boolean
   rid?: string
   pid?: string
+  pinnedFromId?: string
   isSpam: boolean
   likes: number
   createdAt: number

@@ -8,6 +8,7 @@ export interface CommentStats {
 
 export interface CommentRepository {
   create(data: CreateCommentInput): Promise<Comment>
+  createPinnedCopy(original: Comment): Promise<Comment>
   getById(id: string): Promise<Comment | null>
   getList(query: CommentQuery): Promise<PaginatedResult<Comment>>
   update(id: string, data: UpdateCommentInput): Promise<Comment>

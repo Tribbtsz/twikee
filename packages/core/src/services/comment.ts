@@ -45,6 +45,21 @@ export class CommentService {
   }
   
   async setTop(id: string, top: boolean): Promise<Comment> {
+    const comment = await this.db.comments.getById(id)
+    if (!comment) throw new Error('Comment not found')
+
+    // Pinning a child reply: create a copy as top-level pinned comment
+    if (top && (comment.rid || comment.pid)) {
+      return await this.db.comments.createPinnedCopy(comment)
+    }
+
+    // Unpinning a pinned copy: delete the copy
+    if (!top && comment.pinnedFromId) {
+      await this.db.comments.delete(id)
+      return comment
+    }
+
+    // Normal top-level pin/unpin
     return await this.db.comments.update(id, { top })
   }
 }
