@@ -7,7 +7,7 @@ import AdminImportExport from './AdminImportExport.vue'
 import Card from '@/components/ui/Card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
-import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
+import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft } from 'lucide-vue-next'
 
 const props = defineProps<{
   apiUrl: string
@@ -128,15 +128,6 @@ const tabs = [
             返回演示
           </a>
           <span class="text-sm text-muted-foreground">{{ stats.total }} 条评论</span>
-          <Button
-            :variant="commentsClosed ? 'default' : 'destructive'"
-            size="sm"
-            @click="toggleCommentsClosed"
-          >
-            <ShieldAlert v-if="!commentsClosed" class="w-4 h-4 mr-2" />
-            <ShieldCheck v-else class="w-4 h-4 mr-2" />
-            {{ commentsClosed ? '重新开放评论' : '一键关停评论' }}
-          </Button>
           <Button variant="ghost" size="sm" @click="handleLogout">
             <LogOut class="w-4 h-4 mr-2" />
             退出
@@ -147,7 +138,7 @@ const tabs = [
     
     <main class="max-w-6xl mx-auto px-4 py-6">
       <!-- 统计卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent class="p-4">
             <div class="flex items-center gap-3">
@@ -189,6 +180,16 @@ const tabs = [
             </div>
           </CardContent>
         </Card>
+
+        <button
+          class="rounded-lg border-2 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium"
+          :class="commentsClosed
+            ? 'border-green-500 bg-green-500/10 text-green-600 hover:bg-green-500/20'
+            : 'border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20'"
+          @click="toggleCommentsClosed"
+        >
+          {{ commentsClosed ? '一键开启' : '一键关停' }}
+        </button>
       </div>
       
       <!-- 标签页 -->

@@ -171,3 +171,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+.twikee-highlight {
+  animation: twikee-highlight-flash 0.6s ease-in-out 4;
+  border-radius: var(--radius);
+}
+@keyframes twikee-highlight-flash {
+  0%, 100% { background: transparent; }
+  50% { background: var(--primary); opacity: 0.12; }
+}

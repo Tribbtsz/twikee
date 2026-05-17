@@ -94,6 +94,18 @@ onMounted(() => {
   currentUrl.value = window.location.pathname
   fetchConfig()
   loadComments()
+  // Highlight comment section when navigating from admin
+  if (new URLSearchParams(window.location.search).get('hl') === 'twikee') {
+    const el = document.getElementById('twikee-comment')
+    if (el) {
+      el.classList.add('twikee-highlight')
+      setTimeout(() => el.classList.remove('twikee-highlight'), 2400)
+      // Clean URL parameter
+      const url = new URL(window.location.href)
+      url.searchParams.delete('hl')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }
 })
 
 watch(page, loadComments)

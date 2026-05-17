@@ -176,7 +176,7 @@ const displayUrl = (url: string) => {
 const getPageUrl = (comment: any) => {
   if (!comment.url) return null
   if (props.siteUrl) {
-    return `${props.siteUrl}${comment.url}`
+    return `${props.siteUrl}${comment.url}?hl=twikee`
   }
   if (typeof window !== 'undefined') {
     return `${window.location.origin}${comment.url}`
@@ -294,7 +294,6 @@ watch(pagesPage, () => {}, { flush: 'post' })
             返回
           </Button>
           <div>
-            <h2 class="text-xl font-semibold">评论列表</h2>
             <p class="text-sm text-muted-foreground">{{ currentUrl }}</p>
           </div>
         </div>
