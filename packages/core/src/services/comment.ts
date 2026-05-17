@@ -48,22 +48,21 @@ export class CommentService {
     const comment = await this.db.comments.getById(id)
     if (!comment) throw new Error('Comment not found')
 
-    // Pinning a child reply: create a copy as top-level pinned comment
-    if (top && (comment.rid || comment.pid)) {
-      // Check if a pinned copy already exists
-      const existing = await this.db.comments.getList({ url: comment.url, page: 1, pageSize: 1000 })
-      const alreadyPinned = existing.data.find(c => c.pinnedFromId === id && c.top)
-      if (alreadyPinned) return alreadyPinned
-      return await this.db.comments.createPinnedCopy(comment)
-    }
-
     // Unpinning a pinned copy: delete the copy
     if (!top && comment.pinnedFromId) {
       await this.db.comments.delete(id)
       return comment
     }
 
-    // Normal top-level pin/unpin
-    return await this.db.comments.update(id, { top })
+    // Pinning: always create a copy
+    if (top) {
+      const existing = await this.db.comments.getList({ url: comment.url, page: 1, pageSize: 1000 })
+      const alreadyPinned = existing.data.find(c => c.pinnedFromId === id && c.top)
+      if (alreadyPinned) return alreadyPinned
+      return await this.db.comments.createPinnedCopy(comment)
+    }
+
+    // Unpinning a non-copy comment (legacy)
+    return await this.db.comments.update(id, { top: false })
   }
 }

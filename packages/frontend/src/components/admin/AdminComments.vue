@@ -47,13 +47,12 @@ const commentsPageSize = ref(20)
 const commentsTotal = ref(0)
 const commentsTotalPages = computed(() => Math.ceil(commentsTotal.value / commentsPageSize.value))
 
-type StatusTab = 'all' | 'approved' | 'spam' | 'deleted'
+type StatusTab = 'all' | 'approved' | 'spam'
 const activeTab = ref<StatusTab>('all')
 const tabs: { key: StatusTab; label: string }[] = [
   { key: 'all', label: '全部' },
   { key: 'approved', label: '已发布' },
   { key: 'spam', label: '待审核' },
-  { key: 'deleted', label: '已隐藏' },
 ]
 
 const fetchPages = async () => {
@@ -118,7 +117,6 @@ const switchTab = (tab: StatusTab) => {
 const filteredComments = computed(() => {
   if (activeTab.value === 'all') return comments.value
   if (activeTab.value === 'spam') return comments.value.filter(c => c.isSpam)
-  if (activeTab.value === 'deleted') return comments.value.filter(c => !c.isSpam && !c.content)
   return comments.value.filter(c => !c.isSpam)
 })
 
@@ -126,7 +124,7 @@ const tabCounts = computed(() => {
   const all = comments.value.length
   const spam = comments.value.filter(c => c.isSpam).length
   const approved = all - spam
-  return { all, approved, spam, deleted: 0 }
+  return { all, approved, spam }
 })
 
 const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {

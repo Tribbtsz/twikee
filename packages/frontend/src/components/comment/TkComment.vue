@@ -56,11 +56,12 @@ const pinnedFromInfo = computed(() => {
   if (!props.comment.pinnedFromId) return null
   const original = props.allComments.find(c => c.id === props.comment.pinnedFromId)
   if (!original) return null
-  // Show the parent comment's nick (who the original reply was directed at)
+  // For replies: show parent's nick. For top-level: show original's nick
   const parent = original.rid ? props.allComments.find(c => c.id === original.rid) : null
   return {
-    parentId: original.rid || original.pid || original.id,
-    nick: parent?.nick || original.nick
+    targetId: original.id,
+    nick: parent?.nick || original.nick,
+    isReply: !!original.rid
   }
 })
 
@@ -186,7 +187,7 @@ const scrollToComment = (id: string) => {
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     el.classList.add('tk-comment--highlight')
-    setTimeout(() => el.classList.remove('tk-comment--highlight'), 2000)
+    setTimeout(() => el.classList.remove('tk-comment--highlight'), 1200)
   }
 }
 
@@ -274,11 +275,11 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             <Badge v-if="comment.top" variant="secondary" class="tk-badge">置顶</Badge>
             <a
               v-if="comment.pinnedFromId && pinnedFromInfo"
-              :href="`#comment-${pinnedFromInfo.parentId}`"
+              :href="`#comment-${pinnedFromInfo.targetId}`"
               class="tk-comment__pinned-from"
-              @click.prevent="scrollToComment(pinnedFromInfo.parentId)"
+              @click.prevent="scrollToComment(pinnedFromInfo.targetId)"
             >
-              回复自 @{{ pinnedFromInfo.nick }}
+              {{ pinnedFromInfo.isReply ? '回复自' : '来自' }} @{{ pinnedFromInfo.nick }}
             </a>
             <Badge v-if="comment.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
           </div>
@@ -496,10 +497,11 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 }
 
 .tk-comment--highlight {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: 0.5rem;
-  transition: outline-color 0.3s;
+  animation: highlight-flash 0.6s ease-in-out 2;
+}
+@keyframes highlight-flash {
+  0%, 100% { background: transparent; }
+  50% { background: var(--primary); opacity: 0.15; }
 }
 
 .tk-comment__nick {
