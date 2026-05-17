@@ -111,6 +111,16 @@ app.post("/api/comment", async (c) => {
     return c.json({ error: "url, nick, content are required" }, 400);
   }
 
+  // Check if comments are closed
+  const commentsClosed = await db!.config.get("COMMENTS_CLOSED");
+  if (commentsClosed === "true") {
+    return c.json({ error: "评论已关闭" }, 403);
+  }
+
+  // Check if auto-approve is enabled
+  const autoApprove = await db!.config.get("AUTO_APPROVE");
+  const needsModeration = autoApprove !== "true";
+
   let isMaster = false;
   if (body.mail) {
     const bloggerEmail = await db!.config.get("BLOGGER_EMAIL");
@@ -134,6 +144,12 @@ app.post("/api/comment", async (c) => {
   if (isMaster) {
     await commentService!.update(comment.id, { master: true });
     comment.master = true;
+  }
+
+  // Apply moderation: non-master comments need approval unless auto-approve is on
+  if (needsModeration && !isMaster) {
+    await commentService!.update(comment.id, { isSpam: true });
+    comment.isSpam = true;
   }
 
   if (notificationService) {

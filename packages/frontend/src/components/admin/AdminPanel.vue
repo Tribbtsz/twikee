@@ -7,7 +7,7 @@ import AdminImportExport from './AdminImportExport.vue'
 import Card from '@/components/ui/Card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
-import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft } from 'lucide-vue-next'
+import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
 
 const props = defineProps<{
   apiUrl: string
@@ -17,6 +17,7 @@ const token = ref(localStorage.getItem('twikee_admin_token') || '')
 const activeTab = ref('comments')
 const stats = ref({ total: 0, approved: 0, pending: 0 })
 const siteUrl = ref('')
+const commentsClosed = ref(false)
 
 const isLoggedIn = computed(() => !!token.value)
 
@@ -36,6 +37,35 @@ const checkAuth = (res: Response) => {
     return false
   }
   return true
+}
+
+const fetchCommentsClosed = async () => {
+  if (!token.value) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/admin/config`, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    if (!checkAuth(res)) return
+    const data = await res.json()
+    commentsClosed.value = data.COMMENTS_CLOSED === 'true'
+  } catch {}
+}
+
+const toggleCommentsClosed = async () => {
+  const newValue = !commentsClosed.value
+  if (newValue && !window.confirm('确定要关闭评论吗？所有新评论将被拒绝。')) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/admin/config`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ COMMENTS_CLOSED: newValue.toString() })
+    })
+    if (!checkAuth(res)) return
+    commentsClosed.value = newValue
+  } catch {}
 }
 
 const fetchStats = async () => {
@@ -73,6 +103,7 @@ const fetchSiteUrl = async () => {
 onMounted(() => {
   fetchStats()
   fetchSiteUrl()
+  fetchCommentsClosed()
 })
 
 const tabs = [
@@ -97,6 +128,15 @@ const tabs = [
             返回演示
           </a>
           <span class="text-sm text-muted-foreground">{{ stats.total }} 条评论</span>
+          <Button
+            :variant="commentsClosed ? 'default' : 'destructive'"
+            size="sm"
+            @click="toggleCommentsClosed"
+          >
+            <ShieldAlert v-if="!commentsClosed" class="w-4 h-4 mr-2" />
+            <ShieldCheck v-else class="w-4 h-4 mr-2" />
+            {{ commentsClosed ? '重新开放评论' : '一键关停评论' }}
+          </Button>
           <Button variant="ghost" size="sm" @click="handleLogout">
             <LogOut class="w-4 h-4 mr-2" />
             退出

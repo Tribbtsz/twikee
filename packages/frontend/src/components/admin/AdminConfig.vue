@@ -43,6 +43,8 @@ const settings = [
       { key: 'GRAVATAR_CDN', label: 'Gravatar CDN', placeholder: 'cravatar.cn', desc: '头像 CDN 地址' },
       { key: 'DEFAULT_GRAVATAR', label: '默认头像', placeholder: 'identicon', desc: '无头像时的默认样式', type: 'select', options: ['identicon', 'monsterid', 'wavatar', 'retro', 'robohash', 'blank'] },
       { key: 'COMMENT_PLACEHOLDER', label: '评论占位符', placeholder: '说点什么吧...', desc: '评论框提示文字' },
+      { key: 'COMMENTS_CLOSED', label: '关闭评论', placeholder: 'false', desc: '开启后所有新评论将被拒绝', type: 'boolean' },
+      { key: 'AUTO_APPROVE', label: '自动通过评论', placeholder: 'false', desc: '开启后新评论无需审核直接发布', type: 'boolean' },
       { key: 'DEMO_ENABLED', label: '启用 Demo 页面', placeholder: 'true', desc: '是否允许访问 Demo 页面', type: 'boolean' },
     ]
   },
