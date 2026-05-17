@@ -126,7 +126,7 @@ watch(page, loadComments)
         </CardHeader>
         <CardContent>
           <p class="text-muted-foreground leading-relaxed mb-4">
-            这是一个现代化的评论系统，支持实时评论、点赞、回复、Markdown 语法、代码高亮等功能。
+            这是一个现代化的评论系统，支持实时评论、点赞、回复、Markdown 语法等功能。
             采用 Vue 3 + Vite + Tailwind CSS 4 构建前端，Hono.js 构建后端 API，
             Turso 作为数据库存储。
           </p>
