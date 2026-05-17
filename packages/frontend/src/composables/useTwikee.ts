@@ -13,6 +13,7 @@ export function useTwikee(options: TwikeeOptions) {
   const config = ref<Record<string, any>>({})
   
   const baseUrl = computed(() => {
+    if (!options.envId) return ''
     let url = options.envId
     if (!url.startsWith('http')) {
       url = `https://${url}`

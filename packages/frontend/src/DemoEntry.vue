@@ -7,7 +7,7 @@ import Card from './components/ui/Card.vue'
 import CardHeader from './components/ui/CardHeader.vue'
 import CardContent from './components/ui/CardContent.vue'
 import { useTwikee } from './composables/useTwikee'
-import { MessageSquare, Calendar, Eye, ShieldCheck } from 'lucide-vue-next'
+import { MessageSquare, ShieldCheck } from 'lucide-vue-next'
 
 const envId = ref((window as any).TWIKEE_API_URL || '')
 const currentUrl = ref('')
@@ -133,20 +133,6 @@ watch(page, loadComments)
           <p class="text-sm text-muted-foreground mb-4">
             技术栈：Vue 3、Vite、Tailwind CSS 4、shadcn/ui 风格组件、Hono.js、Turso (libSQL)
           </p>
-          <div class="flex gap-4 text-sm text-muted-foreground">
-            <span class="flex items-center gap-1">
-              <Calendar class="w-4 h-4" />
-              2025-04-30
-            </span>
-            <span class="flex items-center gap-1">
-              <Eye class="w-4 h-4" />
-              1.2k 阅读
-            </span>
-            <span class="flex items-center gap-1">
-              <MessageSquare class="w-4 h-4" />
-              评论系统演示
-            </span>
-          </div>
         </CardContent>
       </Card>
 

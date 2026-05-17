@@ -22,7 +22,8 @@ const sizeClasses = computed(() => {
 const avatarUrl = computed(() => {
   if (props.mail) {
     const hash = md5(props.mail.toLowerCase().trim())
-    const cdn = props.gravatarCdn.endsWith('/') ? props.gravatarCdn : `${props.gravatarCdn}/`
+    const base = props.gravatarCdn || 'https://gravatar.com/avatar/'
+    const cdn = base.endsWith('/') ? base : `${base}/`
     return `${cdn}${hash}?d=identicon&s=80`
   }
   return null

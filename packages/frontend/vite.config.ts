@@ -30,6 +30,9 @@ export default defineConfig({
     alias: { '@': resolve(__dirname, 'src') }
   },
   server: {
-    open: '/demo.html'
+    open: '/demo.html',
+    proxy: {
+      '/api': 'http://localhost:3000'
+    }
   }
 })
