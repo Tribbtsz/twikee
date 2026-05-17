@@ -121,7 +121,7 @@ const tabs = [
   <div v-else class="min-h-screen bg-background">
     <header class="border-b bg-card sticky top-0 z-10">
       <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold">Twikee 管理后台</h1>
+        <h1 class="text-xl font-bold">Twikee 管理后台 <span v-if="commentsClosed" class="text-base  font-bold text-red-500 ml-6 bg-red-200 py-2 px-4 rounded-full">已关停</span></h1>
         <div class="flex items-center gap-4">
           <a href="/demo.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
             <ArrowLeft class="w-4 h-4" />
@@ -138,8 +138,8 @@ const tabs = [
     
     <main class="max-w-6xl mx-auto px-4 py-6">
       <!-- 统计卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
+      <div class="flex gap-4 mb-6 items-stretch">
+        <Card class="flex-1">
           <CardContent class="p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-primary/10 rounded-lg">
@@ -152,8 +152,8 @@ const tabs = [
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        <Card class="flex-1">
           <CardContent class="p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-green-500/10 rounded-lg">
@@ -166,8 +166,8 @@ const tabs = [
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        <Card class="flex-1">
           <CardContent class="p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-yellow-500/10 rounded-lg">
@@ -181,19 +181,17 @@ const tabs = [
           </CardContent>
         </Card>
 
-        <Card
-          class="cursor-pointer transition-colors"
+        <div
+          class="w-24 shrink-0 cursor-pointer transition-all rounded-lg flex flex-col items-center justify-center gap-1"
           :class="commentsClosed
-            ? 'hover:border-green-500/50'
-            : 'hover:border-destructive/50'"
+            ? 'bg-green-500 text-white hover:bg-green-600'
+            : 'bg-destructive text-destructive-foreground hover:opacity-90'"
           @click="toggleCommentsClosed"
         >
-          <CardContent class="p-4 h-full flex flex-col items-center justify-center gap-2">
-            <ShieldCheck v-if="commentsClosed" class="w-6 h-6 text-green-500" />
-            <ShieldAlert v-else class="w-6 h-6 text-destructive" />
-            <div class="text-sm font-medium">{{ commentsClosed ? '一键开启' : '一键关停' }}</div>
-          </CardContent>
-        </Card>
+          <ShieldCheck v-if="commentsClosed" class="w-5 h-5" />
+          <ShieldAlert v-else class="w-5 h-5" />
+          <div class="text-xs font-medium">{{ commentsClosed ? '一键开启' : '一键关停' }}</div>
+        </div>
       </div>
       
       <!-- 标签页 -->

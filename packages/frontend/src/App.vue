@@ -94,17 +94,20 @@ onMounted(() => {
   currentUrl.value = window.location.pathname
   fetchConfig()
   loadComments()
-  // Highlight comment section when navigating from admin
-  if (new URLSearchParams(window.location.search).get('hl') === 'twikee') {
-    const el = document.getElementById('twikee-comment')
-    if (el) {
-      el.classList.add('twikee-highlight')
-      setTimeout(() => el.classList.remove('twikee-highlight'), 2400)
-      // Clean URL parameter
+  // Highlight specific comment when navigating from admin
+  const hlId = new URLSearchParams(window.location.search).get('hl')
+  if (hlId) {
+    setTimeout(() => {
+      const el = document.getElementById(`comment-${hlId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('tk-comment--highlight')
+        setTimeout(() => el.classList.remove('tk-comment--highlight'), 1200)
+      }
       const url = new URL(window.location.href)
       url.searchParams.delete('hl')
       window.history.replaceState({}, '', url.toString())
-    }
+    }, 800)
   }
 })
 

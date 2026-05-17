@@ -176,12 +176,12 @@ const displayUrl = (url: string) => {
 const getPageUrl = (comment: any) => {
   if (!comment.url) return null
   if (props.siteUrl) {
-    return `${props.siteUrl}${comment.url}?hl=twikee`
+    return `${props.siteUrl}${comment.url}?hl=${comment.id}`
   }
   if (typeof window !== 'undefined') {
-    return `${window.location.origin}${comment.url}`
+    return `${window.location.origin}${comment.url}?hl=${comment.id}`
   }
-  return comment.url
+  return `${comment.url}?hl=${comment.id}`
 }
 
 const filteredPages = computed(() => {
