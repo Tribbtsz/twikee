@@ -232,4 +232,47 @@ const handleSubmit = async () => {
   font-size: 0.875rem;
   line-height: 1.625;
 }
+.tk-submit__preview :deep(p) {
+  margin: 0 0 0.5rem;
+}
+.tk-submit__preview :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.tk-submit__preview :deep(code) {
+  font-size: 0.8125rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  background: var(--muted);
+}
+.tk-submit__preview :deep(pre) {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--muted);
+  overflow-x: auto;
+}
+.tk-submit__preview :deep(pre code) {
+  padding: 0;
+  background: none;
+}
+.tk-submit__preview :deep(blockquote) {
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.75rem;
+  border-left: 3px solid var(--primary);
+  color: var(--muted-foreground);
+}
+.tk-submit__preview :deep(ul),
+.tk-submit__preview :deep(ol) {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+.tk-submit__preview :deep(h1),
+.tk-submit__preview :deep(h2),
+.tk-submit__preview :deep(h3),
+.tk-submit__preview :deep(h4),
+.tk-submit__preview :deep(h5),
+.tk-submit__preview :deep(h6) {
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
 </style>
