@@ -336,7 +336,6 @@ watch(pagesPage, () => {}, { flush: 'post' })
                   <Badge v-if="comment.top" variant="secondary">置顶</Badge>
                   <span v-if="comment.pinnedFromId" class="text-xs text-muted-foreground">回复自评论</span>
                   <Badge v-if="comment.isSpam" variant="destructive">待审核</Badge>
-                  <Badge v-else variant="outline">已发布</Badge>
                 </div>
                 <div class="mt-2 text-sm break-words">{{ comment.content }}</div>
                 <div class="mt-2 text-xs text-muted-foreground flex items-center gap-2">

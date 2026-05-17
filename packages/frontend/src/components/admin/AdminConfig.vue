@@ -41,17 +41,17 @@ const settings = [
       { key: 'MASTER_TAG', label: '博主标识', placeholder: '博主', desc: '博主昵称旁显示的标签' },
       { key: 'COMMENT_PAGE_SIZE', label: '每页评论数', placeholder: '10', desc: '评论列表分页大小' },
       { key: 'GRAVATAR_CDN', label: 'Gravatar CDN', placeholder: 'cravatar.cn', desc: '头像 CDN 地址' },
-      { key: 'DEFAULT_GRAVATAR', label: '默认头像', placeholder: 'identicon', desc: '无头像时的默认样式' },
+      { key: 'DEFAULT_GRAVATAR', label: '默认头像', placeholder: 'identicon', desc: '无头像时的默认样式', type: 'select', options: ['identicon', 'monsterid', 'wavatar', 'retro', 'robohash', 'blank'] },
       { key: 'COMMENT_PLACEHOLDER', label: '评论占位符', placeholder: '说点什么吧...', desc: '评论框提示文字' },
-      { key: 'DEMO_ENABLED', label: '启用 Demo 页面', placeholder: 'true', desc: '设为 false 可禁用 Demo 页面访问' },
+      { key: 'DEMO_ENABLED', label: '启用 Demo 页面', placeholder: 'true', desc: '是否允许访问 Demo 页面', type: 'boolean' },
     ]
   },
   {
     icon: Bell,
     name: '通知设置',
     items: [
-      { key: 'NOTIFICATION_ENABLE', label: '启用通知', placeholder: 'true', desc: '是否启用评论通知' },
-      { key: 'NOTIFICATION_TYPE', label: '通知方式', placeholder: 'telegram', desc: 'telegram / webhook / email' },
+      { key: 'NOTIFICATION_ENABLE', label: '启用通知', placeholder: 'true', desc: '是否启用评论通知', type: 'boolean' },
+      { key: 'NOTIFICATION_TYPE', label: '通知方式', placeholder: 'telegram', desc: '选择通知渠道', type: 'select', options: ['telegram', 'webhook', 'email'] },
       { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram Bot Token', placeholder: '123456:ABC-DEF', desc: '从 @BotFather 获取' },
       { key: 'TELEGRAM_CHAT_ID', label: 'Telegram Chat ID', placeholder: '-100123456789', desc: '群组或频道 ID' },
       { key: 'WEBHOOK_URL', label: 'Webhook URL', placeholder: 'https://...', desc: '自定义通知接口' },
@@ -162,7 +162,23 @@ onMounted(fetchConfig)
               <label class="text-sm font-medium">{{ item.label }}</label>
               <p class="text-xs text-muted-foreground">{{ item.desc }}</p>
             </div>
+            <select
+              v-if="item.type === 'boolean'"
+              v-model="config[item.key]"
+              class="md:col-span-2 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="true">开启</option>
+              <option value="false">关闭</option>
+            </select>
+            <select
+              v-else-if="item.type === 'select'"
+              v-model="config[item.key]"
+              class="md:col-span-2 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              <option v-for="opt in item.options" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
             <Input
+              v-else
               v-model="config[item.key]"
               :type="item.secret ? 'password' : 'text'"
               :placeholder="item.placeholder"
