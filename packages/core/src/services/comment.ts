@@ -50,6 +50,10 @@ export class CommentService {
 
     // Pinning a child reply: create a copy as top-level pinned comment
     if (top && (comment.rid || comment.pid)) {
+      // Check if a pinned copy already exists
+      const existing = await this.db.comments.getList({ url: comment.url, page: 1, pageSize: 1000 })
+      const alreadyPinned = existing.data.find(c => c.pinnedFromId === id && c.top)
+      if (alreadyPinned) return alreadyPinned
       return await this.db.comments.createPinnedCopy(comment)
     }
 

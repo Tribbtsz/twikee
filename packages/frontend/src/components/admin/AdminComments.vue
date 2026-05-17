@@ -18,7 +18,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   refresh: []
+  logout: []
 }>()
+
+const checkAuth = (res: Response) => {
+  if (res.status === 401) {
+    emit('logout')
+    return false
+  }
+  return true
+}
 
 const pages = ref<{ url: string; count: number; spamCount: number; lastComment: number }[]>([])
 const loadingPages = ref(false)
@@ -53,6 +62,7 @@ const fetchPages = async () => {
     const res = await fetch(`${props.apiUrl}/api/admin/pages`, {
       headers: { Authorization: `Bearer ${props.token}` }
     })
+    if (!checkAuth(res)) return
     const data = await res.json()
     pages.value = data.data || []
     pagesTotal.value = data.total || pages.value.length
@@ -76,6 +86,7 @@ const fetchComments = async (url: string) => {
       `${props.apiUrl}/api/admin/comments?${params}`,
       { headers: { Authorization: `Bearer ${props.token}` } }
     )
+    if (!checkAuth(res)) return
     const data = await res.json()
     comments.value = data.data || []
     commentsTotal.value = data.total || 0
@@ -123,7 +134,7 @@ const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
     if (!window.confirm('确定要删除这条评论吗？此操作不可恢复。')) return
   }
   try {
-    await fetch(`${props.apiUrl}/api/admin/comment/${id}/moderate`, {
+    const res = await fetch(`${props.apiUrl}/api/admin/comment/${id}/moderate`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
@@ -131,6 +142,7 @@ const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
       },
       body: JSON.stringify({ action })
     })
+    if (!checkAuth(res)) return
     await fetchComments(currentUrl.value!)
     emit('refresh')
   } catch (e) {
@@ -140,7 +152,7 @@ const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
 
 const toggleTop = async (id: string, top: boolean) => {
   try {
-    await fetch(`${props.apiUrl}/api/admin/comment/${id}/top`, {
+    const res = await fetch(`${props.apiUrl}/api/admin/comment/${id}/top`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
@@ -148,6 +160,7 @@ const toggleTop = async (id: string, top: boolean) => {
       },
       body: JSON.stringify({ top })
     })
+    if (!checkAuth(res)) return
     await fetchComments(currentUrl.value!)
   } catch (e) {
     console.error('操作失败', e)

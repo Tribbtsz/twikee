@@ -30,12 +30,21 @@ const handleLogout = () => {
   localStorage.removeItem('twikee_admin_token')
 }
 
+const checkAuth = (res: Response) => {
+  if (res.status === 401) {
+    handleLogout()
+    return false
+  }
+  return true
+}
+
 const fetchStats = async () => {
   if (!token.value) return
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/stats`, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
+    if (!checkAuth(res)) return
     const data = await res.json()
     stats.value = data
   } catch (e) {
@@ -53,6 +62,7 @@ const fetchSiteUrl = async () => {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
+    if (!checkAuth(res)) return
     const data = await res.json()
     siteUrl.value = (data.SITE_URL || '').replace(/\/$/, '')
   } catch (e) {
@@ -162,12 +172,14 @@ const tabs = [
         :token="token"
         :site-url="siteUrl"
         @refresh="fetchStats"
+        @logout="handleLogout"
       />
       
       <AdminConfig
         v-if="activeTab === 'config'"
         :api-url="apiUrl"
         :token="token"
+        @logout="handleLogout"
       />
       
       <AdminImportExport

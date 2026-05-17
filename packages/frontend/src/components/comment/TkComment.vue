@@ -52,9 +52,16 @@ const replyError = ref<string | null>(null)
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
 
-const pinnedFromComment = computed(() => {
+const pinnedFromInfo = computed(() => {
   if (!props.comment.pinnedFromId) return null
-  return props.allComments.find(c => c.id === props.comment.pinnedFromId) || null
+  const original = props.allComments.find(c => c.id === props.comment.pinnedFromId)
+  if (!original) return null
+  // Show the parent comment's nick (who the original reply was directed at)
+  const parent = original.rid ? props.allComments.find(c => c.id === original.rid) : null
+  return {
+    parentId: original.rid || original.pid || original.id,
+    nick: parent?.nick || original.nick
+  }
 })
 
 if (typeof window !== 'undefined') {
@@ -266,12 +273,12 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             <Badge v-if="comment.master" variant="default" class="tk-badge">博主</Badge>
             <Badge v-if="comment.top" variant="secondary" class="tk-badge">置顶</Badge>
             <a
-              v-if="comment.pinnedFromId && pinnedFromComment"
-              :href="`#comment-${comment.pinnedFromId}`"
+              v-if="comment.pinnedFromId && pinnedFromInfo"
+              :href="`#comment-${pinnedFromInfo.parentId}`"
               class="tk-comment__pinned-from"
-              @click.prevent="scrollToComment(comment.pinnedFromId!)"
+              @click.prevent="scrollToComment(pinnedFromInfo.parentId)"
             >
-              回复自 @{{ pinnedFromComment.nick }}
+              回复自 @{{ pinnedFromInfo.nick }}
             </a>
             <Badge v-if="comment.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
           </div>
@@ -350,7 +357,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
       <div
         v-for="child in comment.children"
         :key="child.id"
-        :id="child.id"
+        :id="`comment-${child.id}`"
         class="tk-comment tk-comment--reply"
       >
         <div class="tk-comment__inner">

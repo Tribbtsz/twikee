@@ -13,9 +13,21 @@ const props = defineProps<{
   token: string
 }>()
 
+const emit = defineEmits<{
+  logout: []
+}>()
+
 const config = ref<Record<string, string>>({})
 const loading = ref(false)
 const saved = ref(false)
+
+const checkAuth = (res: Response) => {
+  if (res.status === 401) {
+    emit('logout')
+    return false
+  }
+  return true
+}
 
 const settings = [
   {
@@ -81,6 +93,7 @@ const fetchConfig = async () => {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
       headers: { Authorization: `Bearer ${props.token}` }
     })
+    if (!checkAuth(res)) return
     const data = await res.json()
     config.value = data
   } catch (e) {
@@ -94,7 +107,7 @@ const saveConfig = async () => {
   loading.value = true
   saved.value = false
   try {
-    await fetch(`${props.apiUrl}/api/admin/config`, {
+    const res = await fetch(`${props.apiUrl}/api/admin/config`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
@@ -102,6 +115,7 @@ const saveConfig = async () => {
       },
       body: JSON.stringify(config.value)
     })
+    if (!checkAuth(res)) return
     saved.value = true
     setTimeout(() => { saved.value = false }, 2000)
   } catch (e) {
