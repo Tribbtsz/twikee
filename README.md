@@ -99,10 +99,11 @@ twikee.init({
 
 ```
 twikee/
+├── api/                # Hono API 服务
 ├── packages/
 │   ├── core/           # 核心业务逻辑（数据库适配、认证、评论服务）
-│   ├── frontend/       # Vue 3 前端（评论组件 + 管理面板）
-│   └── api/            # Hono API 服务
+│   └── frontend/       # Vue 3 前端（评论组件 + 管理面板）
+├── scripts/            # 开发脚本
 ├── .env.example        # 环境变量模板
 └── pnpm-workspace.yaml
 ```
