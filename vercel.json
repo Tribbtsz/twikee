@@ -1,10 +1,5 @@
 {
   "installCommand": "pnpm install",
   "buildCommand": "pnpm -F @twikee/core build && pnpm -F @twikee/api build && pnpm -F @twikee/frontend build",
-  "outputDirectory": "packages/frontend/dist",
-  "functions": {
-    "api/index.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  }
+  "outputDirectory": "packages/frontend/dist"
 }

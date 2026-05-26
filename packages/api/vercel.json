@@ -1,9 +1,4 @@
 {
   "buildCommand": "cd ../frontend && pnpm build",
-  "outputDirectory": "../frontend/dist",
-  "functions": {
-    "api/index.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  }
+  "outputDirectory": "../frontend/dist"
 }

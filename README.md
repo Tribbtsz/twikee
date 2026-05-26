@@ -2,7 +2,7 @@
 
 一个现代化的评论系统，基于 Vue 3 + Hono + Turso/libSQL 构建。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tribbtsz/twikee&secret=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,TWIKEE_ADMIN_PASSWORD,TWIKEE_SECRET&envDescription=Required%20environment%20variables&envLink=https://github.com/Tribbtsz/twikee/blob/main/.env.example)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tribbtsz/twikee&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,TWIKEE_ADMIN_PASSWORD,TWIKEE_SECRET&envDescription=Required%20environment%20variables&envLink=https://github.com/Tribbtsz/twikee/blob/main/.env.example)
 
 ## 技术栈
 
