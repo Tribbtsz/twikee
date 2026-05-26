@@ -4,7 +4,7 @@
   "outputDirectory": "packages/frontend/dist",
   "functions": {
     "api/index.ts": {
-      "runtime": "nodejs22.x"
+      "runtime": "@vercel/node@3"
     }
   }
 }
