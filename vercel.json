@@ -1,5 +1,12 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm -F @twikee/core build && pnpm -F @twikee/api build && pnpm -F @twikee/frontend build",
-  "outputDirectory": "packages/frontend/dist"
+  "devCommand": "pnpm -F @twikee/frontend exec vite --host 127.0.0.1",
+  "buildCommand": "pnpm -F @twikee/core build && pnpm -F @twikee/frontend build:site",
+  "outputDirectory": "packages/frontend/dist-site",
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    }
+  ]
 }
