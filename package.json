@@ -12,9 +12,9 @@
     "test": "pnpm -r test"
   },
   "engines": {
-    "node": ">=18"
+    "node": "22.x"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.18.3",
   "keywords": [
     "twikee",
     "comment",
@@ -26,11 +26,14 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^22.19.17",
     "@hono/node-server": "^2.0.0",
     "dotenv": "^17.4.2",
+    "typescript": "^5.9.3",
     "tsx": "^4.21.0"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.12.15"
   }
 }

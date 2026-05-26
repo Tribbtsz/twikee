@@ -173,8 +173,8 @@ const displayUrl = (url: string) => {
   return url.length > 50 ? url.substring(0, 50) + '...' : url
 }
 
-const getPageUrl = (comment: any) => {
-  if (!comment.url) return null
+const getPageUrl = (comment: any): string | undefined => {
+  if (!comment.url) return undefined
   if (props.siteUrl) {
     return `${props.siteUrl}${comment.url}?hl=${comment.id}`
   }

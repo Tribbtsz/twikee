@@ -1,5 +1,5 @@
 {
-  "installCommand": "pnpm install --dev",
+  "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm -F @twikee/core build && pnpm -F @twikee/api build && pnpm -F @twikee/frontend build",
   "outputDirectory": "packages/frontend/dist"
 }

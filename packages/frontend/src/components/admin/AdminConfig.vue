@@ -1,12 +1,27 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import Card from '@/components/ui/Card.vue'
 import CardHeader from '@/components/ui/CardHeader.vue'
 import CardContent from '@/components/ui/CardContent.vue'
 import Input from '@/components/ui/Input.vue'
-import Textarea from '@/components/ui/Textarea.vue'
 import Button from '@/components/ui/Button.vue'
 import { Save, RotateCcw, Mail, Bell, Shield, Image, Globe } from 'lucide-vue-next'
+
+type ConfigItem = {
+  key: string
+  label: string
+  placeholder: string
+  desc: string
+  type?: 'boolean' | 'select'
+  options?: string[]
+  secret?: boolean
+}
+
+type ConfigGroup = {
+  icon: typeof Globe
+  name: string
+  items: ConfigItem[]
+}
 
 const props = defineProps<{
   apiUrl: string
@@ -29,7 +44,7 @@ const checkAuth = (res: Response) => {
   return true
 }
 
-const settings = [
+const settings: ConfigGroup[] = [
   {
     icon: Globe,
     name: '基础设置',
