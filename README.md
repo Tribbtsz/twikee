@@ -4,8 +4,6 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tribbtsz/twikee&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,TWIKEE_ADMIN_PASSWORD,TWIKEE_SECRET&envDescription=Required%20environment%20variables&envLink=https://github.com/Tribbtsz/twikee/blob/main/.env.example)
 
-> **注意**: 部署时需要手动填写环境变量，参考 [.env.example](./.env.example)
-
 ## 技术栈
 
 - **前端**: Vue 3 + Vite + Tailwind CSS 4 + shadcn/ui 风格组件
