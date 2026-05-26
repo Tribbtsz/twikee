@@ -119,7 +119,7 @@ app.post("/api/comment", async (c) => {
 
   // Check if auto-approve is enabled
   const autoApprove = await db!.config.get("AUTO_APPROVE");
-  const needsModeration = autoApprove !== "true";
+  const needsModeration = autoApprove === "false";
 
   let isMaster = false;
   if (body.mail) {

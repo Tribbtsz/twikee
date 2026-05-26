@@ -6,6 +6,7 @@ import Button from './components/ui/Button.vue'
 import Card from './components/ui/Card.vue'
 import CardHeader from './components/ui/CardHeader.vue'
 import CardContent from './components/ui/CardContent.vue'
+import Toast from './components/ui/Toast.vue'
 import { useTwikee } from './composables/useTwikee'
 import { MessageSquare, ShieldCheck } from 'lucide-vue-next'
 
@@ -18,6 +19,11 @@ const replyingTo = ref<string | null>(null)
 const demoEnabled = ref(true)
 const demoCheckDone = ref(false)
 const commentsClosed = ref(false)
+const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' | 'warning' })
+
+const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  toast.value = { open: true, message, type }
+}
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: envId.value,
@@ -75,8 +81,17 @@ const loadComments = async () => {
 }
 
 const handleSubmit = async (data: any) => {
-  await submitComment({ ...data, url: currentUrl.value })
-  await loadComments()
+  try {
+    const result = await submitComment({ ...data, url: currentUrl.value })
+    if (result.isSpam) {
+      showToast('评论已提交，正在等待博主审核', 'warning')
+    } else {
+      showToast('评论发表成功', 'success')
+    }
+    await loadComments()
+  } catch {
+    showToast('评论发表失败，请稍后重试', 'error')
+  }
 }
 
 onMounted(async () => {
@@ -240,6 +255,12 @@ watch(page, loadComments)
         <span>MIT License</span>
       </div>
     </footer>
+
+    <Toast
+      v-model:open="toast.open"
+      :message="toast.message"
+      :type="toast.type"
+    />
   </div>
 </template>
 

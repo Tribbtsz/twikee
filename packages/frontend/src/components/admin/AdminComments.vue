@@ -5,6 +5,8 @@ import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Input from '@/components/ui/Input.vue'
+import Dialog from '@/components/ui/Dialog.vue'
+import Toast from '@/components/ui/Toast.vue'
 import { 
   Eye, EyeOff, Trash2, Pin, PinOff, RefreshCw, Search, 
   ArrowLeft, FileText, MessageSquare, ExternalLink 
@@ -27,6 +29,14 @@ const checkAuth = (res: Response) => {
     return false
   }
   return true
+}
+
+const showDeleteDialog = ref(false)
+const deleteTargetId = ref<string | null>(null)
+const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' })
+
+const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  toast.value = { open: true, message, type }
 }
 
 const pages = ref<{ url: string; count: number; spamCount: number; lastComment: number }[]>([])
@@ -129,7 +139,9 @@ const tabCounts = computed(() => {
 
 const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
   if (action === 'delete') {
-    if (!window.confirm('确定要删除这条评论吗？此操作不可恢复。')) return
+    deleteTargetId.value = id
+    showDeleteDialog.value = true
+    return
   }
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/comment/${id}/moderate`, {
@@ -141,10 +153,31 @@ const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
       body: JSON.stringify({ action })
     })
     if (!checkAuth(res)) return
+    showToast(action === 'approve' ? '评论已通过' : '评论已移至待审核', 'success')
     await fetchComments(currentUrl.value!)
     emit('refresh')
   } catch (e) {
-    console.error('操作失败', e)
+    showToast('操作失败', 'error')
+  }
+}
+
+const confirmDelete = async () => {
+  if (!deleteTargetId.value) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/admin/comment/${deleteTargetId.value}/moderate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${props.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action: 'delete' })
+    })
+    if (!checkAuth(res)) return
+    showToast('评论已删除', 'success')
+    await fetchComments(currentUrl.value!)
+    emit('refresh')
+  } catch (e) {
+    showToast('删除失败', 'error')
   }
 }
 
@@ -389,5 +422,20 @@ watch(pagesPage, () => {}, { flush: 'post' })
         </div>
       </div>
     </div>
+
+    <Dialog
+      v-model:open="showDeleteDialog"
+      title="删除评论"
+      description="确定要删除这条评论吗？此操作不可恢复。"
+      confirm-text="删除"
+      variant="destructive"
+      @confirm="confirmDelete"
+    />
+
+    <Toast
+      v-model:open="toast.open"
+      :message="toast.message"
+      :type="toast.type"
+    />
   </div>
 </template>

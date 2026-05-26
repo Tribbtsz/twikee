@@ -116,6 +116,7 @@ const handleLogin = async () => {
             <Input
               v-model="password"
               type="password"
+              autocomplete="current-password"
               placeholder="管理员密码"
               class="pl-10"
             />
@@ -140,6 +141,7 @@ const handleLogin = async () => {
             <Input
               v-model="password"
               type="password"
+              autocomplete="new-password"
               placeholder="设置密码 (至少 6 位)"
               class="pl-10"
             />
@@ -150,6 +152,7 @@ const handleLogin = async () => {
             <Input
               v-model="confirmPassword"
               type="password"
+              autocomplete="new-password"
               placeholder="确认密码"
               class="pl-10"
             />

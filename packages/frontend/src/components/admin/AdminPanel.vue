@@ -7,6 +7,8 @@ import AdminImportExport from './AdminImportExport.vue'
 import Card from '@/components/ui/Card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
+import Dialog from '@/components/ui/Dialog.vue'
+import Toast from '@/components/ui/Toast.vue'
 import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -18,6 +20,12 @@ const activeTab = ref('comments')
 const stats = ref({ total: 0, approved: 0, pending: 0 })
 const siteUrl = ref('')
 const commentsClosed = ref(false)
+const showCloseDialog = ref(false)
+const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' })
+
+const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  toast.value = { open: true, message, type }
+}
 
 const isLoggedIn = computed(() => !!token.value)
 
@@ -52,8 +60,18 @@ const fetchCommentsClosed = async () => {
 }
 
 const toggleCommentsClosed = async () => {
-  const newValue = !commentsClosed.value
-  if (newValue && !window.confirm('确定要关闭评论吗？所有新评论将被拒绝。')) return
+  if (!commentsClosed.value) {
+    showCloseDialog.value = true
+    return
+  }
+  await applyCommentsClosed(false)
+}
+
+const confirmCloseComments = async () => {
+  await applyCommentsClosed(true)
+}
+
+const applyCommentsClosed = async (newValue: boolean) => {
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
       method: 'POST',
@@ -65,7 +83,10 @@ const toggleCommentsClosed = async () => {
     })
     if (!checkAuth(res)) return
     commentsClosed.value = newValue
-  } catch {}
+    showToast(newValue ? '评论已关停' : '评论已开启', 'success')
+  } catch {
+    showToast('操作失败', 'error')
+  }
 }
 
 const fetchStats = async () => {
@@ -231,5 +252,20 @@ const tabs = [
         :token="token"
       />
     </main>
+
+    <Dialog
+      v-model:open="showCloseDialog"
+      title="关停评论"
+      description="确定要关闭评论吗？所有新评论将被拒绝，直到重新开启。"
+      confirm-text="关停"
+      variant="destructive"
+      @confirm="confirmCloseComments"
+    />
+
+    <Toast
+      v-model:open="toast.open"
+      :message="toast.message"
+      :type="toast.type"
+    />
   </div>
 </template>
