@@ -12,7 +12,7 @@
     "test": "pnpm -r test"
   },
   "engines": {
-    "node": "22.x"
+    "node": ">=18"
   },
   "packageManager": "pnpm@10.18.3",
   "keywords": [
