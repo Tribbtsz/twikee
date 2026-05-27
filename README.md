@@ -115,7 +115,10 @@ twikee/
 ├── .env.example        # 环境变量模板
 └── pnpm-workspace.yaml
 ```
+## Credits
+
+Refactored from [Twikoo](https://github.com/twikoojs/twikoo). Thanks to the original authors.
 
 ## License
 
-MIT
+MIT 
