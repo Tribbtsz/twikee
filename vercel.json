@@ -5,6 +5,10 @@
   "outputDirectory": "packages/frontend/dist-site",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "/api/[...slug]"
+    },
+    {
       "source": "/admin",
       "destination": "/admin.html"
     }
