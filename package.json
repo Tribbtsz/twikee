@@ -2,6 +2,7 @@
   "name": "twikee-v3",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "A modern comment system - Vue3 + Hono + Turso",
   "scripts": {
     "dev": "tsx scripts/dev.ts",
