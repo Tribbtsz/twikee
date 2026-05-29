@@ -9,8 +9,11 @@
     "dev:api": "pnpm --filter @twikee/api dev",
     "dev:frontend": "pnpm --filter @twikee/frontend dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,vue,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,vue,json,md}\"",
+    "lint": "pnpm -r lint"
   },
   "engines": {
     "node": ">=18"
@@ -30,6 +33,7 @@
     "@hono/node-server": "^2.0.0",
     "@types/node": "^22.19.17",
     "dotenv": "^17.4.2",
+    "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

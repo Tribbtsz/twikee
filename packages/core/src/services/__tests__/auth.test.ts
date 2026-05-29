@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { AuthService } from '../auth'
 import { createHash } from 'crypto'
 import { DatabaseAdapter } from '../../adapters/base'
-import type { UserRepository, ConfigRepository } from '../../types'
+import type { UserRepository, ConfigRepository } from '../../adapters/base'
 
 class MockConfigRepo implements ConfigRepository {
   store = new Map<string, string>()

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import type { AuthService } from '@twikee/core'
 import type { TursoAdapter } from '@twikee/core'
+import { AuthService } from '@twikee/core'
 import { SetupSchema, LoginSchema } from '../validation'
 
 type Env = {

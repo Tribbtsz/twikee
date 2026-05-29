@@ -9,6 +9,7 @@
     "build": "tsup",
     "deploy": "vercel deploy",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },
   "dependencies": {

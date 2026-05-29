@@ -2,9 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { CommentService } from '../comment'
 import { DatabaseAdapter } from '../../adapters/base'
 import type {
-  Comment, CreateCommentInput, CommentQuery,
   CommentRepository, UserRepository, ConfigRepository,
   CommentStats,
+} from '../../adapters/base'
+import type {
+  Comment, CreateCommentInput, CommentQuery,
 } from '../../types'
 
 class MockCommentRepo implements CommentRepository {

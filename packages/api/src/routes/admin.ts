@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import type { CommentService, AuthService, TursoAdapter } from '@twikee/core'
+import type { CommentService, TursoAdapter } from '@twikee/core'
+import { AuthService } from '@twikee/core'
 import { AdminCommentQuerySchema, AdminConfigSchema, ModerateSchema, TopSchema } from '../validation'
 
 type Env = {
@@ -23,7 +24,7 @@ export function createAdminRoutes() {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
     const { url, page, pageSize, includeSpam } = parsed.data
-    const result = await c.var.commentService.getList({ url, page, pageSize, includeSpam })
+    const result = await c.var.commentService.getList({ url: url || '', page, pageSize, includeSpam })
     return c.json(result)
   })
 

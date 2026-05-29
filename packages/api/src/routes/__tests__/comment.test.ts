@@ -22,7 +22,13 @@ function makeApp() {
     like: async (id: string, uid: string) => db.comments.like(id, uid),
   }
 
-  const app = new Hono()
+  const app = new Hono<{
+    Variables: {
+      db: any
+      commentService: any
+      notificationService: any
+    }
+  }>()
   app.use('*', async (c, next) => {
     c.set('db', db)
     c.set('commentService', commentService)
