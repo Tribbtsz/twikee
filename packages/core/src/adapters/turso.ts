@@ -1,5 +1,3 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { createClient, type Client } from "@libsql/client/web";
 import type {
   Comment,
@@ -17,6 +15,8 @@ import {
   type UserRepository,
   type ConfigRepository,
 } from "./base";
+import { MigrationRunner } from "../migrations/runner";
+import { migrations } from "../migrations";
 
 class TursoCommentRepository implements CommentRepository {
   private client: Client;
@@ -409,68 +409,8 @@ export class TursoAdapter extends DatabaseAdapter {
   }
 
   async init(): Promise<void> {
-    // 自动创建本地数据库文件所在目录
-    const url = this._config.url;
-    if (url.startsWith("file:")) {
-      const filePath = url.slice(5);
-      mkdirSync(dirname(filePath), { recursive: true });
-    } else if (url.startsWith("./") || url.startsWith("/")) {
-      mkdirSync(dirname(url), { recursive: true });
-    }
-
-    await this.client.batch([
-      `CREATE TABLE IF NOT EXISTS comments (
-        id TEXT PRIMARY KEY,
-        url TEXT NOT NULL,
-        nick TEXT NOT NULL,
-        mail TEXT,
-        link TEXT,
-        content TEXT NOT NULL,
-        ua TEXT,
-        ip TEXT,
-        master INTEGER DEFAULT 0,
-        top INTEGER DEFAULT 0,
-        rid TEXT,
-        pid TEXT,
-        pinned_from_id TEXT,
-        is_spam INTEGER DEFAULT 0,
-        likes INTEGER DEFAULT 0,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER
-      )`,
-      `CREATE INDEX IF NOT EXISTS idx_comments_url ON comments(url)`,
-      `CREATE INDEX IF NOT EXISTS idx_comments_created ON comments(created_at)`,
-      `CREATE INDEX IF NOT EXISTS idx_comments_rid ON comments(rid)`,
-
-      `CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        nick TEXT NOT NULL,
-        mail TEXT UNIQUE,
-        link TEXT,
-        avatar TEXT,
-        created_at INTEGER NOT NULL
-      )`,
-
-      `CREATE TABLE IF NOT EXISTS config (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at INTEGER NOT NULL
-      )`,
-
-      `CREATE TABLE IF NOT EXISTS likes (
-        comment_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        PRIMARY KEY (comment_id, user_id)
-      )`,
-    ]);
-
-    // Ensure pinned_from_id column exists for existing databases
-    try {
-      await this.client.execute("ALTER TABLE comments ADD COLUMN pinned_from_id TEXT");
-    } catch {
-      // Column already exists, ignore
-    }
+    const runner = new MigrationRunner(this.client)
+    await runner.run(migrations)
   }
 
   async close(): Promise<void> {
