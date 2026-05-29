@@ -1,4 +1,5 @@
-import { createClient, type Client } from "@libsql/client/web";
+import { createClient } from "@tursodatabase/serverless/compat";
+import type { Client } from "@tursodatabase/serverless/compat";
 import type {
   Comment,
   User,

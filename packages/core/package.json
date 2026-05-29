@@ -17,9 +17,10 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@libsql/client": "^0.14.0",
+    "@tursodatabase/serverless": "1.2.0-pre.2",
     "bcryptjs": "^3.0.3",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

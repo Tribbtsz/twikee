@@ -1,6 +1,24 @@
 import type { Ref } from 'vue'
 import { ref, computed } from 'vue'
 
+export interface TwikeeComment {
+  id: string
+  url: string
+  nick: string
+  mail?: string
+  link?: string
+  content: string
+  master: boolean
+  top: boolean
+  rid?: string
+  pid?: string
+  pinnedFromId?: string
+  isSpam: boolean
+  likes: number
+  createdAt: number
+  updatedAt?: number
+}
+
 export interface TwikeeOptions {
   envId: string
   el: string | Element
@@ -9,7 +27,7 @@ export interface TwikeeOptions {
 export function useTwikee(options: TwikeeOptions) {
   const loading = ref(true)
   const error = ref<string | null>(null)
-  const comments = ref<any[]>([])
+  const comments = ref<TwikeeComment[]>([])
   const config = ref<Record<string, any>>({})
   
   const baseUrl = computed(() => {

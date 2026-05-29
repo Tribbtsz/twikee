@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@twikee/core": "workspace:*",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@hono/node-server": "^2.0.0",
