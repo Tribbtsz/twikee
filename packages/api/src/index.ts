@@ -14,6 +14,7 @@ import { createCommentRoutes } from './routes/comment'
 import { createAuthRoutes } from './routes/auth'
 import { createAdminRoutes } from './routes/admin'
 import { requireAdmin } from './middleware/auth'
+import { demoGuard } from './middleware/demo'
 
 const app = new Hono<{
   Variables: {
@@ -124,6 +125,7 @@ app.get('/api/config', async (c) => {
 
 app.route('/api/comment', createCommentRoutes())
 app.route('/api/auth', createAuthRoutes())
+app.use('/api/admin/*', demoGuard())
 app.route('/api/admin', createAdminRoutes())
 
 app.onError((err, c) => {
