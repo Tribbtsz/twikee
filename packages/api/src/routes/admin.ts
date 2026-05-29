@@ -72,12 +72,20 @@ export function createAdminRoutes() {
   })
 
   app.delete('/comment/:id', async (c) => {
+    const demoEnabled = await c.var.db.config.get('DEMO_ENABLED')
+    if (demoEnabled !== 'false') {
+      return c.json({ error: 'Not available in demo mode' }, 403)
+    }
     const id = c.req.param('id')
     await c.var.commentService.delete(id)
     return c.json({ success: true })
   })
 
   app.post('/import', async (c) => {
+    const demoEnabled = await c.var.db.config.get('DEMO_ENABLED')
+    if (demoEnabled !== 'false') {
+      return c.json({ error: 'Not available in demo mode' }, 403)
+    }
     const body = await c.req.json()
     if (!Array.isArray(body)) {
       return c.json({ error: 'Expected an array of comments' }, 400)
@@ -132,9 +140,15 @@ export function createAdminRoutes() {
   })
 
   app.post('/config', async (c) => {
+    const demoEnabled = await c.var.db.config.get('DEMO_ENABLED')
     const body = await c.req.json()
     for (const [key, value] of Object.entries(body)) {
-      if (key === 'ADMIN_PASSWORD' && value) {
+      if (demoEnabled !== 'false') {
+        if (key === 'ADMIN_PASSWORD' || key === 'DEMO_ENABLED' || key === 'COMMENTS_CLOSED' || key === 'AUTO_APPROVE') {
+          continue
+        }
+      }
+      if (key === 'ADMIN_PASSWORD') {
         const hashed = await AuthService.hashPassword(value as string)
         await c.var.db.config.set(key, hashed)
       } else {
