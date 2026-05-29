@@ -61,6 +61,9 @@ importers:
       vercel:
         specifier: ^39.0.0
         version: 39.4.2(rollup@4.60.2)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@edge-runtime/vm@3.2.0)(@types/node@22.19.17)(lightningcss@1.32.0)
 
   packages/core:
     dependencies:
