@@ -6,7 +6,7 @@ export { Admin }
 export { useTwikee } from './composables/useTwikee'
 export type { TwikeeOptions } from './composables/useTwikee'
 
-export function init(options: { el: string | Element; envId: string; lang?: string; dark?: string }) {
+export function init(options: { el: string | Element; envId: string; dark?: string }) {
   const { el, envId } = options
   const container = typeof el === 'string' ? document.querySelector(el) : el
   

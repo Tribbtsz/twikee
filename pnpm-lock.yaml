@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@tursodatabase/serverless':
+        specifier: 1.2.0-pre.2
+        version: 1.2.0-pre.2
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -1051,6 +1054,9 @@ packages:
   '@tsconfig/node16@1.0.4':
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
 
+  '@tursodatabase/serverless@1.2.0-pre.2':
+    resolution: {integrity: sha512-yxxLU1P6xeSATKrzg61JosiQmYlvjCx3AeNpkSL6NVs0wgPHr4eV8nH03nBhScSmax4lWlnnaRh8q3su1YrkPA==}
+
   '@types/argparse@1.0.38':
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
 
@@ -2002,6 +2008,7 @@ packages:
 
   lucide-vue-next@0.460.0:
     resolution: {integrity: sha512-IhM1tm3gPhc3u6RagNra4W6Oe48Mz0l3fAJzk0oSLzsRQqt3WU3XiX5ngRyjIs8fzCtvgzu7fC6Qk7XVhS00DQ==}
+    deprecated: Package deprecated. Please use @lucide/vue instead.
     peerDependencies:
       vue: '>=3.0.1'
 
@@ -2586,7 +2593,7 @@ packages:
 
   uuid@3.3.2:
     resolution: {integrity: sha512-yXJmeNaw3DnnKAOKJE51sL/ZaYfWJRl1pK9dr19YFCu0ObS231AB1/LbqTKRAQ5kw8A90rA6fr4riOUpTZvQZA==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -3461,6 +3468,8 @@ snapshots:
   '@tsconfig/node14@1.0.3': {}
 
   '@tsconfig/node16@1.0.4': {}
+
+  '@tursodatabase/serverless@1.2.0-pre.2': {}
 
   '@types/argparse@1.0.38': {}
 
