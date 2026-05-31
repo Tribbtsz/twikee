@@ -4,6 +4,8 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tribbtsz/twikee&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,TWIKEE_ADMIN_PASSWORD,TWIKEE_SECRET&envDescription=Required%20environment%20variables&envLink=https://github.com/Tribbtsz/twikee/blob/main/.env.example)
 
+> 点击按钮一键试用。生产环境建议先 **Fork** 仓库，再将 fork 导入 Vercel 部署，方便后续更新。
+
 ## Demo
 
 - 演示页面: https://twikee.vercel.app/
@@ -81,6 +83,10 @@ twikee.init({
 })
 </script>
 ```
+
+## 更新
+
+上游有更新时，在你的 fork 仓库点击 **Sync fork → Update branch** 即可，Vercel 会自动部署。
 
 ## API 接口
 
