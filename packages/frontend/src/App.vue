@@ -191,6 +191,26 @@ watch(page, loadComments)
 
 <style scoped>
 .twikee-container {
+  --background: var(--twikee-background, var(--background));
+  --foreground: var(--twikee-foreground, var(--foreground));
+  --card: var(--twikee-card, var(--card));
+  --card-foreground: var(--twikee-card-foreground, var(--card-foreground));
+  --popover: var(--twikee-popover, var(--popover));
+  --popover-foreground: var(--twikee-popover-foreground, var(--popover-foreground));
+  --primary: var(--twikee-primary, var(--primary));
+  --primary-foreground: var(--twikee-primary-foreground, var(--primary-foreground));
+  --secondary: var(--twikee-secondary, var(--secondary));
+  --secondary-foreground: var(--twikee-secondary-foreground, var(--secondary-foreground));
+  --muted: var(--twikee-muted, var(--muted));
+  --muted-foreground: var(--twikee-muted-foreground, var(--muted-foreground));
+  --accent: var(--twikee-accent, var(--accent));
+  --accent-foreground: var(--twikee-accent-foreground, var(--accent-foreground));
+  --destructive: var(--twikee-destructive, var(--destructive));
+  --destructive-foreground: var(--twikee-destructive-foreground, var(--destructive-foreground));
+  --border: var(--twikee-border, var(--border));
+  --input: var(--twikee-input, var(--input));
+  --ring: var(--twikee-ring, var(--ring));
+  --radius: var(--twikee-radius, var(--radius));
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
