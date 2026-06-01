@@ -2,13 +2,15 @@ import App from './App.vue'
 import Admin from './Admin.vue'
 import { createApp } from 'vue'
 import './styles/index.css'
+import type { TwikeeInitOptions } from './types'
 
 export { App, Admin }
 export { useTwikee } from './composables/useTwikee'
 export type { TwikeeOptions } from './composables/useTwikee'
+export type { TwikeeAppearanceOptions, TwikeeInitOptions } from './types'
 
-export function init(options: { el: string | Element; envId: string }) {
-  const { el, envId } = options
+export function init(options: TwikeeInitOptions) {
+  const { el, envId, appearance } = options
   const container = typeof el === 'string' ? document.querySelector(el) : el
 
   if (!container) {
@@ -16,7 +18,7 @@ export function init(options: { el: string | Element; envId: string }) {
     return
   }
 
-  const app = createApp(App, { envId })
+  const app = createApp(App, { envId, appearance })
   app.mount(container)
 
   return app

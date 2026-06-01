@@ -1,10 +1,8 @@
 # Twikee
 
-一个现代化的评论系统，基于 Vue 3 + Hono + Turso/libSQL 构建。
+一个轻量评论系统，基于 Vue 3 + Hono + Turso/libSQL 构建。
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tribbtsz/twikee&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,TWIKEE_ADMIN_PASSWORD,TWIKEE_SECRET&envDescription=Required%20environment%20variables&envLink=https://github.com/Tribbtsz/twikee/blob/main/.env.example)
-
-> 点击按钮一键试用。生产环境建议先 **Fork** 仓库，再将 fork 导入 Vercel 部署，方便后续更新。
 
 ## Demo
 
@@ -12,119 +10,36 @@
 - 管理后台: https://twikee.vercel.app/admin
 - 管理员密码: `Admin123`
 
-## 技术栈
-
-- **前端**: Vue 3 + Vite + Tailwind CSS 4 + shadcn/ui 风格组件
-- **后端**: Hono.js (轻量级跨平台框架)
-- **数据库**: Turso (libSQL/SQLite 兼容)
-- **部署**: Vercel / Netlify / Cloudflare Workers (预留)
-
 ## 快速开始
-
-### 1. 安装依赖
 
 ```bash
 pnpm install
-```
-
-### 2. 本地开发（使用本地 SQLite）
-
-复制环境变量模板:
-
-```bash
 cp .env.example .env
-```
-
-编辑 `.env`，设置以下变量:
-
-```bash
-# 本地 SQLite（默认即可，无需修改）
-TURSO_DATABASE_URL=file:./data/twikee.db
-TURSO_AUTH_TOKEN=
-
-# 必填：管理员密码和 JWT 密钥
-TWIKEE_ADMIN_PASSWORD=your-password
-TWIKEE_SECRET=your-secret-key
-```
-
-启动开发服务器:
-
-```bash
 pnpm dev
 ```
 
-启动后访问 `http://localhost:5173` 查看 Demo 页面，`http://localhost:5173/admin` 进入管理面板。
+本地访问 `http://localhost:5173`，管理后台访问 `http://localhost:5173/admin`。
 
-API 服务运行在 `http://localhost:3000`，首次启动会自动创建 SQLite 数据库文件。
-
-### 3. 生产部署（Turso 云数据库）
-
-在 Vercel 或其他平台设置以下环境变量:
-
-```bash
-TURSO_DATABASE_URL=libsql://your-db.turso.io
-TURSO_AUTH_TOKEN=your-turso-auth-token
-TWIKEE_ADMIN_PASSWORD=your-admin-password
-TWIKEE_SECRET=your-secret-key
-```
-
-## 前端使用
-
-在网站中引入:
+## 前端接入
 
 ```html
-<script src="https://your-domain.com/twikee.es.js"></script>
 <link rel="stylesheet" href="https://your-domain.com/style.css">
+<script src="https://your-domain.com/twikee.umd.js"></script>
 <script>
 twikee.init({
   el: '#comment',
-  envId: 'https://your-api-domain.com',
-  lang: 'zh-CN'
+  envId: 'https://your-api-domain.com'
 })
 </script>
 ```
 
-## 更新
+## 文档
 
-上游有更新时，在你的 fork 仓库点击 **Sync fork → Update branch** 即可，Vercel 会自动部署。
-
-## API 接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/comment | 获取评论列表 |
-| POST | /api/comment | 创建评论 |
-| POST | /api/comment/:id/like | 点赞 |
-| GET | /api/config | 获取公开配置 |
-| POST | /api/auth/setup | 初始化密码 |
-| POST | /api/auth/login | 管理员登录 |
-| GET | /api/admin/comments | 管理评论列表 |
-| POST | /api/admin/config | 更新配置 |
-
-## 通知推送 (可选)
-
-支持以下通知渠道，在管理面板中配置:
-
-- Telegram Bot
-- Webhook
-- Email (Resend)
-
-## 项目结构
-
-```
-twikee/
-├── api/                # Hono API 服务
-├── packages/
-│   ├── core/           # 核心业务逻辑（数据库适配、认证、评论服务）
-│   └── frontend/       # Vue 3 前端（评论组件 + 管理面板）
-├── scripts/            # 开发脚本
-├── .env.example        # 环境变量模板
-└── pnpm-workspace.yaml
-```
-## Credits
-
-Refactored from [Twikoo](https://github.com/twikoojs/twikoo). Thanks to the original authors.
+- [部署](./docs/deployment.md)
+- [前端接入](./docs/frontend.md)
+- [外观配置](./docs/appearance.md)
+- [API](./docs/api.md)
 
 ## License
 
-MIT 
+MIT

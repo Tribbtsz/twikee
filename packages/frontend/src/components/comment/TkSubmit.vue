@@ -199,6 +199,15 @@ const handleSubmit = async () => {
   background: var(--muted);
 }
 
+:global(.twikee-container[data-submit-style='minimal']) .tk-submit {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
+:global(.twikee-container[data-fields-layout='inline']) .tk-submit .grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .tk-submit :deep(input),
 .tk-submit :deep(textarea) {
   border: none;
@@ -206,10 +215,24 @@ const handleSubmit = async () => {
   box-shadow: none;
 }
 
+:global(.twikee-container[data-submit-style='minimal']) .tk-submit :deep(input),
+:global(.twikee-container[data-submit-style='minimal']) .tk-submit :deep(textarea),
+:global(.twikee-container[data-submit-style='minimal']) .tk-submit__preview {
+  background: transparent;
+}
+
 .tk-submit :deep(input:focus),
 .tk-submit :deep(textarea:focus) {
   outline: none;
   box-shadow: 0 0 0 1px var(--ring);
+}
+
+:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(input:focus),
+:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(textarea:focus),
+:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(input:focus-visible),
+:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(textarea:focus-visible) {
+  outline: none;
+  box-shadow: none;
 }
 
 .tk-submit__field {

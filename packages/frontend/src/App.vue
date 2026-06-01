@@ -4,11 +4,16 @@ import { useTwikee } from './composables/useTwikee'
 import TkComment from './components/comment/TkComment.vue'
 import TkSubmit from './components/comment/TkSubmit.vue'
 import Button from './components/ui/Button.vue'
+import { resolveAppearance } from './types'
 import './styles/index.css'
+import type { TwikeeAppearanceOptions } from './types'
 
 const props = withDefaults(defineProps<{
   envId: string
+  appearance?: TwikeeAppearanceOptions
 }>(), {})
+
+const appearance = computed(() => resolveAppearance(props.appearance))
 
 const apiUrl = computed(() => {
   if (!props.envId) return ''
@@ -120,7 +125,15 @@ watch(page, loadComments)
 </script>
 
 <template>
-  <div id="twikee-comment" class="twikee-container max-w-3xl mx-auto">
+  <div
+    id="twikee-comment"
+    class="twikee-container max-w-3xl mx-auto"
+    :data-appearance="appearance.preset"
+    :data-submit-style="appearance.submit"
+    :data-fields-layout="appearance.fieldsLayout"
+    :data-header-divider="appearance.headerDivider"
+    :data-input-focus-ring="appearance.inputFocusRing"
+  >
     <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
       评论已关闭
     </div>
@@ -256,6 +269,10 @@ watch(page, loadComments)
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border);
+}
+
+.twikee-container[data-header-divider='false'] .tk-comments-header {
+  border-bottom: none;
 }
 
 .tk-comments-title {
