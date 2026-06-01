@@ -290,14 +290,14 @@ watch(page, loadComments)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.25rem;
-  height: 1.25rem;
-  padding: 0 0.375rem;
-  font-size: 0.6875rem;
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  font-size: 0.8125rem;
   font-weight: 600;
-  border-radius: 9999px;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted-foreground);
 }
 
 .tk-comments {

@@ -41,9 +41,16 @@ const avatarUrl = computed(() => {
     />
     <div 
       v-else
-      class="w-full h-full rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-medium text-sm"
+      class="tk-avatar__fallback w-full h-full rounded-full flex items-center justify-center font-medium text-sm"
     >
       {{ nick?.charAt(0)?.toUpperCase() || 'U' }}
     </div>
   </div>
 </template>
+
+<style scoped>
+.tk-avatar__fallback {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+</style>

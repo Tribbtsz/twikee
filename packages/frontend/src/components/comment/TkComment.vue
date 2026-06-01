@@ -449,7 +449,8 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
   left: 3.25rem;
   right: 0;
   height: 1px;
-  background: var(--border);
+  border-bottom: 1px dashed var(--border);
+  opacity: 0.65;
 }
 
 .tk-comment__inner {

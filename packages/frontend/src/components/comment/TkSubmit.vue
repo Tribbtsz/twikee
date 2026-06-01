@@ -180,7 +180,7 @@ const handleSubmit = async () => {
           <div class="flex gap-2">
             <Button
               v-if="rid"
-              variant="outline"
+              variant="ghost"
               size="sm"
               @click="emit('cancel')"
             >
