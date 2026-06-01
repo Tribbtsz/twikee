@@ -6,11 +6,13 @@ import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
 import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/utils'
+import type { ResolvedTwikeeAppearance } from '@/types'
 
 const props = defineProps<{
   url: string
   rid?: string
   pid?: string
+  appearance?: ResolvedTwikeeAppearance
 }>()
 
 const emit = defineEmits<{
@@ -87,6 +89,12 @@ const previewHtml = computed(() => {
   return sanitizeHtml(marked.parse(content.value) as string)
 })
 
+const submitClasses = computed(() => ({
+  'tk-submit--minimal': props.appearance?.submit === 'minimal',
+  'tk-submit--fields-inline': props.appearance?.fieldsLayout === 'inline',
+  'tk-submit--no-focus-ring': props.appearance?.inputFocusRing === false,
+}))
+
 const handleSubmit = async () => {
   mailTouched.value = true
   linkTouched.value = true
@@ -112,7 +120,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="tk-submit">
+  <div class="tk-submit" :class="submitClasses">
     <div class="flex gap-3">
       <TkAvatar :nick="nick || '用户'" :mail="mail" size="md" />
 
@@ -199,12 +207,12 @@ const handleSubmit = async () => {
   background: var(--muted);
 }
 
-:global(.twikee-container[data-submit-style='minimal']) .tk-submit {
+.tk-submit--minimal {
   background: transparent;
   border: 1px dashed var(--border);
 }
 
-:global(.twikee-container[data-fields-layout='inline']) .tk-submit .grid {
+.tk-submit--fields-inline .grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -215,9 +223,9 @@ const handleSubmit = async () => {
   box-shadow: none;
 }
 
-:global(.twikee-container[data-submit-style='minimal']) .tk-submit :deep(input),
-:global(.twikee-container[data-submit-style='minimal']) .tk-submit :deep(textarea),
-:global(.twikee-container[data-submit-style='minimal']) .tk-submit__preview {
+.tk-submit--minimal :deep(input),
+.tk-submit--minimal :deep(textarea),
+.tk-submit--minimal .tk-submit__preview {
   background: transparent;
 }
 
@@ -227,10 +235,10 @@ const handleSubmit = async () => {
   box-shadow: 0 0 0 1px var(--ring);
 }
 
-:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(input:focus),
-:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(textarea:focus),
-:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(input:focus-visible),
-:global(.twikee-container[data-input-focus-ring='false']) .tk-submit :deep(textarea:focus-visible) {
+.tk-submit--no-focus-ring :deep(input:focus),
+.tk-submit--no-focus-ring :deep(textarea:focus),
+.tk-submit--no-focus-ring :deep(input:focus-visible),
+.tk-submit--no-focus-ring :deep(textarea:focus-visible) {
   outline: none;
   box-shadow: none;
 }

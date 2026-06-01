@@ -9,6 +9,7 @@ import TkSubmit from './TkSubmit.vue'
 import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/utils'
 import type { Comment } from '@twikee/core'
+import type { ResolvedTwikeeAppearance } from '@/types'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -22,7 +23,11 @@ const props = defineProps({
   isAdmin: { type: Boolean, default: false },
   apiUrl: { type: String, default: '' },
   isReply: { type: Boolean, default: false },
-  showDivider: { type: Boolean, default: false }
+  showDivider: { type: Boolean, default: false },
+  appearance: {
+    type: Object as PropType<ResolvedTwikeeAppearance>,
+    default: undefined,
+  },
 })
 
 const emit = defineEmits<{
@@ -308,6 +313,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
           <TkSubmit
             :url="comment.url"
             :rid="comment.id"
+            :appearance="appearance"
             @submit="handleReplySubmit"
             @cancel="replyingToId = null"
           />
@@ -404,6 +410,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
               <TkSubmit
                 :url="comment.url"
                 :rid="child.id"
+                :appearance="appearance"
                 @submit="(data: any) => handleChildReplySubmit(data, child.id)"
                 @cancel="replyingToId = null"
               />

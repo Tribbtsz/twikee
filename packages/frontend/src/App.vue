@@ -141,6 +141,7 @@ watch(page, loadComments)
       <TkSubmit
         v-if="!replyingTo"
         :url="currentUrl"
+        :appearance="appearance"
         @submit="handleSubmit"
       />
     </div>
@@ -161,6 +162,7 @@ watch(page, loadComments)
         :api-url="apiUrl"
         :replying="replyingTo === comment.id"
         :show-divider="index < commentTree.length - 1"
+        :appearance="appearance"
         @reply="handleReply"
         @load="loadComments"
       />
