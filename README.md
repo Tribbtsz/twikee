@@ -4,12 +4,6 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Tribbtsz/twikee&env=TURSO_DATABASE_URL,TURSO_AUTH_TOKEN,TWIKEE_ADMIN_PASSWORD,TWIKEE_SECRET&envDescription=Required%20environment%20variables&envLink=https://github.com/Tribbtsz/twikee/blob/main/.env.example)
 
-## Demo
-
-- 演示页面: https://twikee.vercel.app/
-- 管理后台: https://twikee.vercel.app/admin
-- 管理员密码: `Admin123`
-
 ## 快速开始
 
 ```bash
