@@ -10,11 +10,11 @@ const props = defineProps({
   gravatarCdn: { type: String, default: 'https://gravatar.com/avatar/' }
 })
 
-const sizeClasses = computed(() => {
+const sizeStyles = computed(() => {
   const sizes = {
-    sm: 'w-8 h-8',
-    md: 'w-10 h-10',
-    lg: 'w-12 h-12'
+    sm: 'width: 2rem; height: 2rem;',
+    md: 'width: 2.5rem; height: 2.5rem;',
+    lg: 'width: 3rem; height: 3rem;'
   }
   return sizes[props.size]
 })
@@ -31,7 +31,7 @@ const avatarUrl = computed(() => {
 </script>
 
 <template>
-  <div :class="sizeClasses" class="relative shrink-0">
+  <div :style="sizeStyles" class="relative shrink-0">
     <img
       v-if="avatarUrl"
       :src="avatarUrl"
