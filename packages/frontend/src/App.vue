@@ -5,7 +5,6 @@ import TkComment from './components/comment/TkComment.vue'
 import TkSubmit from './components/comment/TkSubmit.vue'
 import Button from './components/ui/Button.vue'
 import { resolveAppearance } from './types'
-import './styles/index.css'
 import type { TwikeeAppearanceOptions } from './types'
 
 const props = withDefaults(defineProps<{

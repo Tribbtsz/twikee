@@ -1,7 +1,7 @@
 import { spawn } from 'child_process'
 import { resolve } from 'path'
 
-const rootDir = resolve(__dirname, '..')
+const rootDir = resolve(import.meta.dirname, '..')
 
 console.log('🚀 Starting Twikee development server...\n')
 

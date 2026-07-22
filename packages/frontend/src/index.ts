@@ -1,7 +1,7 @@
 import App from './App.vue'
 import Admin from './Admin.vue'
 import { createApp } from 'vue'
-import './styles/index.css'
+import './styles/widget.css'
 import type { TwikeeInitOptions } from './types'
 
 export { App, Admin }

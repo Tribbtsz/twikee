@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AdminPanel from './components/admin/AdminPanel.vue'
-import './styles/index.css'
 
 const props = withDefaults(defineProps<{
   envId: string
