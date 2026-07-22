@@ -36,12 +36,14 @@ const avatarUrl = computed(() => {
       v-if="avatarUrl"
       :src="avatarUrl"
       :alt="nick"
-      class="w-full h-full rounded-full object-cover bg-muted"
+      style="width: 100%; height: 100%"
+      class="rounded-full object-cover bg-muted"
       loading="lazy"
     />
-    <div 
+    <div
       v-else
-      class="tk-avatar__fallback w-full h-full rounded-full flex items-center justify-center font-medium text-sm"
+      style="width: 100%; height: 100%"
+      class="tk-avatar__fallback rounded-full flex items-center justify-center font-medium text-sm"
     >
       {{ nick?.charAt(0)?.toUpperCase() || 'U' }}
     </div>
