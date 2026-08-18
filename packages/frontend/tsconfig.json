@@ -14,7 +14,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "blobatar/_parts": ["./node_modules/blobatar/src/blobatar.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.tsx"],

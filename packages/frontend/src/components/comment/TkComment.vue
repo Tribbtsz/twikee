@@ -254,7 +254,6 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
           :mail="comment.mail"
           :link="convertedLink"
           :size="isReply ? 'sm' : 'md'"
-          :gravatar-cdn="publicConfig.GRAVATAR_CDN"
         />
       </div>
 
@@ -374,7 +373,6 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
               :mail="child.mail"
               :link="convertLink(child.link)"
               size="sm"
-              :gravatar-cdn="publicConfig.GRAVATAR_CDN"
             />
           </div>
 

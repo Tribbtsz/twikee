@@ -27,7 +27,10 @@ export default defineConfig({
     }
   },
   resolve: {
-    alias: { '@': resolve(__dirname, 'src') }
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      'blobatar/_parts': resolve(__dirname, 'node_modules/blobatar/src/blobatar.ts')
+    }
   },
   server: {
     open: '/demo.html',

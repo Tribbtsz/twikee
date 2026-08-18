@@ -104,6 +104,9 @@ importers:
       '@vueuse/core':
         specifier: ^11.0.0
         version: 11.3.0(vue@3.5.33(typescript@5.9.3))
+      blobatar:
+        specifier: ^0.2.0
+        version: 0.2.0
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -1304,6 +1307,14 @@ packages:
 
   bindings@1.5.0:
     resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
+
+  blobatar@0.2.0:
+    resolution: {integrity: sha512-TL4blQf9fu+EzsFEKMjh7PVORnf42G9HdpaXzdLR9dTHcMSYJWEj5fPeLhsXTN5YFCNstZaRAQRAWyhW8lRAdw==}
+    peerDependencies:
+      react: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   brace-expansion@1.1.14:
     resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
@@ -2514,7 +2525,7 @@ packages:
 
   uuid@3.3.2:
     resolution: {integrity: sha512-yXJmeNaw3DnnKAOKJE51sL/ZaYfWJRl1pK9dr19YFCu0ObS231AB1/LbqTKRAQ5kw8A90rA6fr4riOUpTZvQZA==}
-    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -3762,6 +3773,8 @@ snapshots:
   bindings@1.5.0:
     dependencies:
       file-uri-to-path: 1.0.0
+
+  blobatar@0.2.0: {}
 
   brace-expansion@1.1.14:
     dependencies:

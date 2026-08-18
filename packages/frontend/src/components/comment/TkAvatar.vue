@@ -1,43 +1,70 @@
 <script setup lang="ts">
-import { computed, type PropType } from 'vue'
-import { md5 } from '@/lib/utils'
+import { computed } from 'vue'
+import { blobatarUri } from 'blobatar/uri'
+import { _parts } from 'blobatar/_parts'
+import type { Expression } from 'blobatar'
+import 'blobatar/motion.css'
 
-const props = defineProps({
-  nick: { type: String, default: '' },
-  mail: { type: String, default: '' },
-  link: { type: String, default: '' },
-  size: { type: String as PropType<'sm' | 'md' | 'lg'>, default: 'md' },
-  gravatarCdn: { type: String, default: 'https://gravatar.com/avatar/' }
+const props = withDefaults(defineProps<{
+  nick?: string
+  mail?: string
+  link?: string
+  size?: 'sm' | 'md' | 'lg'
+  animate?: false | 'hover' | 'always'
+  expression?: Expression
+}>(), {
+  nick: '',
+  mail: '',
+  link: '',
+  size: 'md',
+  animate: 'hover'
 })
 
 const sizeStyles = computed(() => {
   const sizes = {
-    sm: 'width: 2rem; height: 2rem;',
-    md: 'width: 2.5rem; height: 2.5rem;',
-    lg: 'width: 3rem; height: 3rem;'
+    sm: 'width: 2.5rem; height: 2.5rem;',
+    md: 'width: 3rem; height: 3rem;',
+    lg: 'width: 3.5rem; height: 3.5rem;'
   }
   return sizes[props.size]
 })
 
-const avatarUrl = computed(() => {
-  if (props.mail) {
-    const hash = md5(props.mail.toLowerCase().trim())
-    const base = props.gravatarCdn || 'https://gravatar.com/avatar/'
-    const cdn = base.endsWith('/') ? base : `${base}/`
-    return `${cdn}${hash}?d=identicon&s=80`
-  }
-  return null
-})
+const name = computed(() => props.mail?.trim() || props.nick)
+
+const animated = computed(() =>
+  props.animate
+    ? _parts(name.value, {
+        animate: props.animate,
+        expression: props.expression
+      })
+    : null
+)
+
+const staticUri = computed(() =>
+  props.animate ? '' : name.value ? blobatarUri(name.value) : ''
+)
 </script>
 
 <template>
   <div :style="sizeStyles" class="relative shrink-0">
+    <svg
+      v-if="animated"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 100 100"
+      style="width: 100%; height: 100%; display: block"
+      :style="animated.vars"
+      role="img"
+      :aria-label="nick"
+    >
+      <title v-if="nick">{{ nick }}</title>
+      <path v-if="animated.bg" :d="animated.bg.d" :fill="animated.bg.fill" />
+      <g :class="animated.cls" v-html="animated.inner" />
+    </svg>
     <img
-      v-if="avatarUrl"
-      :src="avatarUrl"
+      v-else-if="staticUri"
+      :src="staticUri"
       :alt="nick"
       style="width: 100%; height: 100%"
-      class="rounded-full object-cover bg-muted"
       loading="lazy"
     />
     <div
