@@ -21,7 +21,8 @@
     "@tursodatabase/serverless": "1.2.0-pre.2",
     "bcryptjs": "^3.0.3",
     "hono": "^4.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@libsql/client": "^0.17.4"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

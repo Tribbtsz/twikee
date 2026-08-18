@@ -1,4 +1,5 @@
-import { createClient } from "@tursodatabase/serverless/compat";
+import { createClient as createServerlessClient } from "@tursodatabase/serverless/compat";
+import { createClient as createLibsqlClient } from "@libsql/client";
 import type { Client } from "@tursodatabase/serverless/compat";
 import type {
   Comment,
@@ -392,18 +393,22 @@ export class TursoAdapter extends DatabaseAdapter {
     super();
     this._config = config;
 
-    // 支持本地文件: file:./local.db 或 ./local.db
-    const url =
-      config.url.startsWith("file:") ||
-      config.url.startsWith("./") ||
-      config.url.startsWith("/")
-        ? config.url
-        : config.url;
+    // 本地文件 (file:./local.db 或 ./local.db) 用 @libsql/client，远程 Turso 用 serverless 驱动
+    const url = config.url;
+    const isLocal =
+      url.startsWith("file:") || url.startsWith("./") || url.startsWith("/");
 
-    this.client = createClient({
-      url,
-      authToken: config.authToken || undefined,
-    });
+    this.client = (
+      isLocal
+        ? createLibsqlClient({
+            url,
+            authToken: config.authToken || undefined,
+          })
+        : createServerlessClient({
+            url,
+            authToken: config.authToken || undefined,
+          })
+    ) as unknown as Client;
     this.comments = new TursoCommentRepository(this.client);
     this.users = new TursoUserRepository(this.client);
     this.config = new TursoConfigRepository(this.client);
