@@ -133,8 +133,8 @@ watch(page, loadComments)
     <header class="border-b bg-card sticky top-0 z-10">
       <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
         <div>
-          <h1 class="text-xl font-bold text-center">Twikee 评论系统</h1>
-          <p class="text-sm text-muted-foreground text-center mt-1">
+          <h1 class="text-xl font-bold">Twikee 评论系统</h1>
+          <p class="text-sm text-muted-foreground mt-1">
             基于 Vue 3 + Hono + Turso 构建的现代化评论系统
           </p>
         </div>
