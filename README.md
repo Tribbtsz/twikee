@@ -34,6 +34,11 @@ twikee.init({
 - [外观配置](./docs/appearance.md)
 - [API](./docs/api.md)
 
+## 致谢
+
+- [Twikoo](https://github.com/twikoojs/twikoo) - 本项目参考的评论系统
+- [blobatar](https://github.com/Alain00/blobatar) - 头像生成库，确定性生成几何头像，支持悬停动画
+
 ## License
 
 MIT
