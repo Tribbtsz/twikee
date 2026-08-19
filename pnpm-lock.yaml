@@ -108,8 +108,8 @@ importers:
         specifier: ^11.0.0
         version: 11.3.0(vue@3.5.33(typescript@5.9.3))
       blobatar:
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^2.0.0
+        version: 2.0.0
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -1374,8 +1374,8 @@ packages:
   bindings@1.5.0:
     resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
 
-  blobatar@0.2.0:
-    resolution: {integrity: sha512-TL4blQf9fu+EzsFEKMjh7PVORnf42G9HdpaXzdLR9dTHcMSYJWEj5fPeLhsXTN5YFCNstZaRAQRAWyhW8lRAdw==}
+  blobatar@2.0.0:
+    resolution: {integrity: sha512-46STsjELfKv5hnnRYsWKgN1vlWFkaewSkwnqRRnptCD+LwxejfyXs1lYwek4fkwAtGrXabmJHP4fpzDxjnqAEg==}
     peerDependencies:
       react: '>=18'
     peerDependenciesMeta:
@@ -3931,7 +3931,7 @@ snapshots:
     dependencies:
       file-uri-to-path: 1.0.0
 
-  blobatar@0.2.0: {}
+  blobatar@2.0.0: {}
 
   brace-expansion@1.1.14:
     dependencies:
