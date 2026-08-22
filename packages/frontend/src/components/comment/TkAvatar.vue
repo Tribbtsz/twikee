@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { blobatarUri } from 'blobatar/uri'
-import { _parts } from 'blobatar/_parts'
+import { Blobatar } from 'blobatar/vue'
 import type { Expression } from 'blobatar'
 import 'blobatar/motion.css'
 
@@ -31,40 +30,18 @@ const sizeStyles = computed(() => {
 
 const name = computed(() => props.mail?.trim() || props.nick)
 
-const animated = computed(() =>
-  props.animate
-    ? _parts(name.value, {
-        animate: props.animate,
-        expression: props.expression
-      })
-    : null
-)
-
-const staticUri = computed(() =>
-  props.animate ? '' : name.value ? blobatarUri(name.value) : ''
-)
+const showAvatar = computed(() => props.animate || !!name.value)
 </script>
 
 <template>
   <div :style="sizeStyles" class="relative shrink-0">
-    <svg
-      v-if="animated"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 100 100"
-      style="width: 100%; height: 100%; display: block"
-      :style="animated.vars"
-      role="img"
-      :aria-label="nick"
-    >
-      <title v-if="nick">{{ nick }}</title>
-      <path v-if="animated.bg" :d="animated.bg.d" :fill="animated.bg.fill" />
-      <g :class="animated.cls" v-html="animated.inner" />
-    </svg>
-    <img
-      v-else-if="staticUri"
-      :src="staticUri"
-      :alt="nick"
-      style="width: 100%; height: 100%"
+    <Blobatar
+      v-if="showAvatar"
+      :name="name"
+      :animate="animate"
+      :expression="expression"
+      :title="nick || undefined"
+      class="h-full w-full block"
       loading="lazy"
     />
     <div
