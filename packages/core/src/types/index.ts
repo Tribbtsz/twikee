@@ -90,7 +90,7 @@ export interface NotificationEvent {
 }
 
 export interface NotificationChannel {
-  type: 'telegram' | 'webhook' | 'email'
+  type: 'telegram' | 'webhook' | 'email' | 'wxpusher' | 'wecom'
   config: Record<string, string>
   events: string[]
 }

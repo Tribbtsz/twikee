@@ -114,10 +114,13 @@ const settings: ConfigGroup[] = [
     name: '通知设置',
     items: [
       { key: 'NOTIFICATION_ENABLE', label: '启用通知', placeholder: 'true', desc: '是否启用评论通知', type: 'boolean', default: 'false' },
-      { key: 'NOTIFICATION_TYPE', label: '通知方式', placeholder: 'telegram', desc: '选择通知渠道', type: 'select', options: ['telegram', 'webhook', 'email'], default: 'telegram' },
-      { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram Bot Token', placeholder: '123456:ABC-DEF', desc: '从 @BotFather 获取', default: '' },
+      { key: 'NOTIFICATION_TYPE', label: '通知方式', placeholder: 'telegram', desc: '选择通知渠道', type: 'select', options: ['telegram', 'webhook', 'email', 'wxpusher', 'wecom'], default: 'telegram' },
+      { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram Bot Token', placeholder: '123456:ABC-DEF', desc: '从 @BotFather 获取，留空不修改', secret: true, default: '' },
       { key: 'TELEGRAM_CHAT_ID', label: 'Telegram Chat ID', placeholder: '-100123456789', desc: '群组或频道 ID', default: '' },
       { key: 'WEBHOOK_URL', label: 'Webhook URL', placeholder: 'https://...', desc: '自定义通知接口', default: '' },
+      { key: 'WXPUSHER_APP_TOKEN', label: 'WxPusher AppToken', placeholder: 'AT_xxx', desc: '在 wxpusher 控制台获取，留空不修改', secret: true, default: '' },
+      { key: 'WXPUSHER_UIDS', label: 'WxPusher UID', placeholder: 'UID_xxx,UID_yyy', desc: '接收用户 UID，多个用逗号分隔', default: '' },
+      { key: 'WECOM_KEY', label: '企业微信机器人 Key', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', desc: '群机器人 Webhook 地址中的 key，留空不修改', secret: true, default: '' },
     ]
   },
   {
@@ -127,7 +130,7 @@ const settings: ConfigGroup[] = [
       { key: 'SMTP_HOST', label: 'SMTP 服务器', placeholder: 'smtp.example.com', desc: '邮件服务器地址', default: '' },
       { key: 'SMTP_PORT', label: 'SMTP 端口', placeholder: '587', desc: '邮件服务器端口', default: '587' },
       { key: 'SMTP_USER', label: 'SMTP 用户名', placeholder: 'user@example.com', desc: '邮箱账号', default: '' },
-      { key: 'SMTP_PASS', label: 'SMTP 密码', placeholder: '', desc: '邮箱密码或授权码', secret: true, default: '' },
+      { key: 'SMTP_PASS', label: 'SMTP 密码', placeholder: '', desc: '邮箱密码或授权码，留空不修改', secret: true, default: '' },
       { key: 'SMTP_FROM', label: '发件人地址', placeholder: 'noreply@example.com', desc: '发件人邮箱', default: '' },
       { key: 'SMTP_TO', label: '收件人地址', placeholder: 'admin@example.com', desc: '接收通知的邮箱', default: '' },
     ]

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { CommentService, NotificationService } from '@twikee/core'
 import type { TursoAdapter } from '@twikee/core'
 import { CreateCommentSchema, CommentQuerySchema } from '../validation'
+import { defer } from '../lib/defer'
 
 type Env = {
   Variables: {
@@ -79,10 +80,13 @@ export function createCommentRoutes() {
       const siteName = await db.config.get('SITE_NAME')
       const siteUrl = await db.config.get('SITE_URL')
       const pageUrl = siteUrl ? `${siteUrl}${parsed.data.url}` : parsed.data.url
-      ns.send({
-        type: comment.rid ? 'comment.reply' : 'comment.new',
-        payload: { comment, url: pageUrl, siteName: siteName || undefined },
-      }).catch(() => {})
+      defer(
+        c,
+        ns.send({
+          type: comment.rid ? 'comment.reply' : 'comment.new',
+          payload: { comment, url: pageUrl, siteName: siteName || undefined },
+        })
+      )
     }
 
     return c.json(comment, 201)

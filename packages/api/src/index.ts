@@ -9,6 +9,8 @@ import {
   TelegramAdapter,
   WebhookAdapter,
   EmailAdapter,
+  WxPusherAdapter,
+  WecomAdapter,
 } from '@twikee/core'
 import { createCommentRoutes } from './routes/comment'
 import { createAuthRoutes } from './routes/auth'
@@ -70,6 +72,8 @@ const initNotifications = async () => {
         'comment.new',
         'comment.reply',
       ])
+    } else {
+      console.warn('[Twikee] telegram misconfigured: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID missing')
     }
   } else if (type === 'webhook') {
     const webhookUrl = await db.config.get('WEBHOOK_URL')
@@ -78,6 +82,8 @@ const initNotifications = async () => {
         'comment.new',
         'comment.reply',
       ])
+    } else {
+      console.warn('[Twikee] webhook misconfigured: WEBHOOK_URL missing')
     }
   } else if (type === 'email') {
     const apiKey = await db.config.get('SMTP_PASS')
@@ -88,7 +94,32 @@ const initNotifications = async () => {
         'comment.new',
         'comment.reply',
       ])
+    } else {
+      console.warn('[Twikee] email misconfigured: SMTP_PASS/SMTP_FROM/SMTP_TO missing')
     }
+  } else if (type === 'wxpusher') {
+    const appToken = await db.config.get('WXPUSHER_APP_TOKEN')
+    const uids = await db.config.get('WXPUSHER_UIDS')
+    if (appToken && uids) {
+      notificationService.addChannel('wxpusher', new WxPusherAdapter({ appToken, uids }), [
+        'comment.new',
+        'comment.reply',
+      ])
+    } else {
+      console.warn('[Twikee] wxpusher misconfigured: WXPUSHER_APP_TOKEN/WXPUSHER_UIDS missing')
+    }
+  } else if (type === 'wecom') {
+    const key = await db.config.get('WECOM_KEY')
+    if (key) {
+      notificationService.addChannel('wecom', new WecomAdapter({ key }), [
+        'comment.new',
+        'comment.reply',
+      ])
+    } else {
+      console.warn('[Twikee] wecom misconfigured: WECOM_KEY missing')
+    }
+  } else {
+    console.warn(`[Twikee] unknown NOTIFICATION_TYPE: ${type}`)
   }
 }
 
