@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Blobatar } from 'blobatar/vue'
+import { Blobatar } from '@blobatar/vue'
 import type { Expression } from 'blobatar'
 import 'blobatar/motion.css'
 

@@ -25,7 +25,8 @@
   "dependencies": {
     "@twikee/core": "workspace:*",
     "@vueuse/core": "^11.0.0",
-    "blobatar": "^2.4.0",
+    "@blobatar/vue": "^2.7.0",
+    "blobatar": "^2.7.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "lucide-vue-next": "^0.460.0",
