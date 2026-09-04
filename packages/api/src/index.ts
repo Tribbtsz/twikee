@@ -127,6 +127,7 @@ app.use('/api/*', async (c, next) => {
   try {
     await initDb()
   } catch (e) {
+    console.error('[Twikee] database initialization failed:', e)
     return c.json({ error: 'Database initialization failed' }, 500)
   }
   c.set('db', db!)

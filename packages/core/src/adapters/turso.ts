@@ -19,6 +19,16 @@ import {
 } from "./base";
 import { MigrationRunner } from "../migrations/runner";
 import { migrations } from "../migrations";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
+// 本地 SQLite 文件：确保父目录存在，否则 libsql 会报 SQLITE_CANTOPEN(14)
+function ensureLocalDbDir(url: string): void {
+  const path = url.startsWith("file:") ? url.slice("file:".length) : url;
+  if (!path || path === ":memory:") return;
+  const dir = dirname(resolve(path));
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
 
 class TursoCommentRepository implements CommentRepository {
   private client: Client;
@@ -397,6 +407,10 @@ export class TursoAdapter extends DatabaseAdapter {
     const url = config.url;
     const isLocal =
       url.startsWith("file:") || url.startsWith("./") || url.startsWith("/");
+
+    if (isLocal) {
+      ensureLocalDbDir(url);
+    }
 
     this.client = (
       isLocal
