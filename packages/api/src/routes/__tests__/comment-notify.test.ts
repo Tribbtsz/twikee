@@ -36,12 +36,16 @@ function makeApp(notificationService: any) {
   return app
 }
 
+const flush = () => new Promise<void>((r) => setImmediate(r))
+
 afterEach(() => vi.restoreAllMocks())
 
+// 注：vitest/node 下无 executionCtx，这里覆盖的是 defer 本地 fallback 路径；
+// Vercel/CF 分支由 defer.test.ts 覆盖
 describe('Comment routes with notifications', () => {
   it('POST / triggers notification but still returns 201', async () => {
     const send = vi.fn(async () => {})
-    const app = makeApp({ send })
+    const app = makeApp({ send, channelCount: 1 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
@@ -54,7 +58,7 @@ describe('Comment routes with notifications', () => {
 
   it('POST / reply triggers comment.reply event', async () => {
     const send = vi.fn(async () => {})
-    const app = makeApp({ send })
+    const app = makeApp({ send, channelCount: 1 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Bob', content: '+1', rid: '1' }),
@@ -64,12 +68,24 @@ describe('Comment routes with notifications', () => {
     expect(send.mock.calls[0][0].type).toBe('comment.reply')
   })
 
-  it('POST / still returns 201 when notification fails', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+  it('POST / skips notification when no channels registered', async () => {
+    const send = vi.fn(async () => {})
+    const app = makeApp({ send, channelCount: 0 })
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('POST / still returns 201 and logs when notification fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const send = vi.fn(async () => {
       throw new Error('channel down')
     })
-    const app = makeApp({ send })
+    const app = makeApp({ send, channelCount: 1 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
@@ -77,5 +93,8 @@ describe('Comment routes with notifications', () => {
     })
     expect(res.status).toBe(201)
     expect(send).toHaveBeenCalledTimes(1)
+    await flush()
+    await flush()
+    expect(errSpy).toHaveBeenCalledWith('[Twikee] background task failed:', expect.any(Error))
   })
 })

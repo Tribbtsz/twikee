@@ -76,7 +76,7 @@ export function createCommentRoutes() {
     }
 
     const ns = c.var.notificationService
-    if (ns) {
+    if (ns && ns.channelCount > 0) {
       const siteName = await db.config.get('SITE_NAME')
       const siteUrl = await db.config.get('SITE_URL')
       const pageUrl = siteUrl ? `${siteUrl}${parsed.data.url}` : parsed.data.url

@@ -119,7 +119,7 @@ const initNotifications = async () => {
       console.warn('[Twikee] wecom misconfigured: WECOM_KEY missing')
     }
   } else {
-    console.warn(`[Twikee] unknown NOTIFICATION_TYPE: ${type}`)
+    console.warn(`[Twikee] unknown NOTIFICATION_TYPE: ${JSON.stringify(String(type).slice(0, 50))}`)
   }
 }
 

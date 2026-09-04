@@ -127,26 +127,44 @@ export function createAdminRoutes() {
 
   app.get('/config', async (c) => {
     const config = await c.var.db.config.getAll()
-    const { ADMIN_PASSWORD, SMTP_PASS, TELEGRAM_BOT_TOKEN, WXPUSHER_APP_TOKEN, WECOM_KEY, ...safeConfig } = config
+    const { ADMIN_PASSWORD, SMTP_PASS, TELEGRAM_BOT_TOKEN, WXPUSHER_APP_TOKEN, WECOM_KEY, IMAGE_CDN_TOKEN, ...safeConfig } = config
     return c.json(safeConfig)
   })
 
   // 密钥类配置：前端拿到的是空值，回保存时空值表示"不修改"，避免被清零
-  const SECRET_KEYS = new Set(['ADMIN_PASSWORD', 'SMTP_PASS', 'TELEGRAM_BOT_TOKEN', 'WXPUSHER_APP_TOKEN', 'WECOM_KEY'])
+  const SECRET_KEYS = new Set(['ADMIN_PASSWORD', 'SMTP_PASS', 'TELEGRAM_BOT_TOKEN', 'WXPUSHER_APP_TOKEN', 'WECOM_KEY', 'IMAGE_CDN_TOKEN'])
 
   app.post('/config', async (c) => {
     const body = await c.req.json()
-    for (const [key, value] of Object.entries(body)) {
+    const parsed = AdminConfigSchema.safeParse(body)
+    if (!parsed.success) {
+      return c.json({ error: 'Invalid config' }, 400)
+    }
+    const skipped: string[] = []
+    for (const [key, value] of Object.entries(parsed.data)) {
       if (key === 'ADMIN_PASSWORD') {
-        if (!value) continue
-        const hashed = await AuthService.hashPassword(value as string)
+        if (typeof value !== 'string' || !value.trim()) {
+          skipped.push(key)
+          continue
+        }
+        const hashed = await AuthService.hashPassword(value)
         await c.var.db.config.set(key, hashed)
         continue
       }
-      if (SECRET_KEYS.has(key) && !value) continue
-      await c.var.db.config.set(key, value as string)
+      if (SECRET_KEYS.has(key)) {
+        if (typeof value !== 'string' || !value) {
+          skipped.push(key)
+          continue
+        }
+        await c.var.db.config.set(key, value)
+        continue
+      }
+      if (typeof value !== 'string') {
+        return c.json({ error: `Invalid value for ${key}` }, 400)
+      }
+      await c.var.db.config.set(key, value)
     }
-    return c.json({ success: true })
+    return c.json({ success: true, skipped })
   })
 
   app.get('/stats', async (c) => {

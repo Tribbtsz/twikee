@@ -147,7 +147,7 @@ const settings: ConfigGroup[] = [
     name: '图片设置',
     items: [
       { key: 'IMAGE_CDN', label: '图床类型', placeholder: '', desc: 'qcloud / smms / custom', default: '' },
-      { key: 'IMAGE_CDN_TOKEN', label: '图床 Token', placeholder: '', desc: '图床 API Token', default: '' },
+      { key: 'IMAGE_CDN_TOKEN', label: '图床 Token', placeholder: '', desc: '图床 API Token，留空不修改', secret: true, default: '' },
       { key: 'MAX_IMAGE_SIZE', label: '最大图片大小', placeholder: '5', desc: '单位 MB', default: '5' },
     ]
   },
@@ -183,6 +183,12 @@ const saveConfig = async () => {
     })
     if (!checkAuth(res)) return
     showToast('配置已保存', 'success')
+    // 密钥类不会经 GET 返回，后端空值表示不修改：保存后清零，避免明文驻留内存
+    for (const group of settings) {
+      for (const item of group.items) {
+        if (item.secret) config.value[item.key] = ''
+      }
+    }
     savedConfig.value = { ...config.value }
   } catch (e) {
     showToast('保存配置失败', 'error')

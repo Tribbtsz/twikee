@@ -23,6 +23,9 @@
 | `WEBHOOK_URL` | 自定义通知接口 |
 | `WXPUSHER_APP_TOKEN`（密钥） / `WXPUSHER_UIDS` | WxPusher，UID 多个用逗号分隔 |
 | `WECOM_KEY`（密钥） | 企业微信群机器人 Webhook 地址中的 key |
-| `SMTP_FROM` / `SMTP_TO` / `SMTP_PASS`（密钥） | 邮件（Resend） |
+| `SMTP_FROM` / `SMTP_TO` | 邮件（Resend）发件人 / 收件人 |
+| `SMTP_PASS`（密钥） | 邮件（Resend）API Key |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | 预留字段，当前邮件通道未使用 |
+| `IMAGE_CDN_TOKEN`（密钥） | 图床 Token |
 
 标记为密钥的键不会经 `GET /api/admin/config` 返回；保存时留空表示不修改。

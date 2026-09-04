@@ -1,11 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   escapeHtml,
   sanitizeUrl,
   escapeWecomMarkdown,
+  truncate,
   postJson,
   TelegramAdapter,
   WebhookAdapter,
+  EmailAdapter,
   WxPusherAdapter,
   WecomAdapter,
   NotificationService,
@@ -44,28 +46,45 @@ function mockFetchJson(body: unknown, status = 200) {
   )
 }
 
+function mockFetchText(text: string, status = 200) {
+  return vi.fn(async () => new Response(text, { status }))
+}
+
+afterEach(() => vi.unstubAllGlobals())
+
 describe('escape helpers', () => {
-  it('escapeHtml encodes entities', () => {
-    expect(escapeHtml('<a href="x">&')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;')
+  it('escapeHtml encodes entities including quotes', () => {
+    expect(escapeHtml(`<a href="x" title='y'>&</a>`)).toBe(
+      '&lt;a href=&quot;x&quot; title=&#39;y&#39;&gt;&amp;&lt;/a&gt;',
+    )
   })
 
-  it('sanitizeUrl allows http(s) only', () => {
+  it('sanitizeUrl allows http(s) only and normalizes', () => {
     expect(sanitizeUrl('https://a.com/x')).toBe('https://a.com/x')
-    expect(sanitizeUrl('http://a.com')).toBe('http://a.com')
+    expect(sanitizeUrl('http://a.com')).toBe('http://a.com/')
     expect(sanitizeUrl('javascript:alert(1)')).toBeUndefined()
     expect(sanitizeUrl('" onclick="x')).toBeUndefined()
+    expect(sanitizeUrl('https://x"onmouseover="y')).toBeUndefined()
+    expect(sanitizeUrl("https://a'b")).toBeUndefined()
+    expect(sanitizeUrl('https://a b.com')).toBeUndefined()
+    expect(sanitizeUrl('https://')).toBeUndefined()
+    expect(sanitizeUrl('/relative/path')).toBeUndefined()
     expect(sanitizeUrl(undefined)).toBeUndefined()
   })
 
   it('escapeWecomMarkdown escapes structural chars', () => {
     expect(escapeWecomMarkdown('[x](y) `z`')).toBe('\\[x\\]\\(y\\) \\`z\\`')
+    expect(escapeWecomMarkdown('*bold* _i_ # h > q')).toBe('\\*bold\\* \\_i\\_ \\# h \\> q')
+  })
+
+  it('truncate is surrogate-pair safe', () => {
+    const out = truncate('😀'.repeat(50), 10)
+    expect(Array.from(out).length).toBeLessThanOrEqual(10)
+    expect(out).not.toContain('�')
   })
 })
 
 describe('postJson', () => {
-  beforeEach(() => vi.unstubAllGlobals())
-  afterEach(() => vi.unstubAllGlobals())
-
   it('sends JSON with timeout signal and checks status', async () => {
     const fetchMock = mockFetchJson({ ok: true })
     vi.stubGlobal('fetch', fetchMock)
@@ -82,13 +101,13 @@ describe('postJson', () => {
     await expect(postJson('https://example.com/hook', {})).rejects.toThrow('500')
   })
 
-  it('skips body for GET', async () => {
+  it('skips body for GET regardless of case', async () => {
     const fetchMock = mockFetchJson({})
     vi.stubGlobal('fetch', fetchMock)
-    await postJson('https://example.com/hook', { a: 1 }, { method: 'GET' })
+    await postJson('https://example.com/hook', { a: 1 }, { method: 'get' })
     const [, init] = fetchMock.mock.calls[0]
-    expect(init.method).toBe('GET')
     expect(init.body).toBeUndefined()
+    expect(init.headers).toBeUndefined()
   })
 
   it('aborts after timeoutMs', async () => {
@@ -103,12 +122,30 @@ describe('postJson', () => {
     )
     await expect(postJson('https://example.com/hook', {}, { timeoutMs: 20 })).rejects.toThrow(/timed out/)
   })
+
+  it('timeout error carries hostname but not secrets', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init: { signal: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            init.signal.addEventListener('abort', () => reject(init.signal.reason))
+          }),
+      ),
+    )
+    const err = await postJson(
+      'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=S3CR3T',
+      {},
+      {
+        timeoutMs: 10,
+      },
+    ).catch((e) => e as Error)
+    expect(err.message).toContain('qyapi.weixin.qq.com')
+    expect(err.message).not.toContain('S3CR3T')
+  })
 })
 
 describe('TelegramAdapter', () => {
-  beforeEach(() => vi.unstubAllGlobals())
-  afterEach(() => vi.unstubAllGlobals())
-
   it('escapes user html in message', async () => {
     const fetchMock = mockFetchJson({ ok: true })
     vi.stubGlobal('fetch', fetchMock)
@@ -117,6 +154,7 @@ describe('TelegramAdapter', () => {
     const [, init] = fetchMock.mock.calls[0]
     const body = JSON.parse(init.body)
     expect(body.chat_id).toBe('1')
+    expect(body.parse_mode).toBe('HTML')
     expect(body.text).toContain('&lt;b&gt;Bob&lt;/b&gt;')
     expect(body.text).toContain('a &lt; b &amp; &quot;c&quot;')
     expect(body.text).not.toContain('<b>Bob</b>')
@@ -130,12 +168,32 @@ describe('TelegramAdapter', () => {
     const [, init] = fetchMock.mock.calls[0]
     expect(JSON.parse(init.body).text).not.toContain('javascript:')
   })
+
+  it('never splits entities when truncating long messages', async () => {
+    const fetchMock = mockFetchJson({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = new TelegramAdapter({ botToken: 'tok', chatId: '1' })
+    await adapter.send(makeEvent({ content: 'a<b'.repeat(1500) }))
+    const [, init] = fetchMock.mock.calls[0]
+    const text = JSON.parse(init.body).text as string
+    expect(text.length).toBeLessThanOrEqual(4096)
+    expect(text).not.toMatch(/&[a-zA-Z#0-9]*$/)
+  })
+
+  it('throws on business error ok:false', async () => {
+    vi.stubGlobal('fetch', mockFetchJson({ ok: false, description: 'bad request' }))
+    const adapter = new TelegramAdapter({ botToken: 'tok', chatId: '1' })
+    await expect(adapter.send(makeEvent())).rejects.toThrow(/bad request/)
+  })
+
+  it('throws on invalid JSON response', async () => {
+    vi.stubGlobal('fetch', mockFetchText('not-json'))
+    const adapter = new TelegramAdapter({ botToken: 'tok', chatId: '1' })
+    await expect(adapter.send(makeEvent())).rejects.toThrow(/invalid JSON/)
+  })
 })
 
 describe('WebhookAdapter', () => {
-  beforeEach(() => vi.unstubAllGlobals())
-  afterEach(() => vi.unstubAllGlobals())
-
   it('posts the event as JSON', async () => {
     const fetchMock = mockFetchJson({})
     vi.stubGlobal('fetch', fetchMock)
@@ -147,10 +205,40 @@ describe('WebhookAdapter', () => {
   })
 })
 
-describe('WxPusherAdapter', () => {
-  beforeEach(() => vi.unstubAllGlobals())
-  afterEach(() => vi.unstubAllGlobals())
+describe('EmailAdapter', () => {
+  it('escapes html and attribute contexts', async () => {
+    const fetchMock = mockFetchJson({ id: 'mail-id' })
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = new EmailAdapter({ apiKey: 'k', from: 'a@x.com', to: 'b@x.com' })
+    await adapter.send(
+      makeEvent({
+        nick: 'Bob<script>alert(1)</script>',
+        content: '<img src=x onerror=y>',
+        link: 'https://x"onmouseover="y',
+      }),
+    )
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer k' })
+    const body = JSON.parse(init.body)
+    expect(body.html).toContain('&lt;script&gt;')
+    expect(body.html).not.toContain('<script>')
+    expect(body.html).not.toContain('onmouseover')
+    expect(body.html).not.toContain('<img')
+  })
 
+  it('keeps safe links and strips newlines from subject', async () => {
+    const fetchMock = mockFetchJson({ id: 'mail-id' })
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = new EmailAdapter({ apiKey: 'k', from: 'a@x.com', to: 'b@x.com' })
+    await adapter.send(makeEvent({ nick: 'Bob\nCC: evil', link: 'https://example.com/a?b=1&c=2' }))
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.subject).not.toContain('\n')
+    expect(body.html).toContain('href="https://example.com/a?b=1&amp;c=2"')
+  })
+})
+
+describe('WxPusherAdapter', () => {
   it('sends appToken/uids and accepts code 1000', async () => {
     const fetchMock = mockFetchJson({ code: 1000, msg: 'ok' })
     vi.stubGlobal('fetch', fetchMock)
@@ -167,12 +255,20 @@ describe('WxPusherAdapter', () => {
     vi.stubGlobal('fetch', mockFetchJson({ code: 10001, msg: 'appToken error' }))
     await expect(new WxPusherAdapter({ appToken: 'bad', uids: 'UID_1' }).send(makeEvent())).rejects.toThrow(/10001/)
   })
+
+  it('throws on missing code and null body', async () => {
+    vi.stubGlobal('fetch', mockFetchJson({}))
+    await expect(new WxPusherAdapter({ appToken: 'bad', uids: 'UID_1' }).send(makeEvent())).rejects.toThrow(
+      /code=undefined/,
+    )
+    vi.stubGlobal('fetch', mockFetchJson(null))
+    await expect(new WxPusherAdapter({ appToken: 'bad', uids: 'UID_1' }).send(makeEvent())).rejects.toThrow(
+      /invalid JSON/,
+    )
+  })
 })
 
 describe('WecomAdapter', () => {
-  beforeEach(() => vi.unstubAllGlobals())
-  afterEach(() => vi.unstubAllGlobals())
-
   it('sends markdown and accepts errcode 0', async () => {
     const fetchMock = mockFetchJson({ errcode: 0, errmsg: 'ok' })
     vi.stubGlobal('fetch', fetchMock)
@@ -184,12 +280,24 @@ describe('WecomAdapter', () => {
     expect(body.markdown.content).toContain('> line1\n> line2')
   })
 
-  it('throws on business errcode', async () => {
-    vi.stubGlobal('fetch', mockFetchJson({ errcode: 40001, errmsg: 'invalid key' }))
-    await expect(new WecomAdapter({ key: 'bad' }).send(makeEvent())).rejects.toThrow(/40001/)
+  it('encodes key in webhook url', async () => {
+    const fetchMock = mockFetchJson({ errcode: 0 })
+    vi.stubGlobal('fetch', fetchMock)
+    await new WecomAdapter({ key: 'a&b=c' }).send(makeEvent())
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=a%26b%3Dc')
   })
 
-  it('truncates overlong content to 4096 limit', async () => {
+  it('throws on business errcode and invalid responses', async () => {
+    vi.stubGlobal('fetch', mockFetchJson({ errcode: 40001, errmsg: 'invalid key' }))
+    await expect(new WecomAdapter({ key: 'bad' }).send(makeEvent())).rejects.toThrow(/40001/)
+    vi.stubGlobal('fetch', mockFetchJson({}))
+    await expect(new WecomAdapter({ key: 'bad' }).send(makeEvent())).rejects.toThrow(/errcode=undefined/)
+    vi.stubGlobal('fetch', mockFetchText('not-json'))
+    await expect(new WecomAdapter({ key: 'bad' }).send(makeEvent())).rejects.toThrow(/invalid JSON/)
+  })
+
+  it('truncates overlong content within 4096 limit', async () => {
     const fetchMock = mockFetchJson({ errcode: 0 })
     vi.stubGlobal('fetch', fetchMock)
     await new WecomAdapter({ key: 'k' }).send(makeEvent({ content: 'x'.repeat(5000) }))
@@ -228,6 +336,8 @@ describe('NotificationService', () => {
   })
 
   it('resolves with zero channels', async () => {
-    await expect(new NotificationService().send(makeEvent())).resolves.toBeUndefined()
+    const svc = new NotificationService()
+    expect(svc.channelCount).toBe(0)
+    await expect(svc.send(makeEvent())).resolves.toBeUndefined()
   })
 })

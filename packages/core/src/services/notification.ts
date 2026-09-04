@@ -1,7 +1,6 @@
 import type { NotificationEvent } from '../types'
 
 const TIMEOUT_MS = 8000
-const MAX_MESSAGE_LENGTH = 4000
 
 export function escapeHtml(s: string): string {
   return s
@@ -9,20 +8,51 @@ export function escapeHtml(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 export function sanitizeUrl(url: string | undefined): string | undefined {
   if (!url) return undefined
   const trimmed = url.trim()
-  return /^https?:\/\//i.test(trimmed) ? trimmed : undefined
+  if (/["'<>\s]/.test(trimmed)) return undefined
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+    return parsed.href
+  } catch {
+    return undefined
+  }
 }
 
 export function escapeWecomMarkdown(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/([`[\]()])/g, '\\$1')
+  return s.replace(/\\/g, '\\\\').replace(/([`*_\[\]()#+\-.!|>])/g, '\\$1')
 }
 
-function truncate(s: string, max = MAX_MESSAGE_LENGTH): string {
-  return s.length > max ? `${s.slice(0, max)}…` : s
+export function truncate(s: string, max: number): string {
+  const chars = Array.from(s)
+  if (chars.length <= max) return s
+  return `${chars.slice(0, max - 1).join('')}…`
+}
+
+// 在转义后的 HTML 上截断：避开实体（&amp;）与标签（<b>）中间，防止制造新的解析失败
+function truncateHtml(s: string, max: number): string {
+  const chars = Array.from(s)
+  if (chars.length <= max) return s
+  let cut = chars.slice(0, max - 1).join('')
+  const amp = cut.lastIndexOf('&')
+  if (amp !== -1 && !cut.slice(amp).includes(';')) cut = cut.slice(0, amp)
+  const lt = cut.lastIndexOf('<')
+  if (lt !== -1 && !cut.slice(lt).includes('>')) cut = cut.slice(0, lt)
+  return `${cut}…`
+}
+
+// 在转义后的 WeCom markdown 上截断：去掉尾部悬空转义符
+function truncateWecom(s: string, max: number): string {
+  const chars = Array.from(s)
+  if (chars.length <= max) return s
+  const cut = chars.slice(0, max - 1)
+  while (cut.length > 0 && cut[cut.length - 1] === '\\') cut.pop()
+  return `${cut.join('')}…`
 }
 
 export async function postJson(
@@ -31,13 +61,19 @@ export async function postJson(
   init?: { method?: string; headers?: Record<string, string>; timeoutMs?: number }
 ): Promise<Response> {
   const method = init?.method ?? 'POST'
-  const hasBody = body !== undefined && method !== 'GET' && method !== 'HEAD'
+  const upperMethod = method.toUpperCase()
+  const hasBody = body !== undefined && upperMethod !== 'GET' && upperMethod !== 'HEAD'
   const timeoutMs = init?.timeoutMs ?? TIMEOUT_MS
   const controller = new AbortController()
-  const host = new URL(url).hostname
-  const timer = setTimeout(() => {
-    controller.abort(new Error(`Notification to ${host} timed out after ${timeoutMs}ms`))
-  }, timeoutMs)
+  let host = 'unknown'
+  try {
+    host = new URL(url).hostname
+  } catch {
+    // 相对路径等非法 URL：交由 fetch 抛错，这里只保证日志不带敏感信息
+  }
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const maybeUnref = timer as unknown as { unref?: () => void }
+  if (typeof maybeUnref.unref === 'function') maybeUnref.unref()
   try {
     const res = await fetch(url, {
       method,
@@ -49,6 +85,11 @@ export async function postJson(
       throw new Error(`Notification request failed: ${res.status} ${res.statusText}`)
     }
     return res
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error(`Notification to ${host} timed out after ${timeoutMs}ms`)
+    }
+    throw err
   } finally {
     clearTimeout(timer)
   }
@@ -70,18 +111,28 @@ export class TelegramAdapter implements ChannelAdapter {
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
     const text = this.formatMessage(comment, url, siteName)
-    
-    await postJson(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+
+    const res = await postJson(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
       chat_id: this.chatId,
       text,
       parse_mode: 'HTML'
     })
+    // Telegram 业务错误走 HTTP 200 + { ok: false, description }
+    let data: { ok?: boolean; description?: string }
+    try {
+      data = (await res.json()) as { ok?: boolean; description?: string }
+    } catch {
+      throw new Error('Telegram failed: invalid JSON response')
+    }
+    if (!data || typeof data !== 'object' || data.ok !== true) {
+      throw new Error(`Telegram failed: ${data?.description ?? 'unknown error'}`)
+    }
   }
   
   private formatMessage(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
     const type = comment.rid ? '回复' : '新评论'
     const safeLink = sanitizeUrl(comment.link)
-    return truncate(`
+    return truncateHtml(`
 <b>[${escapeHtml(siteName ?? 'Twikee')}] ${type}通知</b>
 
 <b>昵称:</b> ${escapeHtml(comment.nick)}
@@ -90,7 +141,7 @@ ${comment.mail ? `<b>邮箱:</b> ${escapeHtml(comment.mail)}\n` : ''}${safeLink 
 ${escapeHtml(comment.content)}
 
 <b>页面:</b> ${escapeHtml(url)}
-    `.trim())
+    `.trim(), 4096)
   }
 }
 
@@ -127,7 +178,7 @@ export class EmailAdapter implements ChannelAdapter {
   
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
-    const subject = `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`
+    const subject = `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`.replace(/[\r\n]+/g, ' ')
     
     await postJson('https://api.resend.com/emails', {
       from: this.from,
@@ -146,10 +197,10 @@ export class EmailAdapter implements ChannelAdapter {
       <h2>${escapeHtml(siteName ?? 'Twikee')} - ${comment.rid ? '新回复' : '新评论'}</h2>
       <p><strong>昵称:</strong> ${escapeHtml(comment.nick)}</p>
       ${comment.mail ? `<p><strong>邮箱:</strong> ${escapeHtml(comment.mail)}</p>` : ''}
-      ${safeLink ? `<p><strong>网站:</strong> <a href="${safeLink}">${escapeHtml(safeLink)}</a></p>` : ''}
+      ${safeLink ? `<p><strong>网站:</strong> <a href="${escapeHtml(safeLink)}">${escapeHtml(safeLink)}</a></p>` : ''}
       <p><strong>内容:</strong></p>
-      <div style="background: #f5f5f5; padding: 10px; border-radius: 5px;">${escapeHtml(comment.content)}</div>
-      ${safeUrl ? `<p><strong>页面:</strong> <a href="${safeUrl}">${escapeHtml(safeUrl)}</a></p>` : `<p><strong>页面:</strong> ${escapeHtml(url)}</p>`}
+      <div style="background: #f5f5f5; padding: 10px; border-radius: 5px;">${escapeHtml(truncate(comment.content, 5000))}</div>
+      ${safeUrl ? `<p><strong>页面:</strong> <a href="${escapeHtml(safeUrl)}">${escapeHtml(safeUrl)}</a></p>` : `<p><strong>页面:</strong> ${escapeHtml(url)}</p>`}
     `
   }
 }
@@ -166,7 +217,7 @@ export class WxPusherAdapter implements ChannelAdapter {
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
     const type = comment.rid ? '回复' : '新评论'
-    const content = truncate(`[${siteName ?? 'Twikee'}] ${type}通知\n\n昵称: ${comment.nick}${comment.mail ? `\n邮箱: ${comment.mail}` : ''}${comment.link ? `\n网站: ${comment.link}` : ''}\n内容:\n${comment.content}\n\n页面: ${url}`)
+    const content = truncate(`[${siteName ?? 'Twikee'}] ${type}通知\n\n昵称: ${comment.nick}${comment.mail ? `\n邮箱: ${comment.mail}` : ''}${comment.link ? `\n网站: ${comment.link}` : ''}\n内容:\n${comment.content}\n\n页面: ${url}`, 4000)
     const summary = truncate(`[${siteName ?? 'Twikee'}] ${type} - ${comment.nick}`, 60)
 
     const res = await postJson('https://wxpusher.zjiecode.com/api/send/message', {
@@ -181,6 +232,9 @@ export class WxPusherAdapter implements ChannelAdapter {
     try {
       data = (await res.json()) as { code?: number; msg?: string }
     } catch {
+      throw new Error('WxPusher failed: invalid JSON response')
+    }
+    if (!data || typeof data !== 'object') {
       throw new Error('WxPusher failed: invalid JSON response')
     }
     if (data.code !== 1000) {
@@ -202,20 +256,21 @@ export class WecomAdapter implements ChannelAdapter {
     const quote = (s: string): string =>
       s.split('\n').map((line) => `> ${escapeWecomMarkdown(line)}`).join('\n')
     const mdLink = (text: string, href: string): string =>
-      `[${escapeWecomMarkdown(text)}](${href.replace(/\)/g, '%29')})`
+      `[${escapeWecomMarkdown(text)}](${href.replace(/\(/g, '%28').replace(/\)/g, '%29')})`
     const safeLink = sanitizeUrl(comment.link)
-    const safeUrl = sanitizeUrl(url) ?? url
+    const safeUrl = sanitizeUrl(url)
     // 企业微信群机器人 markdown 上限 4096 字符
-    const content = truncate(
+    const content = truncateWecom(
       `## ${escapeWecomMarkdown(`[${siteName ?? 'Twikee'}] ${type}通知`)}\n` +
       `${quote(`昵称: ${comment.nick}`)}\n` +
       (comment.mail ? `${quote(`邮箱: ${comment.mail}`)}\n` : '') +
       (safeLink ? `> 网站: ${mdLink(safeLink, safeLink)}\n` : '') +
       `${quote(`内容:\n${comment.content}`)}\n` +
-      `> 页面: ${mdLink(url, safeUrl)}`
+      (safeUrl ? `> 页面: ${mdLink(url, safeUrl)}` : `> 页面: ${escapeWecomMarkdown(url)}`),
+      4096
     )
 
-    const res = await postJson(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${this.key}`, {
+    const res = await postJson(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${encodeURIComponent(this.key)}`, {
       msgtype: 'markdown',
       markdown: { content },
     })
@@ -224,6 +279,9 @@ export class WecomAdapter implements ChannelAdapter {
     try {
       data = (await res.json()) as { errcode?: number; errmsg?: string }
     } catch {
+      throw new Error('Wecom failed: invalid JSON response')
+    }
+    if (!data || typeof data !== 'object') {
       throw new Error('Wecom failed: invalid JSON response')
     }
     if (data.errcode !== 0) {
@@ -235,6 +293,10 @@ export class WecomAdapter implements ChannelAdapter {
 export class NotificationService {
   private channels: Map<string, ChannelAdapter> = new Map()
   private enabledEvents: Map<string, Set<string>> = new Map()
+
+  get channelCount(): number {
+    return this.channels.size
+  }
   
   addChannel(name: string, adapter: ChannelAdapter, events: string[]): void {
     this.channels.set(name, adapter)
