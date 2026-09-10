@@ -45,27 +45,48 @@ describe('AuthService', () => {
     expect(await service.verifyAdminPassword('wrong')).toBe(false)
   })
 
-  it('generates and verifies tokens', () => {
-    const token = service.generateToken('admin')
+  it('generates and verifies tokens', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
+    const token = await service.generateToken('admin')
     expect(token).toBeTruthy()
-    const result = service.verifyToken(token)
+    const result = await service.verifyToken(token)
     expect(result.valid).toBe(true)
     expect(result.userId).toBe('admin')
   })
 
-  it('rejects malformed tokens', () => {
-    expect(service.verifyToken('').valid).toBe(false)
-    expect(service.verifyToken('a:b').valid).toBe(false)
-    expect(service.verifyToken('a:b:c').valid).toBe(false)
+  it('invalidates tokens after password change', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'old-hash')
+    const token = await service.generateToken('admin')
+    await adapter.config.set('ADMIN_PASSWORD', 'new-hash')
+    const result = await service.verifyToken(token)
+    expect(result.valid).toBe(false)
   })
 
-  it('rejects expired tokens', () => {
+  it('rejects malformed tokens', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
+    expect((await service.verifyToken('')).valid).toBe(false)
+    expect((await service.verifyToken('a:b')).valid).toBe(false)
+    expect((await service.verifyToken('a:b:c')).valid).toBe(false)
+  })
+
+  it('rejects expired tokens', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
     const past = Date.now() - 8 * 24 * 60 * 60 * 1000
     const hash = createHash('sha256')
-      .update(`admin:${past}:test-secret-123`)
+      .update(`admin:${past}:test-secret-123:admin-hash`)
       .digest('hex')
     const token = `admin:${past}:${hash}`
-    expect(service.verifyToken(token).valid).toBe(false)
+    expect((await service.verifyToken(token)).valid).toBe(false)
+  })
+
+  it('rejects future-dated tokens', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
+    const future = Date.now() + 60 * 60 * 1000
+    const hash = createHash('sha256')
+      .update(`admin:${future}:test-secret-123:admin-hash`)
+      .digest('hex')
+    const token = `admin:${future}:${hash}`
+    expect((await service.verifyToken(token)).valid).toBe(false)
   })
 
   it('creates or gets user by mail', async () => {

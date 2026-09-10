@@ -23,4 +23,19 @@ TWIKEE_ADMIN_PASSWORD=your-admin-password
 TWIKEE_SECRET=your-secret-key
 ```
 
+可选环境变量：
+
+```bash
+# CORS 白名单（逗号分隔）。留空 = 允许所有来源（默认）。
+# 生产建议配置为实际嵌入评论的站点来源，例如 https://your-blog.com
+CORS_ORIGIN=https://your-blog.com
+
+# 管理 token 有效期（毫秒），默认 7 天
+TWIKEE_TOKEN_TTL=604800000
+```
+
+> 注意：`TWIKEE_SECRET` 用于签名管理端登录 token；token 同时绑定管理员密码，改密后所有已登录会话自动失效。若 `TWIKEE_SECRET` 缺失，服务会临时自动生成——生产环境务必显式设置，否则重启后所有登录态失效。
+
 上游有更新时，在 Fork 仓库点击 `Sync fork -> Update branch`，Vercel 会自动部署。
+
+代码合入后若包含数据库结构变更，部署完成后**首次访问 API 时会自动执行迁移**，详见[数据库迁移](./migration.md)。升级前建议先备份 Turso 库。

@@ -24,7 +24,12 @@ export class CommentService {
     return await this.db.comments.update(id, data)
   }
   
-  async delete(id: string): Promise<void> {
+  async delete(id: string): Promise<Comment> {
+    // 软删除：保留记录与子评论结构，清空内容
+    return await this.db.comments.softDelete(id)
+  }
+
+  async hardDelete(id: string): Promise<void> {
     await this.db.comments.delete(id)
   }
   
@@ -38,31 +43,16 @@ export class CommentService {
   
   async moderate(id: string, action: 'approve' | 'spam' | 'delete'): Promise<void> {
     if (action === 'delete') {
-      await this.db.comments.delete(id)
+      await this.db.comments.softDelete(id)
     } else {
       await this.db.comments.update(id, { isSpam: action === 'spam' })
     }
   }
-  
+
   async setTop(id: string, top: boolean): Promise<Comment> {
     const comment = await this.db.comments.getById(id)
     if (!comment) throw new Error('Comment not found')
-
-    // Unpinning a pinned copy: delete the copy
-    if (!top && comment.pinnedFromId) {
-      await this.db.comments.delete(id)
-      return comment
-    }
-
-    // Pinning: always create a copy
-    if (top) {
-      const existing = await this.db.comments.getList({ url: comment.url, page: 1, pageSize: 1000 })
-      const alreadyPinned = existing.data.find(c => c.pinnedFromId === id && c.top)
-      if (alreadyPinned) return alreadyPinned
-      return await this.db.comments.createPinnedCopy(comment)
-    }
-
-    // Unpinning a non-copy comment (legacy)
-    return await this.db.comments.update(id, { top: false })
+    // 直接打 top 标记，不再复制评论
+    return await this.db.comments.update(id, { top })
   }
 }

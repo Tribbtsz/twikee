@@ -1,0 +1,3 @@
+# 文档保持现状，不参与 prettier 格式化
+# （node_modules / dist / coverage 等已由 .gitignore 默认忽略）
+docs/

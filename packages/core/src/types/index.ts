@@ -13,6 +13,7 @@ export interface Comment {
   pid?: string
   pinnedFromId?: string
   isSpam: boolean
+  deleted: boolean
   likes: number
   createdAt: number
   updatedAt?: number
@@ -57,6 +58,7 @@ export interface CommentQuery {
   page?: number
   pageSize?: number
   includeSpam?: boolean
+  includeDeleted?: boolean
 }
 
 export interface PaginatedResult<T> {

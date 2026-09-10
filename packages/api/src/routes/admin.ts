@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import type { CommentService, TursoAdapter } from '@twikee/core'
 import { AuthService } from '@twikee/core'
-import { AdminCommentQuerySchema, AdminConfigSchema, ModerateSchema, TopSchema } from '../validation'
+import { AdminCommentQuerySchema, AdminConfigSchema, ModerateSchema, TopSchema, ADMIN_CONFIG_KEY_SET } from '../validation'
+import { invalidateNotifications } from '../lib/notification'
 
 type Env = {
   Variables: {
@@ -50,7 +51,7 @@ export function createAdminRoutes() {
         SELECT url, COUNT(*) as count,
         SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as spam_count,
         MAX(created_at) as last_comment
-        FROM comments GROUP BY url ORDER BY last_comment DESC
+        FROM comments WHERE deleted = 0 GROUP BY url ORDER BY last_comment DESC
       `)
       const pages = result.rows.map((row: any) => ({
         url: row.url || '/',
@@ -140,6 +141,13 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: 'Invalid config' }, 400)
     }
+
+    // 白名单校验：拒绝未知 key，避免脏数据进库
+    const unknownKeys = Object.keys(parsed.data).filter((k) => !ADMIN_CONFIG_KEY_SET.has(k))
+    if (unknownKeys.length > 0) {
+      return c.json({ error: `Unknown config keys: ${unknownKeys.join(', ')}` }, 400)
+    }
+
     const skipped: string[] = []
     for (const [key, value] of Object.entries(parsed.data)) {
       if (key === 'ADMIN_PASSWORD') {
@@ -164,6 +172,8 @@ export function createAdminRoutes() {
       }
       await c.var.db.config.set(key, value)
     }
+    // 通知配置可能已变更：失效缓存，下次请求（最多 60s 内）重建
+    invalidateNotifications()
     return c.json({ success: true, skipped })
   })
 

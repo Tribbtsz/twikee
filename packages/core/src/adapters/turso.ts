@@ -73,51 +73,7 @@ class TursoCommentRepository implements CommentRepository {
       rid: data.rid,
       pid: data.pid,
       isSpam: false,
-      likes: 0,
-      createdAt: now,
-    };
-  }
-
-  async createPinnedCopy(original: Comment): Promise<Comment> {
-    const id = crypto.randomUUID();
-    const now = Date.now();
-
-    await this.client.execute({
-      sql: `INSERT INTO comments (id, url, nick, mail, link, content, ua, ip, master, top, rid, pid, pinned_from_id, is_spam, likes, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        original.url,
-        original.nick,
-        original.mail ?? null,
-        original.link ?? null,
-        original.content,
-        original.ua ?? null,
-        original.ip ?? null,
-        0,
-        1,
-        null,
-        null,
-        original.id,
-        0,
-        0,
-        now,
-      ],
-    });
-
-    return {
-      id,
-      url: original.url,
-      nick: original.nick,
-      mail: original.mail,
-      link: original.link,
-      content: original.content,
-      ua: original.ua,
-      ip: original.ip,
-      master: false,
-      top: true,
-      pinnedFromId: original.id,
-      isSpam: false,
+      deleted: false,
       likes: 0,
       createdAt: now,
     };
@@ -134,25 +90,30 @@ class TursoCommentRepository implements CommentRepository {
   }
 
   async getList(query: CommentQuery): Promise<PaginatedResult<Comment>> {
-    const { url, page = 1, pageSize = 10, includeSpam = false } = query;
+    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false } = query;
     const offset = (page - 1) * pageSize;
 
-    const spamCondition = includeSpam ? "" : "AND is_spam = 0";
-    const urlCondition = url ? "WHERE url = ?" : "WHERE 1=1";
+    const conditions: string[] = [];
+    const args: (string | number)[] = [];
+    if (url) {
+      conditions.push("url = ?");
+      args.push(url);
+    }
+    if (!includeSpam) conditions.push("is_spam = 0");
+    if (!includeDeleted) conditions.push("deleted = 0");
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const countSql = `SELECT COUNT(*) as count FROM comments ${urlCondition} ${spamCondition}`;
-    const countArgs = url ? [url] : [];
+    const countSql = `SELECT COUNT(*) as count FROM comments ${where}`;
     const countResult = await this.client.execute({
       sql: countSql,
-      args: countArgs,
+      args,
     });
     const total = Number(countResult.rows[0].count);
 
-    const listSql = `SELECT * FROM comments ${urlCondition} ${spamCondition} ORDER BY top DESC, created_at DESC LIMIT ? OFFSET ?`;
-    const listArgs = url ? [url, pageSize, offset] : [pageSize, offset];
+    const listSql = `SELECT * FROM comments ${where} ORDER BY top DESC, created_at DESC LIMIT ? OFFSET ?`;
     const listResult = await this.client.execute({
       sql: listSql,
-      args: listArgs,
+      args: [...args, pageSize, offset],
     });
 
     return {
@@ -206,6 +167,16 @@ class TursoCommentRepository implements CommentRepository {
     });
   }
 
+  async softDelete(id: string): Promise<Comment> {
+    await this.client.execute({
+      sql: "UPDATE comments SET deleted = 1, top = 0, content = '', updated_at = ? WHERE id = ?",
+      args: [Date.now(), id],
+    });
+    const comment = await this.getById(id);
+    if (!comment) throw new Error("Comment not found after soft delete");
+    return comment;
+  }
+
   async like(id: string, userId: string): Promise<boolean> {
     try {
       const existing = await this.client.execute({
@@ -241,7 +212,7 @@ class TursoCommentRepository implements CommentRepository {
 
   async getCount(url: string): Promise<number> {
     const result = await this.client.execute({
-      sql: "SELECT COUNT(*) as count FROM comments WHERE url = ? AND is_spam = 0",
+      sql: "SELECT COUNT(*) as count FROM comments WHERE url = ? AND is_spam = 0 AND deleted = 0",
       args: [url],
     });
     return Number(result.rows[0].count);
@@ -249,7 +220,7 @@ class TursoCommentRepository implements CommentRepository {
 
   async getStats(): Promise<{ total: number; approved: number; pending: number }> {
     const result = await this.client.execute(
-      "SELECT COUNT(*) as total, SUM(CASE WHEN is_spam = 0 THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as pending FROM comments"
+      "SELECT COUNT(*) as total, SUM(CASE WHEN is_spam = 0 THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as pending FROM comments WHERE deleted = 0"
     );
     const row = result.rows[0];
     return {
@@ -275,6 +246,7 @@ class TursoCommentRepository implements CommentRepository {
       pid: row.pid as string | undefined,
       pinnedFromId: row.pinned_from_id as string | undefined,
       isSpam: Boolean(row.is_spam),
+      deleted: Boolean(row.deleted),
       likes: Number(row.likes ?? 0),
       createdAt: row.created_at as number,
       updatedAt: row.updated_at as number | undefined,

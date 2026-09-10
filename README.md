@@ -33,6 +33,7 @@ twikee.init({
 - [前端接入](./docs/frontend.md)
 - [外观配置](./docs/appearance.md)
 - [API](./docs/api.md)
+- [数据库迁移](./docs/migration.md)
 
 ## 致谢
 

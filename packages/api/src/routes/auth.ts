@@ -32,7 +32,7 @@ export function createAuthRoutes() {
 
     const hashed = await AuthService.hashPassword(parsed.data.password)
     await c.var.db.config.set('ADMIN_PASSWORD', hashed)
-    const token = c.var.authService.generateToken('admin')
+    const token = await c.var.authService.generateToken('admin')
     return c.json({ token })
   })
 
@@ -46,7 +46,7 @@ export function createAuthRoutes() {
     const valid = await c.var.authService.verifyAdminPassword(parsed.data.password)
     if (!valid) return c.json({ error: 'Invalid password' }, 401)
 
-    const token = c.var.authService.generateToken('admin')
+    const token = await c.var.authService.generateToken('admin')
     return c.json({ token })
   })
 
@@ -56,7 +56,7 @@ export function createAuthRoutes() {
       return c.json({ valid: false }, 401)
     }
     const token = auth.slice(7)
-    const { valid } = c.var.authService.verifyToken(token)
+    const { valid } = await c.var.authService.verifyToken(token)
     return c.json({ valid })
   })
 

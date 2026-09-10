@@ -175,6 +175,7 @@ const confirmDelete = async () => {
     if (!checkAuth(res)) return
     showToast('评论已删除', 'success')
     await fetchComments(currentUrl.value!)
+    emit('refresh') // 同步更新顶部统计卡片
     emit('refresh')
   } catch (e) {
     showToast('删除失败', 'error')

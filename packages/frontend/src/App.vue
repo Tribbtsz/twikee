@@ -74,11 +74,14 @@ const buildCommentTree = (commentsList: any[]) => {
 const findRootId = (rid: string, commentMap: Map<string, any>): string => {
   let current = commentMap.get(rid)
   let currentId = rid
-  while (current && current.rid) {
+  const visited = new Set<string>()
+  // 沿 rid 链向上找根；visited 防止脏数据循环引用导致死循环
+  while (current && current.rid && !visited.has(current.id)) {
+    visited.add(current.id)
     currentId = current.id
     current = commentMap.get(current.rid)
   }
-  return current ? current.id : rid
+  return current ? current.id : currentId
 }
 
 const commentTree = computed(() => buildCommentTree(comments.value))

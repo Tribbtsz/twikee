@@ -14,6 +14,7 @@ export interface TwikeeComment {
   pid?: string
   pinnedFromId?: string
   isSpam: boolean
+  deleted: boolean
   likes: number
   createdAt: number
   updatedAt?: number

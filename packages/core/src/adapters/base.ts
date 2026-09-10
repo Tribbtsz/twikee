@@ -8,11 +8,13 @@ export interface CommentStats {
 
 export interface CommentRepository {
   create(data: CreateCommentInput): Promise<Comment>
-  createPinnedCopy(original: Comment): Promise<Comment>
   getById(id: string): Promise<Comment | null>
   getList(query: CommentQuery): Promise<PaginatedResult<Comment>>
   update(id: string, data: UpdateCommentInput): Promise<Comment>
+  /** 硬删除：从表中移除（彻底清理用） */
   delete(id: string): Promise<void>
+  /** 软删除：标记 deleted + 清空内容，保留结构供子评论挂靠 */
+  softDelete(id: string): Promise<Comment>
   like(id: string, userId: string): Promise<boolean>
   getCount(url: string): Promise<number>
   getStats(): Promise<CommentStats>

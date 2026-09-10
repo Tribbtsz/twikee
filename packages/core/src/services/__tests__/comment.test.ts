@@ -15,18 +15,12 @@ class MockCommentRepo implements CommentRepository {
   async create(data: CreateCommentInput): Promise<Comment> {
     const id = crypto.randomUUID()
     const comment: Comment = {
-      id, ...data, master: false, top: false, isSpam: false,
+      id, ...data, master: false, top: false, isSpam: false, deleted: false,
       likes: 0, createdAt: Date.now(), mail: data.mail, link: data.link,
       ua: data.ua, ip: data.ip, rid: data.rid, pid: data.pid,
     }
     this.comments.set(id, comment)
     return comment
-  }
-
-  async createPinnedCopy(original: Comment): Promise<Comment> {
-    const copy = { ...original, id: crypto.randomUUID(), top: true, pinnedFromId: original.id, createdAt: Date.now() }
-    this.comments.set(copy.id, copy)
-    return copy
   }
 
   async getById(id: string): Promise<Comment | null> {
@@ -36,6 +30,7 @@ class MockCommentRepo implements CommentRepository {
   async getList(query: CommentQuery): Promise<{ data: Comment[]; total: number; page: number; pageSize: number; totalPages: number }> {
     let list = Array.from(this.comments.values()).filter(c => !query.url || c.url === query.url)
     if (!query.includeSpam) list = list.filter(c => !c.isSpam)
+    if (!query.includeDeleted) list = list.filter(c => !c.deleted)
     const total = list.length
     const page = query.page || 1
     const pageSize = query.pageSize || 10
@@ -52,6 +47,14 @@ class MockCommentRepo implements CommentRepository {
 
   async delete(id: string): Promise<void> {
     this.comments.delete(id)
+  }
+
+  async softDelete(id: string): Promise<Comment> {
+    const existing = this.comments.get(id)
+    if (!existing) throw new Error('Not found')
+    const updated = { ...existing, deleted: true, top: false, content: '', updatedAt: Date.now() }
+    this.comments.set(id, updated)
+    return updated
   }
 
   async like(id: string, userId: string): Promise<boolean> {
@@ -137,17 +140,45 @@ describe('CommentService', () => {
     expect(updated!.isSpam).toBe(true)
   })
 
-  it('moderates: delete', async () => {
+  it('moderates: delete (soft delete keeps row, blanks content)', async () => {
     const c = await service.create({ url: '/test', nick: 'A', content: 'x' })
     await service.moderate(c.id, 'delete')
+    const updated = await service.getById(c.id)
+    expect(updated).not.toBeNull()
+    expect(updated!.deleted).toBe(true)
+    expect(updated!.content).toBe('')
+  })
+
+  it('hard delete removes the row', async () => {
+    const c = await service.create({ url: '/test', nick: 'A', content: 'x' })
+    await service.hardDelete(c.id)
     expect(await service.getById(c.id)).toBeNull()
   })
 
-  it('pins a comment', async () => {
+  it('service.delete is a soft delete', async () => {
+    const c = await service.create({ url: '/test', nick: 'A', content: 'x' })
+    await service.delete(c.id)
+    const updated = await service.getById(c.id)
+    expect(updated!.deleted).toBe(true)
+  })
+
+  it('getList excludes deleted comments by default', async () => {
+    const c = await service.create({ url: '/test', nick: 'A', content: 'ok' })
+    await service.delete(c.id)
+    const result = await service.getList({ url: '/test' })
+    expect(result.total).toBe(0)
+  })
+
+  it('pins a comment with top flag without duplicating', async () => {
     const c = await service.create({ url: '/test', nick: 'A', content: 'x' })
     const pinned = await service.setTop(c.id, true)
     expect(pinned.top).toBe(true)
-    expect(pinned.pinnedFromId).toBe(c.id)
+    expect(pinned.pinnedFromId).toBeUndefined()
+    // 不再复制评论
+    const all = await service.getList({ url: '/test', pageSize: 100 })
+    expect(all.data).toHaveLength(1)
+    const unpinned = await service.setTop(c.id, false)
+    expect(unpinned.top).toBe(false)
   })
 
   it('counts comments per url', async () => {
