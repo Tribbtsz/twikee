@@ -6,6 +6,7 @@ import TkSubmit from './components/comment/TkSubmit.vue'
 import Button from './components/ui/Button.vue'
 import { resolveAppearance } from './types'
 import type { TwikeeAppearanceOptions } from './types'
+import { buildCommentTree } from './lib/comment-tree'
 
 const props = withDefaults(defineProps<{
   envId: string
@@ -44,48 +45,6 @@ const fetchConfig = async () => {
 }
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
-
-const buildCommentTree = (commentsList: any[]) => {
-  if (!Array.isArray(commentsList)) return []
-  const commentMap = new Map<string, any>()
-  const rootComments: any[] = []
-
-  commentsList.forEach(comment => {
-    commentMap.set(comment.id, { ...comment, children: [], replyToNick: '' })
-  })
-
-  commentsList.forEach(comment => {
-    const node = commentMap.get(comment.id)
-    if (comment.rid) {
-      const rootId = findRootId(comment.rid, commentMap)
-      const root = commentMap.get(rootId)
-      if (root && rootId !== comment.id) {
-        const parentComment = commentMap.get(comment.rid)
-        node.replyToNick = parentComment ? parentComment.nick : ''
-        root.children.push(node)
-      } else {
-        rootComments.push(node)
-      }
-    } else {
-      rootComments.push(node)
-    }
-  })
-
-  return rootComments
-}
-
-const findRootId = (rid: string, commentMap: Map<string, any>): string => {
-  let current = commentMap.get(rid)
-  let currentId = rid
-  const visited = new Set<string>()
-  // 沿 rid 链向上找根；visited 防止脏数据循环引用导致死循环
-  while (current && current.rid && !visited.has(current.id)) {
-    visited.add(current.id)
-    currentId = current.id
-    current = commentMap.get(current.rid)
-  }
-  return current ? current.id : currentId
-}
 
 const commentTree = computed(() => buildCommentTree(comments.value))
 

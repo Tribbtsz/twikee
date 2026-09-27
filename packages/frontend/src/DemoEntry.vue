@@ -9,6 +9,7 @@ import CardContent from './components/ui/CardContent.vue'
 import Toast from './components/ui/Toast.vue'
 import { useTwikee } from './composables/useTwikee'
 import { MessageSquare, ShieldCheck } from 'lucide-vue-next'
+import { buildCommentTree } from './lib/comment-tree'
 
 const envId = ref((window as any).TWIKEE_API_URL || '')
 const currentUrl = ref('')
@@ -30,48 +31,6 @@ const { loading, error, comments, fetchComments, submitComment } = useTwikee({
 })
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
-
-const buildCommentTree = (commentsList: any[]) => {
-  if (!Array.isArray(commentsList)) return []
-
-  const commentMap = new Map<string, any>()
-  const rootComments: any[] = []
-
-  commentsList.forEach(comment => {
-    commentMap.set(comment.id, { ...comment, children: [], replyToNick: '' })
-  })
-
-  commentsList.forEach(comment => {
-    const node = commentMap.get(comment.id)
-    if (comment.rid) {
-      const rootId = findRootId(comment.rid, commentMap)
-      const root = commentMap.get(rootId)
-      if (root && rootId !== comment.id) {
-        const parentComment = commentMap.get(comment.rid)
-        node.replyToNick = parentComment ? parentComment.nick : ''
-        root.children.push(node)
-      } else {
-        rootComments.push(node)
-      }
-    } else {
-      rootComments.push(node)
-    }
-  })
-
-  return rootComments
-}
-
-const findRootId = (rid: string, commentMap: Map<string, any>): string => {
-  let current = commentMap.get(rid)
-  const visited = new Set<string>([rid])
-  while (current && current.rid) {
-    // 脏数据可能构成环（A.rid=B, B.rid=A），无保护会卡死浏览器主线程
-    if (visited.has(current.rid)) break
-    visited.add(current.rid)
-    current = commentMap.get(current.rid)
-  }
-  return current ? current.id : rid
-}
 
 const commentTree = computed(() => buildCommentTree(comments.value))
 
