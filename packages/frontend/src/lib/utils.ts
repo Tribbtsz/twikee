@@ -123,9 +123,80 @@ const SAFE_TAGS = new Set([
 ])
 
 const SAFE_ATTRS = new Set([
-  'href', 'title', 'src', 'alt', 'class', 'target', 'rel',
+  'href', 'title', 'src', 'alt', 'target', 'rel', 'class',
   'align', 'width', 'height',
 ])
+
+/** 链接/图片允许的协议白名单 */
+const SAFE_SCHEMES = new Set(['http:', 'https:', 'mailto:', 'tel:'])
+
+/** marked 会给代码块加 language-* class，其余 class 一律不允许（避免污染宿主页样式） */
+const SAFE_CLASS_RE = /^language-[a-z0-9+#.-]*$/i
+/**
+ * 判断 href/src 是否安全。
+ *
+ * 不能只黑名单 `javascript:`：浏览器解析 URL 前会剥离 ASCII tab/LF/CR，
+ * `java\tscript:` 剥掉 tab 就是 `javascript:`；HTML 解析器又会先把属性里的
+ * `&#9;` 解码成 tab，所以连实体编码也能绕过。这里先剥掉所有控制字符与空白
+ * 再取 scheme，走白名单。
+ */
+function isSafeUrlValue(value: string): boolean {
+  const compact = value.replace(/[\u0000-\u0020\u007f-\u009f]/g, '').toLowerCase()
+  const scheme = compact.match(/^([a-z][a-z0-9+.-]*):/)
+  if (!scheme) return true // 相对路径、#锚点、?query、//host 协议相对地址
+  return SAFE_SCHEMES.has(`${scheme[1]}:`)
+}
+
+function isSafeAttr(tag: string, name: string, value: string): boolean {
+  if (!SAFE_ATTRS.has(name)) return false
+  if (name === 'href' || name === 'src') return isSafeUrlValue(value)
+  if (name === 'class') return SAFE_CLASS_RE.test(value)
+  return true
+}
+
+const LIKE_VISITOR_KEY = 'twikee_like_uid'
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** 生成 UUID。crypto.randomUUID 只在安全上下文可用，http 站点上退回 getRandomValues */
+export function randomUuid(): string {
+  const c = globalThis.crypto
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID()
+  const bytes = new Uint8Array(16)
+  if (c && typeof c.getRandomValues === 'function') {
+    c.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+let inMemoryVisitorId: string | undefined
+
+/**
+ * 取点赞用的稳定访客 id。
+ *
+ * widget 通常跨域部署（博客一个域、API 另一个域），fetch 默认不带 Cookie，
+ * 服务端的 HttpOnly Cookie 送不过来；没有稳定身份时每次点赞都是新用户，
+ * 「取消点赞」永远无法生效。因此由前端持久化一份 id 随请求带上。
+ * 服务端会同时把它固化进 Cookie，能带 Cookie 的场景下以后以 Cookie 为准。
+ *
+ * 隐私模式 / 禁用存储时退化为进程内 id（同一页面会话内仍稳定）。
+ */
+export function getLikeVisitorId(): string {
+  try {
+    const existing = localStorage.getItem(LIKE_VISITOR_KEY)
+    if (existing && UUID_RE.test(existing)) return existing
+    const id = randomUuid()
+    localStorage.setItem(LIKE_VISITOR_KEY, id)
+    return id
+  } catch {
+    inMemoryVisitorId = inMemoryVisitorId ?? randomUuid()
+    return inMemoryVisitorId
+  }
+}
 
 export function sanitizeHtml(html: string): string {
   const template = document.createElement('template')
@@ -142,9 +213,7 @@ export function sanitizeHtml(html: string): string {
       } else {
         const attrs = Array.from(child.attributes)
         for (const attr of attrs) {
-          if (!SAFE_ATTRS.has(attr.name)) {
-            child.removeAttribute(attr.name)
-          } else if ((attr.name === 'href' || attr.name === 'src') && /^\s*javascript:/i.test(attr.value)) {
+          if (!isSafeAttr(tag, attr.name, attr.value)) {
             child.removeAttribute(attr.name)
           }
         }

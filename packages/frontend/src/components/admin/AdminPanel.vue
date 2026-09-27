@@ -250,6 +250,7 @@ const tabs = [
         v-if="activeTab === 'data'"
         :api-url="apiUrl"
         :token="token"
+        @logout="handleLogout"
       />
     </main>
 

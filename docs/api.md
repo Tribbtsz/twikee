@@ -29,3 +29,25 @@
 | `IMAGE_CDN_TOKEN`（密钥） | 图床 Token |
 
 标记为密钥的键不会经 `GET /api/admin/config` 返回；保存时留空表示不修改。
+
+## 行为约定
+
+### 点赞 `POST /api/comment/:id/like`
+
+- 访客身份按优先级取：服务端签发的 `tk_uid` Cookie（HttpOnly）→ 请求头 `x-user-id`（须为 UUID）→ 现场生成并写 Cookie。同一身份重复调用即在「赞 / 取消赞」之间切换。
+- 跨域部署（评论页与 API 不同域）时浏览器不会随 fetch 发送 Cookie，由前端持久化的 `x-user-id` 保证身份稳定；服务端会同时尝试把身份固化进 Cookie。
+- 响应以服务端为准：`{ success, liked, likes }`。前端不要本地维护计数。
+- 评论不存在（含已软删除）返回 404。
+- 限流：每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；登录相关每分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
+
+### Webhook 通知 `WEBHOOK_URL`
+
+- 仅允许 `http`/`https`，且不允许指向内网、环回、链路本地（含云 metadata `169.254.169.254`）地址；保存时会校验，不合法返回 400。
+- 请求不跟随重定向（防止公网地址 302 跳转到内网绕过校验）。
+- payload 中不会携带评论者的 `ip` / `ua`。
+
+### 导入 `POST /api/admin/import`
+
+- 接受评论数组，单次最多 1000 条，逐条按 schema 校验。
+- 保留原 `id`：只有保留 id，`rid` 指向的回复关系才能在导入后继续成立（否则所有回复都会变成顶层评论）。`createdAt`/`likes`/`isSpam`/`top`/`master` 等字段同样会保留。
+- id 与库中现有评论冲突的条会计入失败，响应中的 `failedItems` 给出每条失败原因。

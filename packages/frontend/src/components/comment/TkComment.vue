@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import type { PropType } from 'vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
@@ -7,7 +7,7 @@ import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
 import TkSubmit from './TkSubmit.vue'
 import { marked } from 'marked'
-import { sanitizeHtml } from '@/lib/utils'
+import { sanitizeHtml, getLikeVisitorId } from '@/lib/utils'
 import type { Comment } from '@twikee/core'
 import type { ResolvedTwikeeAppearance } from '@/types'
 
@@ -74,12 +74,26 @@ if (typeof window !== 'undefined') {
   liked.value = localStorage.getItem(likeStorageKey.value) === '1'
 }
 
+// 后台审核/删除后重新拉取列表时，组件因 :key="comment.id" 被复用、不会重新 setup，
+// 不同步就会一直显示陈旧计数
+watch(
+  () => props.comment.likes,
+  (value) => {
+    if (typeof value === 'number') likeCount.value = value
+  },
+)
+
 const getChildLikeState = (childId: string, likes?: number) => {
-  if (!childLikeStates.value[childId]) {
+  let state = childLikeStates.value[childId]
+  if (!state) {
     const storageLiked = typeof window !== 'undefined' && localStorage.getItem(`twikee_liked_${childId}`) === '1'
-    childLikeStates.value[childId] = { liked: storageLiked, count: likes || 0 }
+    state = { liked: storageLiked, count: likes || 0 }
+    childLikeStates.value[childId] = state
+  } else if (typeof likes === 'number') {
+    // count 归服务端所有，每次从 props 同步；liked 是客户端本地记忆，保留
+    state.count = likes
   }
-  return childLikeStates.value[childId]
+  return state
 }
 
 const showReplyBox = computed(() => replyingToId.value === props.comment.id)
@@ -122,14 +136,20 @@ const onLike = async () => {
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${props.comment.id}/like`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() }
     })
     if (res.ok) {
       const data = await res.json()
       if (data.success) {
-        liked.value = !liked.value
-        likeCount.value += liked.value ? 1 : -1
-        if (liked.value) {
+        // 以服务端返回为准。旧实现是本地 ±1，而服务端旧逻辑每次请求都换新
+        // 身份导致只能插入不能删除，两侧计数必然越差越多。
+        liked.value = data.liked
+        if (typeof data.likes === 'number') {
+          likeCount.value = data.likes
+        } else {
+          likeCount.value += data.liked ? 1 : -1
+        }
+        if (data.liked) {
           localStorage.setItem(likeStorageKey.value, '1')
         } else {
           localStorage.removeItem(likeStorageKey.value)
@@ -150,14 +170,19 @@ const onChildLike = async (childId: string) => {
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${childId}/like`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() }
     })
     if (res.ok) {
       const data = await res.json()
       if (data.success) {
-        state.liked = !state.liked
-        state.count += state.liked ? 1 : -1
-        if (state.liked) {
+        // 同上：以服务端结果为准，不再本地自增
+        state.liked = data.liked
+        if (typeof data.likes === 'number') {
+          state.count = data.likes
+        } else {
+          state.count += data.liked ? 1 : -1
+        }
+        if (data.liked) {
           localStorage.setItem(`twikee_liked_${childId}`, '1')
         } else {
           localStorage.removeItem(`twikee_liked_${childId}`)
