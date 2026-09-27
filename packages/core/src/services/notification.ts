@@ -24,6 +24,54 @@ export function sanitizeUrl(url: string | undefined): string | undefined {
   }
 }
 
+/**
+ * 拦截指向内网/环回/链路本地的 URL，防止 Webhook 渠道被用作 SSRF 跳板
+ * （评论是公开可提交的，恶意配置一条 WEBHOOK_URL 就能让服务端代为请求内网，
+ *   并把评论者信息外带出去）。
+ *
+ * 已知边界：DNS 名称指向私网（如 127.0.0.1.nip.io）与 DNS rebinding 不在此处
+ * 防护范围内，那需要解析后校验 IP；这里挡住的是直接填 IP / 内网域名的常见手法。
+ */
+export function assertPublicHttpUrl(raw: string, label = 'URL'): void {
+  let parsed: URL
+  try {
+    parsed = new URL(raw)
+  } catch {
+    throw new Error(`${label} is not a valid URL`)
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`${label} must use http or https`)
+  }
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  if (isPrivateHost(host)) {
+    throw new Error(`${label} must not point at a private, loopback or link-local address`)
+  }
+}
+
+function isPrivateHost(host: string): boolean {
+  if (!host) return true
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
+    return true
+  }
+  // IPv6 环回 / 未指定 / 链路本地(fe80::) / 唯一本地(fc00::/7)
+  if (host === '::1' || host === '::') return true
+  if (/^fe[89ab][0-9a-f]:/.test(host) || /^f[cd][0-9a-f]:/.test(host)) return true
+  // IPv6 映射的 IPv4（::ffff:127.0.0.1）
+  const mapped = host.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/)
+  if (mapped) return isPrivateHost(mapped[1])
+
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (!m) return false
+  const [a, b] = [Number(m[1]), Number(m[2])]
+  if (a === 0 || a === 10 || a === 127) return true // 本网段 / 私网 / 环回
+  if (a === 192 && b === 168) return true // 私网
+  if (a === 172 && b >= 16 && b <= 31) return true // 私网
+  if (a === 169 && b === 254) return true // 链路本地 + 云 metadata
+  if (a === 100 && b >= 64 && b <= 127) return true // CGNAT
+  if (a >= 224) return true // 组播 / 保留段
+  return false
+}
+
 export function escapeWecomMarkdown(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/([`*_\[\]()#+\-.!|>])/g, '\\$1')
 }
@@ -77,10 +125,16 @@ export async function postJson(
   try {
     const res = await fetch(url, {
       method,
+      // 不跟随重定向：公网地址 302 到内网会绕过上面的地址校验
+      redirect: 'manual',
       headers: hasBody ? { 'Content-Type': 'application/json', ...init?.headers } : init?.headers,
       body: hasBody ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     })
+    // redirect: 'manual' 下 3xx 是 opaqueredirect（status 0）
+    if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+      throw new Error(`Notification to ${host} returned a redirect, which is not followed`)
+    }
     if (!res.ok) {
       throw new Error(`Notification request failed: ${res.status} ${res.statusText}`)
     }
@@ -151,15 +205,21 @@ export class WebhookAdapter implements ChannelAdapter {
   private headers: Record<string, string>
   
   constructor(config: { url: string; method?: string; headers?: Record<string, string> }) {
+    assertPublicHttpUrl(config.url, 'WEBHOOK_URL')
     this.url = config.url
     this.method = config.method ?? 'POST'
     this.headers = config.headers ?? {}
   }
   
   async send(event: NotificationEvent): Promise<void> {
+    // 重新校验：WEBHOOK_URL 可能在运行期被改掉
+    assertPublicHttpUrl(this.url, 'WEBHOOK_URL')
+    // 最小化 payload：webhook 会整体投递给第三方，剔除 ip/ua，
+    // 避免评论者的 IP 与 User-Agent 被外带到配置地址
+    const { ip: _ip, ua: _ua, ...comment } = event.payload.comment
     await postJson(
       this.url,
-      event,
+      { ...event, payload: { ...event.payload, comment } },
       { method: this.method, headers: this.headers }
     )
   }

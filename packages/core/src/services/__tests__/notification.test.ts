@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   escapeHtml,
   sanitizeUrl,
+  assertPublicHttpUrl,
   escapeWecomMarkdown,
   truncate,
   postJson,
@@ -202,6 +203,63 @@ describe('WebhookAdapter', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('https://example.com/hook')
     expect(JSON.parse(init.body).type).toBe('comment.new')
+  })
+
+  it('strips ip/ua from the payload', async () => {
+    const fetchMock = mockFetchJson({})
+    vi.stubGlobal('fetch', fetchMock)
+    await new WebhookAdapter({ url: 'https://example.com/hook' }).send(
+      makeEvent({ ua: 'Mozilla/5.0 secret', ip: '1.2.3.4' } as Partial<NotificationEvent['payload']['comment']>),
+    )
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.payload.comment.ua).toBeUndefined()
+    expect(body.payload.comment.ip).toBeUndefined()
+    expect(body.payload.comment.nick).toBe('Alice')
+  })
+
+  it('does not follow redirects', async () => {
+    // redirect: 'manual' 下 3xx 为 opaqueredirect（status 0）
+    const fetchMock = vi.fn(
+      async () => new Response(null, { status: 302, headers: { Location: 'http://169.254.169.254/' } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(
+      new WebhookAdapter({ url: 'https://example.com/hook' }).send(makeEvent()),
+    ).rejects.toThrow(/redirect/)
+  })
+
+  it('refuses private/loopback/link-local targets at construction', () => {
+    for (const url of [
+      'http://127.0.0.1/hook',
+      'http://localhost:3000/hook',
+      'http://10.1.2.3/hook',
+      'http://192.168.1.1/hook',
+      'http://172.16.0.1/hook',
+      'http://169.254.169.254/latest/meta-data/',
+      'http://[::1]/hook',
+      'http://svc.internal/hook',
+      'file:///etc/passwd',
+      'not-a-url',
+    ]) {
+      expect(() => new WebhookAdapter({ url }), url).toThrow()
+    }
+  })
+
+  it('accepts public http(s) targets', () => {
+    expect(() => new WebhookAdapter({ url: 'https://example.com/hook' })).not.toThrow()
+    expect(() => new WebhookAdapter({ url: 'http://hooks.example.com:8080/x' })).not.toThrow()
+  })
+})
+
+describe('assertPublicHttpUrl', () => {
+  it('throws for private hosts', () => {
+    expect(() => assertPublicHttpUrl('http://127.0.0.1/')).toThrow()
+    expect(() => assertPublicHttpUrl('https://169.254.169.254/')).toThrow()
+  })
+
+  it('passes for public hosts', () => {
+    expect(() => assertPublicHttpUrl('https://example.com/x')).not.toThrow()
   })
 })
 
