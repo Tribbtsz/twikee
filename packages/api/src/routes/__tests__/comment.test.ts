@@ -14,7 +14,7 @@ function makeApp() {
     comments: {
       create: async (data: any) => ({ ...data, id: '1', createdAt: Date.now(), master: false, top: false, isSpam: false, likes: 0 }),
       getById: async (id: string) => (id === '1' ? { id: '1', url: '/p', nick: 'A', content: 'x', master: false, top: false, isSpam: false, deleted: false, likes: 1, createdAt: Date.now() } : null),
-      getList: async (q: any) => ({ data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 }),
+      getList: async (_q: any) => ({ data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 }),
       like: async (id: string, userId: string) => {
         likeCalls.push({ id, userId })
         return { liked: true, likes: 1 }

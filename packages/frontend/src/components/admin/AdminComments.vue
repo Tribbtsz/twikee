@@ -49,7 +49,6 @@ const currentUrl = ref<string | null>(null)
 const pagesPage = ref(1)
 const pagesPageSize = ref(20)
 const pagesTotal = ref(0)
-const pagesTotalPages = computed(() => Math.ceil(pagesTotal.value / pagesPageSize.value))
 const pagesSearchQuery = ref('')
 
 const commentsPage = ref(1)
@@ -157,6 +156,7 @@ const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
     await fetchComments(currentUrl.value!)
     emit('refresh')
   } catch (e) {
+    console.error('[Twikee] moderate failed:', e)
     showToast('操作失败', 'error')
   }
 }
@@ -175,9 +175,9 @@ const confirmDelete = async () => {
     if (!checkAuth(res)) return
     showToast('评论已删除', 'success')
     await fetchComments(currentUrl.value!)
-    emit('refresh') // 同步更新顶部统计卡片
     emit('refresh')
   } catch (e) {
+    console.error('[Twikee] delete failed:', e)
     showToast('删除失败', 'error')
   }
 }

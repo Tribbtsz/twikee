@@ -1,4 +1,3 @@
-import type { Ref } from 'vue'
 import { ref, computed } from 'vue'
 
 export interface TwikeeComment {

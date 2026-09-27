@@ -73,7 +73,7 @@ function isPrivateHost(host: string): boolean {
 }
 
 export function escapeWecomMarkdown(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/([`*_\[\]()#+\-.!|>])/g, '\\$1')
+  return s.replace(/\\/g, '\\\\').replace(/([`*_[\]()#+\-.!|>])/g, '\\$1')
 }
 
 export function truncate(s: string, max: number): string {
@@ -141,7 +141,7 @@ export async function postJson(
     return res
   } catch (err) {
     if (controller.signal.aborted) {
-      throw new Error(`Notification to ${host} timed out after ${timeoutMs}ms`)
+      throw new Error(`Notification to ${host} timed out after ${timeoutMs}ms`, { cause: err })
     }
     throw err
   } finally {

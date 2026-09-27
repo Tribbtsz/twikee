@@ -63,7 +63,7 @@ function ii(a: number, b: number, c: number, d: number, x: number, s: number, t:
 
 function md51(s: string) {
   const n = s.length
-  let state = [1732584193, -271733879, -1732584194, 271733878]
+  const state = [1732584193, -271733879, -1732584194, 271733878]
   let i: number
   for (i = 64; i <= n; i += 64) {
     md5cycle(state, md5blk(s.substring(i - 64, i)))
@@ -141,6 +141,9 @@ const SAFE_CLASS_RE = /^language-[a-z0-9+#.-]*$/i
  * 再取 scheme，走白名单。
  */
 function isSafeUrlValue(value: string): boolean {
+  // no-control-regex: 这里必须匹配控制字符——浏览器解析 URL 前会剥离 tab/LF/CR，
+  // 攻击者可借此把 javascript: 伪装成 java\tscript:
+  // eslint-disable-next-line no-control-regex
   const compact = value.replace(/[\u0000-\u0020\u007f-\u009f]/g, '').toLowerCase()
   const scheme = compact.match(/^([a-z][a-z0-9+.-]*):/)
   if (!scheme) return true // 相对路径、#锚点、?query、//host 协议相对地址

@@ -19,7 +19,6 @@
     "build": "vite build",
     "build:site": "vite build -c vite.site.config.ts && cp -r dist/* dist-site/ 2>/dev/null || true",
     "preview": "vite preview",
-    "lint": "eslint src/",
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit"
   },

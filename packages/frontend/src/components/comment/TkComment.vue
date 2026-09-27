@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { PropType } from 'vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
@@ -36,15 +36,6 @@ const emit = defineEmits<{
   moderate: [id: string, action: 'approve' | 'spam']
   top: [id: string, top: boolean]
 }>()
-
-const publicConfig = ref<Record<string, string>>({})
-
-onMounted(async () => {
-  try {
-    const res = await fetch(`${props.apiUrl}/api/config`)
-    if (res.ok) publicConfig.value = await res.json()
-  } catch {}
-})
 
 const isContentExpanded = ref(false)
 const likeCount = ref(props.comment.likes || 0)
@@ -241,6 +232,7 @@ const handleReplySubmit = async (data: any) => {
       replyError.value = err?.error || '回复失败，请重试'
     }
   } catch (e) {
+    console.error('[Twikee] reply failed:', e)
     replyError.value = '网络错误，请重试'
   }
 }
@@ -265,6 +257,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
       replyError.value = err?.error || '回复失败，请重试'
     }
   } catch (e) {
+    console.error('[Twikee] child reply failed:', e)
     replyError.value = '网络错误，请重试'
   }
 }

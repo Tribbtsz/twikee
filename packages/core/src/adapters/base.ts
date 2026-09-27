@@ -1,4 +1,4 @@
-import type { Comment, User, Config, CreateCommentInput, UpdateCommentInput, CommentQuery, PaginatedResult } from '../types'
+import type { Comment, User, CreateCommentInput, UpdateCommentInput, CommentQuery, PaginatedResult } from '../types'
 
 export interface CommentStats {
   total: number

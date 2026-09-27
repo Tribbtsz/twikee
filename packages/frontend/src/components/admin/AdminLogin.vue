@@ -63,6 +63,7 @@ const handleSetup = async () => {
       emit('login', data.token)
     }
   } catch (e) {
+    console.error('[Twikee] password setup failed:', e)
     error.value = '设置失败，请检查网络'
   } finally {
     loading.value = false
@@ -90,6 +91,7 @@ const handleLogin = async () => {
       emit('login', data.token)
     }
   } catch (e) {
+    console.error('[Twikee] login failed:', e)
     error.value = '登录失败，请检查网络'
   } finally {
     loading.value = false

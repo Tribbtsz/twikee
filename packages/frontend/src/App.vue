@@ -37,7 +37,10 @@ const fetchConfig = async () => {
     const res = await fetch(`${apiUrl.value}/api/config`)
     const cfg = await res.json()
     commentsClosed.value = cfg.COMMENTS_CLOSED === true
-  } catch {}
+  } catch (e) {
+    // 配置读不到时界面会停在默认态，留一条日志，否则排错毫无线索
+    console.error('[Twikee] failed to load public config:', e)
+  }
 }
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))

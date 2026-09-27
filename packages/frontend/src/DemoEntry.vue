@@ -15,7 +15,6 @@ const currentUrl = ref('')
 const page = ref(1)
 const total = ref(0)
 const pageSize = ref(10)
-const replyingTo = ref<string | null>(null)
 const demoEnabled = ref(true)
 const demoCheckDone = ref(false)
 const commentsClosed = ref(false)
@@ -64,9 +63,11 @@ const buildCommentTree = (commentsList: any[]) => {
 
 const findRootId = (rid: string, commentMap: Map<string, any>): string => {
   let current = commentMap.get(rid)
-  let currentId = rid
+  const visited = new Set<string>([rid])
   while (current && current.rid) {
-    currentId = current.id
+    // 脏数据可能构成环（A.rid=B, B.rid=A），无保护会卡死浏览器主线程
+    if (visited.has(current.rid)) break
+    visited.add(current.rid)
     current = commentMap.get(current.rid)
   }
   return current ? current.id : rid

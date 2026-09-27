@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Card from '@/components/ui/Card.vue'
 import CardHeader from '@/components/ui/CardHeader.vue'
 import CardContent from '@/components/ui/CardContent.vue'
@@ -40,7 +40,6 @@ const emit = defineEmits<{
 const config = ref<Record<string, string>>({})
 const savedConfig = ref<Record<string, string>>({})
 const loading = ref(false)
-const saved = ref(false)
 const showResetDialog = ref(false)
 const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' })
 
@@ -164,6 +163,7 @@ const fetchConfig = async () => {
     config.value = { ...buildDefaults(), ...data }
     savedConfig.value = { ...config.value }
   } catch (e) {
+    console.error('[Twikee] failed to load admin config:', e)
     showToast('获取配置失败', 'error')
   } finally {
     loading.value = false
@@ -191,6 +191,7 @@ const saveConfig = async () => {
     }
     savedConfig.value = { ...config.value }
   } catch (e) {
+    console.error('[Twikee] failed to save admin config:', e)
     showToast('保存配置失败', 'error')
   } finally {
     loading.value = false

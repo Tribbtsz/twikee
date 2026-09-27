@@ -20,7 +20,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 格式与 lint 先行：最容易坏，且失败信息比 typecheck 好读
+      - run: pnpm format:check
+      - run: pnpm lint
       - run: pnpm -r build
       - run: pnpm -r test
+      # typecheck 是硬门禁：曾经 continue-on-error 让类型错误长期无人发现
       - run: pnpm -r typecheck
-        continue-on-error: true

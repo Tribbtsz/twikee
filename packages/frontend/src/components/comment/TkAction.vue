@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const props = defineProps({
+defineProps({
   liked: { type: Boolean, default: false },
   likeCount: { type: Number, default: 0 },
   repliesCount: { type: Number, default: 0 }

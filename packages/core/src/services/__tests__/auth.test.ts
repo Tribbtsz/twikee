@@ -13,10 +13,10 @@ class MockConfigRepo implements ConfigRepository {
 
 class MockUserRepo implements UserRepository {
   users: any[] = []
-  async getById(id: string) { return this.users.find(u => u.id === id) || null }
+  async getById(_id: string) { return this.users.find(u => u.id === _id) || null }
   async getByMail(mail: string) { return this.users.find(u => u.mail === mail) || null }
   async create(data: any) { const u = { ...data, id: crypto.randomUUID(), createdAt: Date.now() }; this.users.push(u); return u }
-  async update(id: string, data: any) { return null as any }
+  async update(_id: string, _data: any) { return null as any }
 }
 
 class MockAdapter extends DatabaseAdapter {

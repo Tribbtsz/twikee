@@ -4,7 +4,6 @@ import type { Client } from "@tursodatabase/serverless/compat";
 import type {
   Comment,
   User,
-  Config,
   CreateCommentInput,
   UpdateCommentInput,
   CommentQuery,

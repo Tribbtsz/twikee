@@ -56,7 +56,9 @@ const fetchCommentsClosed = async () => {
     if (!checkAuth(res)) return
     const data = await res.json()
     commentsClosed.value = data.COMMENTS_CLOSED === 'true'
-  } catch {}
+  } catch (e) {
+    console.error('[Twikee] failed to load admin config:', e)
+  }
 }
 
 const toggleCommentsClosed = async () => {
