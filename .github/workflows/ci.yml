@@ -11,15 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # 20 已被 GitHub Actions 弃用（会被强制跑在 24 上，等于没测它），
+        # 20 已被 GitHub Actions 弃用（条目会被强制跑在 24 上，等于没测它），
         # 22/24 是当前在维护的 LTS
         node-version: [22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      # action 版本统一升到跑在 node24 运行时的大版本：
+      # checkout v5+ / setup-node v5+ / pnpm/action-setup v5+ 都从 node20
+      # 切到了 node24，否则 CI 会一直报 Node 20 弃用警告。
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
+          # setup-node v5 起会在 package.json 有 packageManager 字段时自动启用缓存，
+          # 与下面的 cache: pnpm 冲突（同时设置会直接报错），所以显式关掉自动那个，
+          # 缓存行为保持原来的 cache: pnpm 不变。
+          package-manager-cache: false
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # 格式与 lint 先行：最容易坏，且失败信息比 typecheck 好读
