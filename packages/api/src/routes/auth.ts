@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { TursoAdapter } from '@twikee/core'
 import { AuthService } from '@twikee/core'
 import { SetupSchema, LoginSchema } from '../validation'
+import { rateLimit } from '../lib/rate-limit'
 
 type Env = {
   Variables: {
@@ -9,6 +10,14 @@ type Env = {
     authService: AuthService
   }
 }
+
+/** 登录/初始化密码：每 IP 每 5 分钟 10 次，挡住在线爆破 */
+const authLimiter = rateLimit({
+  windowMs: 5 * 60_000,
+  max: 10,
+  key: 'auth',
+  message: 'Too many attempts, please try again later',
+})
 
 export function createAuthRoutes() {
   const app = new Hono<Env>()
@@ -18,7 +27,7 @@ export function createAuthRoutes() {
     return c.json({ initialized: !!adminPassword })
   })
 
-  app.post('/setup', async (c) => {
+  app.post('/setup', authLimiter, async (c) => {
     const adminPassword = await c.var.db.config.get('ADMIN_PASSWORD')
     if (adminPassword) {
       return c.json({ error: 'Password already set' }, 400)
@@ -36,7 +45,7 @@ export function createAuthRoutes() {
     return c.json({ token })
   })
 
-  app.post('/login', async (c) => {
+  app.post('/login', authLimiter, async (c) => {
     const body = await c.req.json()
     const parsed = LoginSchema.safeParse(body)
     if (!parsed.success) {

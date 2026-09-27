@@ -1,7 +1,15 @@
 import { Hono } from 'hono'
 import type { CommentService, TursoAdapter } from '@twikee/core'
-import { AuthService } from '@twikee/core'
-import { AdminCommentQuerySchema, AdminConfigSchema, ModerateSchema, TopSchema, ADMIN_CONFIG_KEY_SET } from '../validation'
+import { AuthService, assertPublicHttpUrl } from '@twikee/core'
+import {
+  AdminCommentQuerySchema,
+  AdminConfigSchema,
+  ModerateSchema,
+  TopSchema,
+  AdminUpdateCommentSchema,
+  ImportSchema,
+  ADMIN_CONFIG_KEY_SET,
+} from '../validation'
 import { invalidateNotifications } from '../lib/notification'
 
 type Env = {
@@ -68,8 +76,18 @@ export function createAdminRoutes() {
   app.put('/comment/:id', async (c) => {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const comment = await c.var.commentService.update(id, body)
-    return c.json(comment)
+    // body 原样透传会构成 mass assignment：UpdateCommentInput 含 master/top/isSpam，
+    // 一个 {"master":true} 就能把任意评论者设为博主，绕过下面的 moderate/top 端点
+    const parsed = AdminUpdateCommentSchema.safeParse(body)
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
+    }
+    try {
+      const comment = await c.var.commentService.update(id, parsed.data)
+      return c.json(comment)
+    } catch {
+      return c.json({ error: 'Comment not found' }, 404)
+    }
   })
 
   app.delete('/comment/:id', async (c) => {
@@ -80,28 +98,49 @@ export function createAdminRoutes() {
 
   app.post('/import', async (c) => {
     const body = await c.req.json()
-    if (!Array.isArray(body)) {
-      return c.json({ error: 'Expected an array of comments' }, 400)
+    // 逐条校验：数组元素无约束时，脏数据会绕过公开端点的全部校验直接入库
+    const parsed = ImportSchema.safeParse(body)
+    if (!parsed.success) {
+      const issues = parsed.error.issues.slice(0, 10).map((i) => ({
+        index: i.path[0],
+        message: i.message,
+      }))
+      return c.json({ error: 'Invalid import data', issues }, 400)
     }
+
     let success = 0
     let failed = 0
-    for (const item of body) {
+    const failedItems: Array<{ index: number; reason: string }> = []
+
+    for (const [index, item] of parsed.data.entries()) {
       try {
         await c.var.commentService.create({
-          url: sanitize(item.url || '/'),
-          nick: sanitize(item.nick || 'Anonymous'),
+          id: item.id,
+          url: sanitize(item.url),
+          nick: sanitize(item.nick),
           mail: item.mail ? sanitize(item.mail) : undefined,
           link: item.link ? sanitize(item.link) : undefined,
-          content: sanitize(item.content || ''),
-          rid: item.rid,
-          pid: item.pid,
+          content: sanitize(item.content),
+          ua: item.ua ? sanitize(item.ua) : undefined,
+          ip: item.ip ? sanitize(item.ip) : undefined,
+          rid: item.rid ?? undefined,
+          pid: item.pid ?? undefined,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt ?? undefined,
+          likes: item.likes,
+          isSpam: item.isSpam,
+          master: item.master,
+          top: item.top,
+          deleted: item.deleted,
         })
         success++
-      } catch {
+      } catch (e) {
         failed++
+        // id 冲突等：给出可定位的原因，而不是只报一个失败计数
+        failedItems.push({ index, reason: String((e as Error)?.message ?? e).slice(0, 200) })
       }
     }
-    return c.json({ success, failed })
+    return c.json({ success, failed, failedItems })
   })
 
   app.post('/comment/:id/moderate', async (c) => {
@@ -150,6 +189,15 @@ export function createAdminRoutes() {
 
     const skipped: string[] = []
     for (const [key, value] of Object.entries(parsed.data)) {
+      // Webhook 渠道会由服务端向该地址发请求，评论又是公开可提交的：
+      // 不校验就会被当成 SSRF 跳板（打内网 / 云 metadata）并外带评论者信息
+      if (key === 'WEBHOOK_URL' && typeof value === 'string' && value.trim()) {
+        try {
+          assertPublicHttpUrl(value.trim(), 'WEBHOOK_URL')
+        } catch (e) {
+          return c.json({ error: (e as Error).message }, 400)
+        }
+      }
       if (key === 'ADMIN_PASSWORD') {
         if (typeof value !== 'string' || !value.trim()) {
           skipped.push(key)

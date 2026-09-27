@@ -78,9 +78,55 @@ export const TopSchema = z.object({
   top: z.boolean(),
 })
 
+/**
+ * 管理端评论查询。
+ *
+ * includeSpam 不能用 z.coerce.boolean()：coerce 走 Boolean('false') === true，
+ * 前台传 ?includeSpam=false 反而会包含垃圾评论。查询串只可能是字符串，
+ * 这里显式解析。
+ */
 export const AdminCommentQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   url: z.string().optional(),
-  includeSpam: z.coerce.boolean().default(false),
+  includeSpam: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 })
+
+/** 更新评论：仅允许这几个字段，master 只能由公开端点按邮箱匹配设置 */
+export const AdminUpdateCommentSchema = z.object({
+  content: z.string().min(1).max(10000).optional(),
+  isSpam: z.boolean().optional(),
+  top: z.boolean().optional(),
+})
+
+/**
+ * 单条导入评论。保留 id/createdAt 等字段，导入后才能维持原有的回复层级
+ * （rid 指向的必须还是同一个 id，否则所有回复都会变成顶层孤儿）。
+ */
+export const ImportCommentSchema = z.object({
+  id: z.string().min(1).max(64).optional(),
+  url: z.string().min(1).max(2000),
+  nick: z.string().min(1).max(100),
+  mail: z.string().email().optional().or(z.literal('')),
+  link: z.string().url().optional().or(z.literal('')),
+  content: z.string().max(10000),
+  rid: z.string().max(64).nullish(),
+  pid: z.string().max(64).nullish(),
+  createdAt: z.coerce.number().int().positive().optional(),
+  updatedAt: z.coerce.number().int().positive().nullish(),
+  likes: z.coerce.number().int().min(0).optional(),
+  isSpam: z.boolean().optional(),
+  master: z.boolean().optional(),
+  top: z.boolean().optional(),
+  deleted: z.boolean().optional(),
+  ua: z.string().max(500).nullish(),
+  ip: z.string().max(64).nullish(),
+})
+
+/** 一次导入的条数上限，避免超大数组把请求拖到平台超时 */
+export const MAX_IMPORT_COUNT = 1000
+
+export const ImportSchema = z.array(ImportCommentSchema).max(MAX_IMPORT_COUNT)
