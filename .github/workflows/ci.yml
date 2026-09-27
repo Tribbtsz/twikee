@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        # 20 已被 GitHub Actions 弃用（会被强制跑在 24 上，等于没测它），
+        # 22/24 是当前在维护的 LTS
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

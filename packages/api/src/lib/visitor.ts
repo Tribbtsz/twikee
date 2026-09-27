@@ -1,5 +1,6 @@
 import { getCookie, setCookie } from 'hono/cookie'
 import type { Context } from 'hono'
+import { randomUUID } from 'node:crypto'
 
 const VISITOR_COOKIE = 'tk_uid'
 const VISITOR_MAX_AGE = 60 * 60 * 24 * 365 // 1 年
@@ -59,7 +60,7 @@ export function getOrCreateVisitorId(c: Context): string {
   if (fromCookie && UUID_RE.test(fromCookie)) return fromCookie
 
   const fromHeader = c.req.header('x-user-id')?.trim()
-  const id = fromHeader && UUID_RE.test(fromHeader) ? fromHeader : crypto.randomUUID()
+  const id = fromHeader && UUID_RE.test(fromHeader) ? fromHeader : randomUUID()
 
   // 尽快把身份固化到 Cookie：一旦浏览器会携带（同源部署 / 支持 credentials 的部署），
   // 后续就不再依赖客户端传来的值

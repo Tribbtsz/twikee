@@ -20,6 +20,7 @@ import {
 } from './base'
 import { MigrationRunner } from '../migrations/runner'
 import { migrations } from '../migrations'
+import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
@@ -57,7 +58,7 @@ class TursoCommentRepository implements CommentRepository {
   }
 
   async create(data: CreateCommentInput): Promise<Comment> {
-    const id = data.id ?? crypto.randomUUID()
+    const id = data.id ?? randomUUID()
     const now = data.createdAt ?? Date.now()
     const likes = data.likes ?? 0
     const isSpam = data.isSpam ?? false
@@ -342,7 +343,7 @@ class TursoUserRepository implements UserRepository {
   }
 
   async create(data: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    const id = crypto.randomUUID()
+    const id = randomUUID()
     const now = Date.now()
 
     await this.client.execute({

@@ -16,7 +16,7 @@
     "lint": "eslint ."
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "packageManager": "pnpm@10.18.3",
   "keywords": [
