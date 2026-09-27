@@ -48,6 +48,4 @@ export abstract class DatabaseAdapter {
   abstract comments: CommentRepository
   abstract users: UserRepository
   abstract config: ConfigRepository
-  
-  abstract transaction<T>(fn: () => Promise<T>): Promise<T>
 }

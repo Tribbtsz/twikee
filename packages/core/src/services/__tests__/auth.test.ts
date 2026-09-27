@@ -25,7 +25,6 @@ class MockAdapter extends DatabaseAdapter {
   config = new MockConfigRepo()
   async init() {}
   async close() {}
-  async transaction(fn: () => Promise<any>) { return fn() }
 }
 
 describe('AuthService', () => {
@@ -86,7 +85,39 @@ describe('AuthService', () => {
       .update(`admin:${future}:test-secret-123:admin-hash`)
       .digest('hex')
     const token = `admin:${future}:${hash}`
-    expect((await service.verifyToken(token)).valid).toBe(false)
+    const result = await service.verifyToken(token)
+    expect(result.valid).toBe(false)
+    // 与「结构不全」的失败路径保持一致的返回形态
+    expect(result.userId).toBe('')
+  })
+
+  it('returns empty userId for all invalid-token paths', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
+    const badTimestamp = Date.now() + 60 * 60 * 1000
+    const hash = createHash('sha256')
+      .update(`admin:${badTimestamp}:test-secret-123:admin-hash`)
+      .digest('hex')
+    for (const token of ['', 'a:b', `admin:${badTimestamp}:${hash}`]) {
+      expect((await service.verifyToken(token)).userId).toBe('')
+    }
+  })
+
+  it('upgrades a legacy plaintext password to bcrypt on first successful login', async () => {
+    // 遗留明文口令：校验通过后应立即升级为 bcrypt 哈希，
+    // 避免明文长期留在库里
+    await adapter.config.set('ADMIN_PASSWORD', 'plain-admin-pw')
+    expect(await service.verifyAdminPassword('plain-admin-pw')).toBe(true)
+    const stored = await adapter.config.get('ADMIN_PASSWORD')
+    expect(stored).not.toBe('plain-admin-pw')
+    expect(stored!.startsWith('$2')).toBe(true)
+    // 升级后仍能用同一口令登录
+    expect(await service.verifyAdminPassword('plain-admin-pw')).toBe(true)
+  })
+
+  it('rejects a wrong plaintext password without upgrading it', async () => {
+    await adapter.config.set('ADMIN_PASSWORD', 'plain-admin-pw')
+    expect(await service.verifyAdminPassword('wrong')).toBe(false)
+    expect(await adapter.config.get('ADMIN_PASSWORD')).toBe('plain-admin-pw')
   })
 
   it('creates or gets user by mail', async () => {

@@ -14,6 +14,7 @@ import type {
 import {
   DatabaseAdapter,
   type CommentRepository,
+  type CommentStats,
   type LikeResult,
   type UserRepository,
   type ConfigRepository,
@@ -29,6 +30,16 @@ function isPrimaryKeyViolation(err: unknown): boolean {
   if (code === "SQLITE_CONSTRAINT_PRIMARYKEY") return true
   const message = String((err as Error | undefined)?.message ?? "")
   return /UNIQUE constraint failed|PRIMARY KEY constraint failed/i.test(message)
+}
+
+/**
+ * SQLite 的 NULL 读出来是 JS `null`，而 Comment/User 的可选字段类型是 undefined。
+ * 不归一化的话类型是谎言：`x.mail === undefined` 永远为 false，API 序列化后
+ * 前端还会收到 `"mail": null`。所有从库里读出来的文本字段都过这个函数。
+ */
+function normalizeText(value: unknown): string | undefined {
+  if (value == null) return undefined
+  return String(value)
 }
 
 // 本地 SQLite 文件：确保父目录存在，否则 libsql 会报 SQLITE_CANTOPEN(14)
@@ -264,38 +275,44 @@ class TursoCommentRepository implements CommentRepository {
     return Number(result.rows[0].count);
   }
 
-  async getStats(): Promise<{ total: number; approved: number; pending: number }> {
+  async getStats(): Promise<CommentStats> {
     const result = await this.client.execute(
       "SELECT COUNT(*) as total, SUM(CASE WHEN is_spam = 0 THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as pending FROM comments WHERE deleted = 0"
     );
     const row = result.rows[0];
     return {
       total: Number(row.total),
-      approved: Number(row.approved),
-      pending: Number(row.pending),
+      // SUM 在没有行时返回 null，Number(null)=0；为可读性显式兜底
+      approved: Number(row.approved ?? 0),
+      pending: Number(row.pending ?? 0),
     };
   }
 
+  /**
+   * SQLite 的 NULL 在运行时是 JS `null`，不是 `undefined`。
+   * 原实现用 `as string | undefined` 断言掩盖了这一点：类型承诺缺失字段，
+   * API 序列化后前端收到的却是 `"mail": null`。这里统一归一化为 undefined。
+   */
   private rowToComment(row: any): Comment {
     return {
       id: row.id as string,
       url: row.url as string,
       nick: row.nick as string,
-      mail: row.mail as string | undefined,
-      link: row.link as string | undefined,
+      mail: normalizeText(row.mail),
+      link: normalizeText(row.link),
       content: row.content as string,
-      ua: row.ua as string | undefined,
-      ip: row.ip as string | undefined,
+      ua: normalizeText(row.ua),
+      ip: normalizeText(row.ip),
       master: Boolean(row.master),
       top: Boolean(row.top),
-      rid: row.rid as string | undefined,
-      pid: row.pid as string | undefined,
-      pinnedFromId: row.pinned_from_id as string | undefined,
+      rid: normalizeText(row.rid),
+      pid: normalizeText(row.pid),
+      pinnedFromId: normalizeText(row.pinned_from_id),
       isSpam: Boolean(row.is_spam),
       deleted: Boolean(row.deleted),
       likes: Number(row.likes ?? 0),
       createdAt: row.created_at as number,
-      updatedAt: row.updated_at as number | undefined,
+      updatedAt: row.updated_at == null ? undefined : (row.updated_at as number),
     };
   }
 }
@@ -453,9 +470,5 @@ export class TursoAdapter extends DatabaseAdapter {
 
   async close(): Promise<void> {
     this.client.close();
-  }
-
-  async transaction<T>(fn: () => Promise<T>): Promise<T> {
-    return await fn();
   }
 }
