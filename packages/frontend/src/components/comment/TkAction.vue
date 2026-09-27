@@ -2,7 +2,7 @@
 defineProps({
   liked: { type: Boolean, default: false },
   likeCount: { type: Number, default: 0 },
-  repliesCount: { type: Number, default: 0 }
+  repliesCount: { type: Number, default: 0 },
 })
 
 const emit = defineEmits<{
@@ -24,11 +24,7 @@ const emit = defineEmits<{
       <span v-if="likeCount > 0" class="tk-action__count">{{ likeCount }}</span>
     </button>
 
-    <button
-      class="tk-action__btn"
-      aria-label="回复评论"
-      @click="emit('reply')"
-    >
+    <button class="tk-action__btn" aria-label="回复评论" @click="emit('reply')">
       回复
       <span v-if="repliesCount > 0" class="tk-action__count">{{ repliesCount }}</span>
     </button>

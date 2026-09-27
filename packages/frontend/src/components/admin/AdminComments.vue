@@ -7,9 +7,18 @@ import Badge from '@/components/ui/Badge.vue'
 import Input from '@/components/ui/Input.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Toast from '@/components/ui/Toast.vue'
-import { 
-  Eye, EyeOff, Trash2, Pin, PinOff, RefreshCw, Search, 
-  ArrowLeft, FileText, MessageSquare, ExternalLink 
+import {
+  Eye,
+  EyeOff,
+  Trash2,
+  Pin,
+  PinOff,
+  RefreshCw,
+  Search,
+  ArrowLeft,
+  FileText,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -68,7 +77,7 @@ const fetchPages = async () => {
   loadingPages.value = true
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/pages`, {
-      headers: { Authorization: `Bearer ${props.token}` }
+      headers: { Authorization: `Bearer ${props.token}` },
     })
     if (!checkAuth(res)) return
     const data = await res.json()
@@ -90,10 +99,9 @@ const fetchComments = async (url: string) => {
       pageSize: commentsPageSize.value.toString(),
       includeSpam: 'true',
     })
-    const res = await fetch(
-      `${props.apiUrl}/api/admin/comments?${params}`,
-      { headers: { Authorization: `Bearer ${props.token}` } }
-    )
+    const res = await fetch(`${props.apiUrl}/api/admin/comments?${params}`, {
+      headers: { Authorization: `Bearer ${props.token}` },
+    })
     if (!checkAuth(res)) return
     const data = await res.json()
     comments.value = data.data || []
@@ -125,13 +133,13 @@ const switchTab = (tab: StatusTab) => {
 
 const filteredComments = computed(() => {
   if (activeTab.value === 'all') return comments.value
-  if (activeTab.value === 'spam') return comments.value.filter(c => c.isSpam)
-  return comments.value.filter(c => !c.isSpam)
+  if (activeTab.value === 'spam') return comments.value.filter((c) => c.isSpam)
+  return comments.value.filter((c) => !c.isSpam)
 })
 
 const tabCounts = computed(() => {
   const all = comments.value.length
-  const spam = comments.value.filter(c => c.isSpam).length
+  const spam = comments.value.filter((c) => c.isSpam).length
   const approved = all - spam
   return { all, approved, spam }
 })
@@ -147,9 +155,9 @@ const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ action })
+      body: JSON.stringify({ action }),
     })
     if (!checkAuth(res)) return
     showToast(action === 'approve' ? '评论已通过' : '评论已移至待审核', 'success')
@@ -168,9 +176,9 @@ const confirmDelete = async () => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ action: 'delete' })
+      body: JSON.stringify({ action: 'delete' }),
     })
     if (!checkAuth(res)) return
     showToast('评论已删除', 'success')
@@ -188,9 +196,9 @@ const toggleTop = async (id: string, top: boolean) => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ top })
+      body: JSON.stringify({ top }),
     })
     if (!checkAuth(res)) return
     await fetchComments(currentUrl.value!)
@@ -223,18 +231,14 @@ const filteredPages = computed(() => {
     const start = (pagesPage.value - 1) * pagesPageSize.value
     return pages.value.slice(start, start + pagesPageSize.value)
   }
-  const filtered = pages.value.filter(p => 
-    p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase())
-  )
+  const filtered = pages.value.filter((p) => p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase()))
   const start = (pagesPage.value - 1) * pagesPageSize.value
   return filtered.slice(start, start + pagesPageSize.value)
 })
 
 const filteredPagesTotal = computed(() => {
   if (!pagesSearchQuery.value) return pages.value.length
-  return pages.value.filter(p => 
-    p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase())
-  ).length
+  return pages.value.filter((p) => p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase())).length
 })
 
 const filteredPagesTotalPages = computed(() => Math.ceil(filteredPagesTotal.value / pagesPageSize.value))
@@ -266,12 +270,12 @@ watch(pagesPage, () => {}, { flush: 'post' })
           </Button>
         </div>
       </div>
-      
+
       <div v-if="loadingPages" class="text-center py-8 text-muted-foreground">加载中...</div>
-      
+
       <div v-else class="space-y-2">
-        <Card 
-          v-for="p in filteredPages" 
+        <Card
+          v-for="p in filteredPages"
           :key="p.url"
           class="cursor-pointer hover:shadow-md transition-shadow"
           @click="viewPageComments(p.url)"
@@ -284,12 +288,10 @@ watch(pagesPage, () => {}, { flush: 'post' })
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="font-medium truncate" :title="p.url">{{ displayUrl(p.url) }}</div>
-                  <div class="text-xs text-muted-foreground mt-1">
-                    最后评论: {{ displayTime(p.lastComment) }}
-                  </div>
+                  <div class="text-xs text-muted-foreground mt-1">最后评论: {{ displayTime(p.lastComment) }}</div>
                 </div>
               </div>
-              
+
               <div class="flex items-center gap-4 shrink-0">
                 <div class="text-center">
                   <div class="text-lg font-bold">{{ p.count }}</div>
@@ -301,25 +303,21 @@ watch(pagesPage, () => {}, { flush: 'post' })
             </div>
           </CardContent>
         </Card>
-        
+
         <div v-if="filteredPages.length === 0" class="text-center py-8 text-muted-foreground">
           {{ pagesSearchQuery ? '未找到匹配的页面' : '暂无评论' }}
         </div>
 
         <div v-if="filteredPagesTotalPages > 1" class="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" :disabled="pagesPage <= 1" @click="pagesPage--">
-            上一页
-          </Button>
-          <span class="text-sm text-muted-foreground">
-            {{ pagesPage }} / {{ filteredPagesTotalPages }}
-          </span>
+          <Button variant="outline" size="sm" :disabled="pagesPage <= 1" @click="pagesPage--"> 上一页 </Button>
+          <span class="text-sm text-muted-foreground"> {{ pagesPage }} / {{ filteredPagesTotalPages }} </span>
           <Button variant="outline" size="sm" :disabled="pagesPage >= filteredPagesTotalPages" @click="pagesPage++">
             下一页
           </Button>
         </div>
       </div>
     </div>
-    
+
     <div v-else>
       <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
         <div class="flex items-center gap-3">
@@ -343,18 +341,20 @@ watch(pagesPage, () => {}, { flush: 'post' })
           v-for="tab in tabs"
           :key="tab.key"
           class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
-          :class="activeTab === tab.key 
-            ? 'border-primary text-primary' 
-            : 'border-transparent text-muted-foreground hover:text-foreground'"
+          :class="
+            activeTab === tab.key
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          "
           @click="switchTab(tab.key)"
         >
           {{ tab.label }}
           <span v-if="tab.key === 'spam' && tabCounts.spam > 0" class="ml-1 text-xs">({{ tabCounts.spam }})</span>
         </button>
       </div>
-      
+
       <div v-if="loadingComments" class="text-center py-8 text-muted-foreground">加载中...</div>
-      
+
       <div v-else class="space-y-3 mt-3">
         <Card v-for="comment in filteredComments" :key="comment.id">
           <CardContent class="p-4">
@@ -384,7 +384,7 @@ watch(pagesPage, () => {}, { flush: 'post' })
                   </a>
                 </div>
               </div>
-              
+
               <div class="flex gap-1 shrink-0">
                 <Button v-if="comment.isSpam" variant="ghost" size="sm" @click="moderate(comment.id, 'approve')">
                   <Eye class="w-4 h-4" />
@@ -405,18 +405,14 @@ watch(pagesPage, () => {}, { flush: 'post' })
             </div>
           </CardContent>
         </Card>
-        
+
         <div v-if="filteredComments.length === 0" class="text-center py-8 text-muted-foreground">
           {{ activeTab === 'spam' ? '暂无待审核评论' : activeTab === 'approved' ? '暂无已发布评论' : '暂无评论' }}
         </div>
 
         <div v-if="commentsTotalPages > 1" class="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" :disabled="commentsPage <= 1" @click="commentsPage--">
-            上一页
-          </Button>
-          <span class="text-sm text-muted-foreground">
-            {{ commentsPage }} / {{ commentsTotalPages }}
-          </span>
+          <Button variant="outline" size="sm" :disabled="commentsPage <= 1" @click="commentsPage--"> 上一页 </Button>
+          <span class="text-sm text-muted-foreground"> {{ commentsPage }} / {{ commentsTotalPages }} </span>
           <Button variant="outline" size="sm" :disabled="commentsPage >= commentsTotalPages" @click="commentsPage++">
             下一页
           </Button>
@@ -433,10 +429,6 @@ watch(pagesPage, () => {}, { flush: 'post' })
       @confirm="confirmDelete"
     />
 
-    <Toast
-      v-model:open="toast.open"
-      :message="toast.message"
-      :type="toast.type"
-    />
+    <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />
   </div>
 </template>

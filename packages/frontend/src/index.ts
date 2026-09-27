@@ -27,18 +27,18 @@ export function init(options: TwikeeInitOptions) {
 export function initAdmin(options: { el: string | Element; envId: string }) {
   const { el, envId } = options
   const container = typeof el === 'string' ? document.querySelector(el) : el
-  
+
   if (!container) {
     console.error('[Twikee] Container element not found')
     return
   }
-  
+
   const app = createApp(Admin, { envId })
   app.mount(container)
-  
+
   return app
 }
 
 if (typeof window !== 'undefined') {
-  (window as any).twikee = { init, initAdmin }
+  ;(window as any).twikee = { init, initAdmin }
 }

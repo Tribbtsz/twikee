@@ -9,11 +9,35 @@ function makeApp() {
   const db: any = {
     config: {
       get: async (k: string) => config.get(k) || null,
-      set: async (k: string, v: string) => { config.set(k, v) },
+      set: async (k: string, v: string) => {
+        config.set(k, v)
+      },
     },
     comments: {
-      create: async (data: any) => ({ ...data, id: '1', createdAt: Date.now(), master: false, top: false, isSpam: false, likes: 0 }),
-      getById: async (id: string) => (id === '1' ? { id: '1', url: '/p', nick: 'A', content: 'x', master: false, top: false, isSpam: false, deleted: false, likes: 1, createdAt: Date.now() } : null),
+      create: async (data: any) => ({
+        ...data,
+        id: '1',
+        createdAt: Date.now(),
+        master: false,
+        top: false,
+        isSpam: false,
+        likes: 0,
+      }),
+      getById: async (id: string) =>
+        id === '1'
+          ? {
+              id: '1',
+              url: '/p',
+              nick: 'A',
+              content: 'x',
+              master: false,
+              top: false,
+              isSpam: false,
+              deleted: false,
+              likes: 1,
+              createdAt: Date.now(),
+            }
+          : null,
       getList: async (_q: any) => ({ data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 }),
       like: async (id: string, userId: string) => {
         likeCalls.push({ id, userId })
@@ -169,4 +193,5 @@ describe('Comment routes', () => {
     })
     expect(res.status).toBe(200)
     expect(res.headers.get('set-cookie')).toBeNull()
-  })})
+  })
+})

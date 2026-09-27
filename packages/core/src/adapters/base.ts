@@ -44,7 +44,7 @@ export interface ConfigRepository {
 export abstract class DatabaseAdapter {
   abstract init(): Promise<void>
   abstract close(): Promise<void>
-  
+
   abstract comments: CommentRepository
   abstract users: UserRepository
   abstract config: ConfigRepository

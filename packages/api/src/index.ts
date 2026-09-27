@@ -26,13 +26,16 @@ const app = new Hono<{
   }
 }>()
 
-app.use('*', cors({
-  origin: (origin: string) => {
-    if (corsOrigins.length === 0) return '*' // 未配置：允许所有来源
-    if (corsOrigins.includes(origin)) return origin
-    return null // 不在白名单：不返回 CORS 头，浏览器拒绝
-  },
-}))
+app.use(
+  '*',
+  cors({
+    origin: (origin: string) => {
+      if (corsOrigins.length === 0) return '*' // 未配置：允许所有来源
+      if (corsOrigins.includes(origin)) return origin
+      return null // 不在白名单：不返回 CORS 头，浏览器拒绝
+    },
+  }),
+)
 app.use('*', logger())
 
 let db: TursoAdapter | null = null
@@ -85,10 +88,13 @@ app.use('/api/*', async (c, next) => {
   await next()
 })
 
-app.use('/api/admin/*', requireAdmin({
-  initDb: () => Promise.resolve(),
-  verifyToken: async (token: string) => authService!.verifyToken(token),
-}))
+app.use(
+  '/api/admin/*',
+  requireAdmin({
+    initDb: () => Promise.resolve(),
+    verifyToken: async (token: string) => authService!.verifyToken(token),
+  }),
+)
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: Date.now() }))
 

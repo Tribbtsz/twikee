@@ -9,7 +9,16 @@ import CardContent from '@/components/ui/CardContent.vue'
 import Button from '@/components/ui/Button.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Toast from '@/components/ui/Toast.vue'
-import { MessageSquare, Settings, LogOut, BarChart3, Database, ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-vue-next'
+import {
+  MessageSquare,
+  Settings,
+  LogOut,
+  BarChart3,
+  Database,
+  ArrowLeft,
+  ShieldAlert,
+  ShieldCheck,
+} from 'lucide-vue-next'
 
 const props = defineProps<{
   apiUrl: string
@@ -51,7 +60,7 @@ const fetchCommentsClosed = async () => {
   if (!token.value) return
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
-      headers: { Authorization: `Bearer ${token.value}` }
+      headers: { Authorization: `Bearer ${token.value}` },
     })
     if (!checkAuth(res)) return
     const data = await res.json()
@@ -79,9 +88,9 @@ const applyCommentsClosed = async (newValue: boolean) => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ COMMENTS_CLOSED: newValue.toString() })
+      body: JSON.stringify({ COMMENTS_CLOSED: newValue.toString() }),
     })
     if (!checkAuth(res)) return
     commentsClosed.value = newValue
@@ -95,7 +104,7 @@ const fetchStats = async () => {
   if (!token.value) return
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/stats`, {
-      headers: { Authorization: `Bearer ${token.value}` }
+      headers: { Authorization: `Bearer ${token.value}` },
     })
     if (!checkAuth(res)) return
     const data = await res.json()
@@ -107,13 +116,16 @@ const fetchStats = async () => {
 
 const fetchSiteUrl = async () => {
   if (!token.value) return
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ) {
     siteUrl.value = window.location.origin
     return
   }
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
-      headers: { Authorization: `Bearer ${token.value}` }
+      headers: { Authorization: `Bearer ${token.value}` },
     })
     if (!checkAuth(res)) return
     const data = await res.json()
@@ -140,11 +152,16 @@ const tabs = [
   <div v-if="!isLoggedIn" class="min-h-screen bg-background">
     <AdminLogin :api-url="apiUrl" @login="handleLogin" />
   </div>
-  
+
   <div v-else class="min-h-screen bg-background">
     <header class="border-b bg-card sticky top-0 z-10">
       <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold">Twikee 管理后台 <span v-if="commentsClosed" class="text-base  font-bold text-red-500 ml-6 bg-red-200 py-2 px-4 rounded-full">已关停</span></h1>
+        <h1 class="text-xl font-bold">
+          Twikee 管理后台
+          <span v-if="commentsClosed" class="text-base font-bold text-red-500 ml-6 bg-red-200 py-2 px-4 rounded-full"
+            >已关停</span
+          >
+        </h1>
         <div class="flex items-center gap-4">
           <a href="/demo.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
             <ArrowLeft class="w-4 h-4" />
@@ -158,7 +175,7 @@ const tabs = [
         </div>
       </div>
     </header>
-    
+
     <main class="max-w-6xl mx-auto px-4 py-6">
       <!-- 统计卡片 -->
       <div class="flex gap-4 mb-6 items-stretch">
@@ -206,9 +223,11 @@ const tabs = [
 
         <div
           class="w-24 shrink-0 cursor-pointer transition-all rounded-lg flex flex-col items-center justify-center gap-1"
-          :class="commentsClosed
-            ? 'bg-green-500 text-white hover:bg-green-600'
-            : 'bg-destructive text-destructive-foreground hover:opacity-90'"
+          :class="
+            commentsClosed
+              ? 'bg-green-500 text-white hover:bg-green-600'
+              : 'bg-destructive text-destructive-foreground hover:opacity-90'
+          "
           @click="toggleCommentsClosed"
         >
           <ShieldCheck v-if="commentsClosed" class="w-5 h-5" />
@@ -216,7 +235,7 @@ const tabs = [
           <div class="text-xs font-medium">{{ commentsClosed ? '一键开启' : '一键关停' }}</div>
         </div>
       </div>
-      
+
       <!-- 标签页 -->
       <div class="flex gap-2 mb-4 border-b pb-4">
         <Button
@@ -230,7 +249,7 @@ const tabs = [
           {{ tab.label }}
         </Button>
       </div>
-      
+
       <!-- 内容区域 -->
       <AdminComments
         v-if="activeTab === 'comments'"
@@ -240,20 +259,10 @@ const tabs = [
         @refresh="fetchStats"
         @logout="handleLogout"
       />
-      
-      <AdminConfig
-        v-if="activeTab === 'config'"
-        :api-url="apiUrl"
-        :token="token"
-        @logout="handleLogout"
-      />
-      
-      <AdminImportExport
-        v-if="activeTab === 'data'"
-        :api-url="apiUrl"
-        :token="token"
-        @logout="handleLogout"
-      />
+
+      <AdminConfig v-if="activeTab === 'config'" :api-url="apiUrl" :token="token" @logout="handleLogout" />
+
+      <AdminImportExport v-if="activeTab === 'data'" :api-url="apiUrl" :token="token" @logout="handleLogout" />
     </main>
 
     <Dialog
@@ -265,10 +274,6 @@ const tabs = [
       @confirm="confirmCloseComments"
     />
 
-    <Toast
-      v-model:open="toast.open"
-      :message="toast.message"
-      :type="toast.type"
-    />
+    <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />
   </div>
 </template>

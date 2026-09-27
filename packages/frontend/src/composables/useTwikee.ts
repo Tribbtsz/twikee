@@ -29,7 +29,7 @@ export function useTwikee(options: TwikeeOptions) {
   const error = ref<string | null>(null)
   const comments = ref<TwikeeComment[]>([])
   const config = ref<Record<string, any>>({})
-  
+
   const baseUrl = computed(() => {
     if (!options.envId) return ''
     let url = options.envId
@@ -38,7 +38,7 @@ export function useTwikee(options: TwikeeOptions) {
     }
     return url
   })
-  
+
   const fetchComments = async (url: string, page = 1) => {
     try {
       loading.value = true
@@ -52,7 +52,7 @@ export function useTwikee(options: TwikeeOptions) {
         data: data.data || [],
         total: data.total || 0,
         page: data.page || 1,
-        pageSize: data.pageSize || 10
+        pageSize: data.pageSize || 10,
       }
     } catch (e) {
       error.value = '加载评论失败'
@@ -61,13 +61,13 @@ export function useTwikee(options: TwikeeOptions) {
         data: [],
         total: 0,
         page: 1,
-        pageSize: 10
+        pageSize: 10,
       }
     } finally {
       loading.value = false
     }
   }
-  
+
   const submitComment = async (data: {
     url: string
     nick: string
@@ -80,7 +80,7 @@ export function useTwikee(options: TwikeeOptions) {
       const res = await fetch(`${baseUrl.value}/api/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       })
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`)
@@ -92,13 +92,13 @@ export function useTwikee(options: TwikeeOptions) {
       throw e
     }
   }
-  
+
   return {
     loading,
     error,
     comments,
     config,
     fetchComments,
-    submitComment
+    submitComment,
   }
 }

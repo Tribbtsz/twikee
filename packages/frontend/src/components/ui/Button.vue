@@ -26,21 +26,24 @@ const buttonVariants = cva(
       variant: 'default',
       size: 'default',
     },
-  }
+  },
 )
 
 type ButtonVariants = VariantProps<typeof buttonVariants>
 
-const props = withDefaults(defineProps<{
-  variant?: ButtonVariants['variant']
-  size?: ButtonVariants['size']
-  disabled?: boolean
-  class?: string
-}>(), {
-  variant: 'default',
-  size: 'default',
-  disabled: false
-})
+const props = withDefaults(
+  defineProps<{
+    variant?: ButtonVariants['variant']
+    size?: ButtonVariants['size']
+    disabled?: boolean
+    class?: string
+  }>(),
+  {
+    variant: 'default',
+    size: 'default',
+    disabled: false,
+  },
+)
 
 const classes = computed(() => cn(buttonVariants({ variant: props.variant, size: props.size }), props.class))
 </script>

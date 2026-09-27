@@ -74,7 +74,9 @@ describe('sanitizeHtml', () => {
     })
 
     it('applies the scheme check to img src too', () => {
-      expect(sanitizeHtml('<img src="https://example.com/a.png" alt="ok">')).toContain('src="https://example.com/a.png"')
+      expect(sanitizeHtml('<img src="https://example.com/a.png" alt="ok">')).toContain(
+        'src="https://example.com/a.png"',
+      )
       expect(sanitizeHtml('<img src="javascript:alert(1)">')).not.toContain('src')
     })
   })

@@ -13,7 +13,7 @@ import type { ResolvedTwikeeAppearance } from '@/types'
 
 marked.setOptions({ breaks: true, gfm: true })
 
-type CommentNode = Comment & { children?: CommentNode[], replyToNick?: string }
+type CommentNode = Comment & { children?: CommentNode[]; replyToNick?: string }
 
 const props = defineProps({
   comment: { type: Object as PropType<CommentNode>, required: true },
@@ -50,14 +50,14 @@ const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
 
 const pinnedFromInfo = computed(() => {
   if (!props.comment.pinnedFromId) return null
-  const original = props.allComments.find(c => c.id === props.comment.pinnedFromId)
+  const original = props.allComments.find((c) => c.id === props.comment.pinnedFromId)
   if (!original) return null
   // For replies: show parent's nick. For top-level: show original's nick
-  const parent = original.rid ? props.allComments.find(c => c.id === original.rid) : null
+  const parent = original.rid ? props.allComments.find((c) => c.id === original.rid) : null
   return {
     targetId: original.id,
     nick: parent?.nick || original.nick,
-    isReply: !!original.rid
+    isReply: !!original.rid,
   }
 })
 
@@ -127,7 +127,7 @@ const onLike = async () => {
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${props.comment.id}/like`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() }
+      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() },
     })
     if (res.ok) {
       const data = await res.json()
@@ -161,7 +161,7 @@ const onChildLike = async (childId: string) => {
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${childId}/like`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() }
+      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() },
     })
     if (res.ok) {
       const data = await res.json()
@@ -221,8 +221,8 @@ const handleReplySubmit = async (data: any) => {
       body: JSON.stringify({
         ...data,
         url: props.comment.url,
-        rid: props.comment.id
-      })
+        rid: props.comment.id,
+      }),
     })
     if (res.ok) {
       replyingToId.value = null
@@ -246,8 +246,8 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
       body: JSON.stringify({
         ...data,
         url: props.comment.url,
-        rid: childId
-      })
+        rid: childId,
+      }),
     })
     if (res.ok) {
       replyingToId.value = null
@@ -264,15 +264,18 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
 </script>
 
 <template>
-  <div :id="`comment-${comment.id}`" class="tk-comment" :class="{ 'tk-comment--reply': isReply, 'tk-comment--divider': showDivider, 'tk-comment--pinned-copy': comment.pinnedFromId }">
+  <div
+    :id="`comment-${comment.id}`"
+    class="tk-comment"
+    :class="{
+      'tk-comment--reply': isReply,
+      'tk-comment--divider': showDivider,
+      'tk-comment--pinned-copy': comment.pinnedFromId,
+    }"
+  >
     <div class="tk-comment__inner">
       <div class="tk-comment__avatar">
-        <TkAvatar
-          :nick="comment.nick"
-          :mail="comment.mail"
-          :link="convertedLink"
-          :size="isReply ? 'sm' : 'md'"
-        />
+        <TkAvatar :nick="comment.nick" :mail="comment.mail" :link="convertedLink" :size="isReply ? 'sm' : 'md'" />
       </div>
 
       <div class="tk-comment__body">
@@ -337,12 +340,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
         </div>
 
         <div class="tk-comment__actions">
-          <TkAction
-            :liked="liked"
-            :like-count="likeCount"
-            @like="onLike"
-            @reply="onReply"
-          />
+          <TkAction :liked="liked" :like-count="likeCount" @like="onLike" @reply="onReply" />
 
           <div v-if="isAdmin" class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
@@ -354,13 +352,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             >
               显示
             </Button>
-            <Button
-              v-else
-              variant="ghost"
-              size="sm"
-              class="h-6 text-xs"
-              @click="emit('moderate', comment.id, 'spam')"
-            >
+            <Button v-else variant="ghost" size="sm" class="h-6 text-xs" @click="emit('moderate', comment.id, 'spam')">
               隐藏
             </Button>
             <Button
@@ -386,12 +378,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
       >
         <div class="tk-comment__inner">
           <div class="tk-comment__avatar">
-            <TkAvatar
-              :nick="child.nick"
-              :mail="child.mail"
-              :link="convertLink(child.link)"
-              size="sm"
-            />
+            <TkAvatar :nick="child.nick" :mail="child.mail" :link="convertLink(child.link)" size="sm" />
           </div>
 
           <div class="tk-comment__body">
@@ -524,8 +511,14 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
   animation: highlight-flash 0.6s ease-in-out 2;
 }
 @keyframes highlight-flash {
-  0%, 100% { background: transparent; }
-  50% { background: var(--primary); opacity: 0.15; }
+  0%,
+  100% {
+    background: transparent;
+  }
+  50% {
+    background: var(--primary);
+    opacity: 0.15;
+  }
 }
 
 .tk-comment__nick {

@@ -2,9 +2,12 @@
 import { computed } from 'vue'
 import AdminPanel from './components/admin/AdminPanel.vue'
 
-const props = withDefaults(defineProps<{
-  envId: string
-}>(), {})
+const props = withDefaults(
+  defineProps<{
+    envId: string
+  }>(),
+  {},
+)
 
 const apiUrl = computed(() => {
   let url = props.envId

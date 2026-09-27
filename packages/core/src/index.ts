@@ -4,7 +4,14 @@ export type { CommentStats, LikeResult } from './adapters/base'
 export { TursoAdapter } from './adapters/turso'
 export { CommentService } from './services/comment'
 export { AuthService } from './services/auth'
-export { NotificationService, TelegramAdapter, WebhookAdapter, EmailAdapter, WxPusherAdapter, WecomAdapter } from './services/notification'
+export {
+  NotificationService,
+  TelegramAdapter,
+  WebhookAdapter,
+  EmailAdapter,
+  WxPusherAdapter,
+  WecomAdapter,
+} from './services/notification'
 export { sanitizeUrl, assertPublicHttpUrl } from './services/notification'
 export type { ChannelAdapter } from './services/notification'
 

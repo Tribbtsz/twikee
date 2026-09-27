@@ -51,7 +51,7 @@ const handleSetup = async () => {
     const res = await fetch(`${props.apiUrl}/api/auth/setup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value })
+      body: JSON.stringify({ password: password.value }),
     })
 
     const data = await res.json()
@@ -80,7 +80,7 @@ const handleLogin = async () => {
     const res = await fetch(`${props.apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value })
+      body: JSON.stringify({ password: password.value }),
     })
 
     const data = await res.json()
@@ -128,11 +128,7 @@ const handleLogin = async () => {
             {{ error }}
           </div>
 
-          <Button
-            type="submit"
-            class="w-full"
-            :disabled="!password || loading"
-          >
+          <Button type="submit" class="w-full" :disabled="!password || loading">
             {{ loading ? '登录中...' : '登录' }}
           </Button>
         </form>
@@ -164,11 +160,7 @@ const handleLogin = async () => {
             {{ error }}
           </div>
 
-          <Button
-            type="submit"
-            class="w-full"
-            :disabled="!password || !confirmPassword || loading"
-          >
+          <Button type="submit" class="w-full" :disabled="!password || !confirmPassword || loading">
             {{ loading ? '设置中...' : '设置密码并登录' }}
           </Button>
         </form>

@@ -1,6 +1,6 @@
-import { createClient as createServerlessClient } from "@tursodatabase/serverless/compat";
-import { createClient as createLibsqlClient } from "@libsql/client";
-import type { Client } from "@tursodatabase/serverless/compat";
+import { createClient as createServerlessClient } from '@tursodatabase/serverless/compat'
+import { createClient as createLibsqlClient } from '@libsql/client'
+import type { Client } from '@tursodatabase/serverless/compat'
 import type {
   Comment,
   User,
@@ -9,7 +9,7 @@ import type {
   CommentQuery,
   PaginatedResult,
   TursoConfig,
-} from "../types";
+} from '../types'
 import {
   DatabaseAdapter,
   type CommentRepository,
@@ -17,17 +17,17 @@ import {
   type LikeResult,
   type UserRepository,
   type ConfigRepository,
-} from "./base";
-import { MigrationRunner } from "../migrations/runner";
-import { migrations } from "../migrations";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+} from './base'
+import { MigrationRunner } from '../migrations/runner'
+import { migrations } from '../migrations'
+import { existsSync, mkdirSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 
 /** likes 表主键冲突（并发双击时后到者会撞上） */
 function isPrimaryKeyViolation(err: unknown): boolean {
   const code = (err as { code?: string; extendedCode?: string } | null)?.code
-  if (code === "SQLITE_CONSTRAINT_PRIMARYKEY") return true
-  const message = String((err as Error | undefined)?.message ?? "")
+  if (code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return true
+  const message = String((err as Error | undefined)?.message ?? '')
   return /UNIQUE constraint failed|PRIMARY KEY constraint failed/i.test(message)
 }
 
@@ -43,17 +43,17 @@ function normalizeText(value: unknown): string | undefined {
 
 // 本地 SQLite 文件：确保父目录存在，否则 libsql 会报 SQLITE_CANTOPEN(14)
 function ensureLocalDbDir(url: string): void {
-  const path = url.startsWith("file:") ? url.slice("file:".length) : url;
-  if (!path || path === ":memory:") return;
-  const dir = dirname(resolve(path));
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const path = url.startsWith('file:') ? url.slice('file:'.length) : url
+  if (!path || path === ':memory:') return
+  const dir = dirname(resolve(path))
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
 }
 
 class TursoCommentRepository implements CommentRepository {
-  private client: Client;
+  private client: Client
 
   constructor(client: Client) {
-    this.client = client;
+    this.client = client
   }
 
   async create(data: CreateCommentInput): Promise<Comment> {
@@ -87,7 +87,7 @@ class TursoCommentRepository implements CommentRepository {
         now,
         data.updatedAt ?? null,
       ],
-    });
+    })
 
     return {
       id,
@@ -107,45 +107,45 @@ class TursoCommentRepository implements CommentRepository {
       likes,
       createdAt: now,
       updatedAt: data.updatedAt,
-    };
+    }
   }
 
   async getById(id: string): Promise<Comment | null> {
     const result = await this.client.execute({
-      sql: "SELECT * FROM comments WHERE id = ?",
+      sql: 'SELECT * FROM comments WHERE id = ?',
       args: [id],
-    });
+    })
 
-    if (result.rows.length === 0) return null;
-    return this.rowToComment(result.rows[0]);
+    if (result.rows.length === 0) return null
+    return this.rowToComment(result.rows[0])
   }
 
   async getList(query: CommentQuery): Promise<PaginatedResult<Comment>> {
-    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false } = query;
-    const offset = (page - 1) * pageSize;
+    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false } = query
+    const offset = (page - 1) * pageSize
 
-    const conditions: string[] = [];
-    const args: (string | number)[] = [];
+    const conditions: string[] = []
+    const args: (string | number)[] = []
     if (url) {
-      conditions.push("url = ?");
-      args.push(url);
+      conditions.push('url = ?')
+      args.push(url)
     }
-    if (!includeSpam) conditions.push("is_spam = 0");
-    if (!includeDeleted) conditions.push("deleted = 0");
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    if (!includeSpam) conditions.push('is_spam = 0')
+    if (!includeDeleted) conditions.push('deleted = 0')
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-    const countSql = `SELECT COUNT(*) as count FROM comments ${where}`;
+    const countSql = `SELECT COUNT(*) as count FROM comments ${where}`
     const countResult = await this.client.execute({
       sql: countSql,
       args,
-    });
-    const total = Number(countResult.rows[0].count);
+    })
+    const total = Number(countResult.rows[0].count)
 
-    const listSql = `SELECT * FROM comments ${where} ORDER BY top DESC, created_at DESC LIMIT ? OFFSET ?`;
+    const listSql = `SELECT * FROM comments ${where} ORDER BY top DESC, created_at DESC LIMIT ? OFFSET ?`
     const listResult = await this.client.execute({
       sql: listSql,
       args: [...args, pageSize, offset],
-    });
+    })
 
     return {
       data: listResult.rows.map((row) => this.rowToComment(row)),
@@ -153,59 +153,59 @@ class TursoCommentRepository implements CommentRepository {
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
-    };
+    }
   }
 
   async update(id: string, data: UpdateCommentInput): Promise<Comment> {
-    const sets: string[] = [];
-    const args: (string | number | boolean | null)[] = [];
+    const sets: string[] = []
+    const args: (string | number | boolean | null)[] = []
 
     if (data.content !== undefined) {
-      sets.push("content = ?");
-      args.push(data.content);
+      sets.push('content = ?')
+      args.push(data.content)
     }
     if (data.isSpam !== undefined) {
-      sets.push("is_spam = ?");
-      args.push(data.isSpam ? 1 : 0);
+      sets.push('is_spam = ?')
+      args.push(data.isSpam ? 1 : 0)
     }
     if (data.top !== undefined) {
-      sets.push("top = ?");
-      args.push(data.top ? 1 : 0);
+      sets.push('top = ?')
+      args.push(data.top ? 1 : 0)
     }
     if (data.master !== undefined) {
-      sets.push("master = ?");
-      args.push(data.master ? 1 : 0);
+      sets.push('master = ?')
+      args.push(data.master ? 1 : 0)
     }
 
-    sets.push("updated_at = ?");
-    args.push(Date.now());
-    args.push(id);
+    sets.push('updated_at = ?')
+    args.push(Date.now())
+    args.push(id)
 
     await this.client.execute({
-      sql: `UPDATE comments SET ${sets.join(", ")} WHERE id = ?`,
+      sql: `UPDATE comments SET ${sets.join(', ')} WHERE id = ?`,
       args,
-    });
+    })
 
-    const comment = await this.getById(id);
-    if (!comment) throw new Error("Comment not found after update");
-    return comment;
+    const comment = await this.getById(id)
+    if (!comment) throw new Error('Comment not found after update')
+    return comment
   }
 
   async delete(id: string): Promise<void> {
     await this.client.execute({
-      sql: "DELETE FROM comments WHERE id = ?",
+      sql: 'DELETE FROM comments WHERE id = ?',
       args: [id],
-    });
+    })
   }
 
   async softDelete(id: string): Promise<Comment> {
     await this.client.execute({
       sql: "UPDATE comments SET deleted = 1, top = 0, content = '', updated_at = ? WHERE id = ?",
       args: [Date.now(), id],
-    });
-    const comment = await this.getById(id);
-    if (!comment) throw new Error("Comment not found after soft delete");
-    return comment;
+    })
+    const comment = await this.getById(id)
+    if (!comment) throw new Error('Comment not found after soft delete')
+    return comment
   }
 
   /**
@@ -220,15 +220,15 @@ class TursoCommentRepository implements CommentRepository {
     const syncCount = {
       sql: 'UPDATE comments SET likes = (SELECT COUNT(*) FROM likes WHERE comment_id = ?) WHERE id = ?',
       args: [id, id],
-    };
+    }
 
     const existing = await this.client.execute({
       sql: 'SELECT 1 FROM likes WHERE comment_id = ? AND user_id = ?',
       args: [id, userId],
-    });
+    })
 
     // 当前未赞 → 本次点击意图是「赞」
-    let liked = existing.rows.length === 0;
+    let liked = existing.rows.length === 0
 
     if (liked) {
       try {
@@ -241,50 +241,50 @@ class TursoCommentRepository implements CommentRepository {
             syncCount,
           ],
           'write',
-        );
+        )
       } catch (err) {
         // 并发双击：两个请求都判定为「未赞」并同时 INSERT，主键约束让后到者失败。
         // 此时该行的赞已存在，本次点击按「取消赞」收敛，保证两次点击 = 最终未赞。
-        if (!isPrimaryKeyViolation(err)) throw err;
-        liked = false;
+        if (!isPrimaryKeyViolation(err)) throw err
+        liked = false
         await this.client.batch(
           [{ sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?', args: [id, userId] }, syncCount],
           'write',
-        );
+        )
       }
     } else {
       await this.client.batch(
         [{ sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?', args: [id, userId] }, syncCount],
         'write',
-      );
+      )
     }
 
     const result = await this.client.execute({
       sql: 'SELECT likes FROM comments WHERE id = ?',
       args: [id],
-    });
-    return { liked, likes: Number(result.rows[0]?.likes ?? 0) };
+    })
+    return { liked, likes: Number(result.rows[0]?.likes ?? 0) }
   }
 
   async getCount(url: string): Promise<number> {
     const result = await this.client.execute({
-      sql: "SELECT COUNT(*) as count FROM comments WHERE url = ? AND is_spam = 0 AND deleted = 0",
+      sql: 'SELECT COUNT(*) as count FROM comments WHERE url = ? AND is_spam = 0 AND deleted = 0',
       args: [url],
-    });
-    return Number(result.rows[0].count);
+    })
+    return Number(result.rows[0].count)
   }
 
   async getStats(): Promise<CommentStats> {
     const result = await this.client.execute(
-      "SELECT COUNT(*) as total, SUM(CASE WHEN is_spam = 0 THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as pending FROM comments WHERE deleted = 0"
-    );
-    const row = result.rows[0];
+      'SELECT COUNT(*) as total, SUM(CASE WHEN is_spam = 0 THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN is_spam = 1 THEN 1 ELSE 0 END) as pending FROM comments WHERE deleted = 0',
+    )
+    const row = result.rows[0]
     return {
       total: Number(row.total),
       // SUM 在没有行时返回 null，Number(null)=0；为可读性显式兜底
       approved: Number(row.approved ?? 0),
       pending: Number(row.pending ?? 0),
-    };
+    }
   }
 
   /**
@@ -312,76 +312,69 @@ class TursoCommentRepository implements CommentRepository {
       likes: Number(row.likes ?? 0),
       createdAt: row.created_at as number,
       updatedAt: row.updated_at == null ? undefined : (row.updated_at as number),
-    };
+    }
   }
 }
 
 class TursoUserRepository implements UserRepository {
-  private client: Client;
+  private client: Client
 
   constructor(client: Client) {
-    this.client = client;
+    this.client = client
   }
 
   async getById(id: string): Promise<User | null> {
     const result = await this.client.execute({
-      sql: "SELECT * FROM users WHERE id = ?",
+      sql: 'SELECT * FROM users WHERE id = ?',
       args: [id],
-    });
-    if (result.rows.length === 0) return null;
-    return this.rowToUser(result.rows[0]);
+    })
+    if (result.rows.length === 0) return null
+    return this.rowToUser(result.rows[0])
   }
 
   async getByMail(mail: string): Promise<User | null> {
     const result = await this.client.execute({
-      sql: "SELECT * FROM users WHERE mail = ?",
+      sql: 'SELECT * FROM users WHERE mail = ?',
       args: [mail],
-    });
-    if (result.rows.length === 0) return null;
-    return this.rowToUser(result.rows[0]);
+    })
+    if (result.rows.length === 0) return null
+    return this.rowToUser(result.rows[0])
   }
 
-  async create(data: Omit<User, "id" | "createdAt">): Promise<User> {
-    const id = crypto.randomUUID();
-    const now = Date.now();
+  async create(data: Omit<User, 'id' | 'createdAt'>): Promise<User> {
+    const id = crypto.randomUUID()
+    const now = Date.now()
 
     await this.client.execute({
-      sql: "INSERT INTO users (id, nick, mail, link, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      args: [
-        id,
-        data.nick,
-        data.mail ?? null,
-        data.link ?? null,
-        data.avatar ?? null,
-        now,
-      ],
-    });
+      sql: 'INSERT INTO users (id, nick, mail, link, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [id, data.nick, data.mail ?? null, data.link ?? null, data.avatar ?? null, now],
+    })
 
-    return { ...data, id, createdAt: now };
+    return { ...data, id, createdAt: now }
   }
 
   async update(id: string, data: Partial<User>): Promise<User> {
-    const sets: string[] = [];
-    const args: (string | number | null)[] = [];
+    const sets: string[] = []
+    const args: (string | number | null)[] = []
 
-    for (const key of ["nick", "mail", "link", "avatar"] as const) {
+    for (const key of ['nick', 'mail', 'link', 'avatar'] as const) {
       if (data[key] !== undefined) {
-        sets.push(`${key} = ?`);
-        args.push(data[key] ?? null);
+        sets.push(`${key} = ?`)
+        args.push(data[key] ?? null)
       }
     }
 
     if (sets.length > 0) {
-      args.push(id);
+      args.push(id)
       await this.client.execute({
-        sql: `UPDATE users SET ${sets.join(", ")} WHERE id = ?`,
+        sql: `UPDATE users SET ${sets.join(', ')} WHERE id = ?`,
         args,
-      });
+      })
     }
 
-    const user = await this.getById(id);
-    if (!user) throw new Error("User not found after update");
-    return user;
+    const user = await this.getById(id)
+    if (!user) throw new Error('User not found after update')
+    return user
   }
 
   private rowToUser(row: any): User {
@@ -392,74 +385,71 @@ class TursoUserRepository implements UserRepository {
       link: row.link as string | undefined,
       avatar: row.avatar as string | undefined,
       createdAt: row.created_at as number,
-    };
+    }
   }
 }
 
 class TursoConfigRepository implements ConfigRepository {
-  private client: Client;
+  private client: Client
 
   constructor(client: Client) {
-    this.client = client;
+    this.client = client
   }
 
   async get(key: string): Promise<string | null> {
     const result = await this.client.execute({
-      sql: "SELECT value FROM config WHERE key = ?",
+      sql: 'SELECT value FROM config WHERE key = ?',
       args: [key],
-    });
-    if (result.rows.length === 0) return null;
-    return result.rows[0].value as string;
+    })
+    if (result.rows.length === 0) return null
+    return result.rows[0].value as string
   }
 
   async set(key: string, value: string): Promise<void> {
     await this.client.execute({
-      sql: "INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, ?)",
+      sql: 'INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, ?)',
       args: [key, value, Date.now()],
-    });
+    })
   }
 
   async getAll(): Promise<Record<string, string>> {
-    const result = await this.client.execute("SELECT key, value FROM config");
-    return Object.fromEntries(result.rows.map((row) => [row.key, row.value]));
+    const result = await this.client.execute('SELECT key, value FROM config')
+    return Object.fromEntries(result.rows.map((row) => [row.key, row.value]))
   }
 }
 
 export class TursoAdapter extends DatabaseAdapter {
-  private client: Client;
-  private _config: TursoConfig;
+  private client: Client
+  private _config: TursoConfig
 
-  comments: CommentRepository;
-  users: UserRepository;
-  config: ConfigRepository;
+  comments: CommentRepository
+  users: UserRepository
+  config: ConfigRepository
 
   constructor(config: TursoConfig) {
-    super();
-    this._config = config;
+    super()
+    this._config = config
 
     // 本地文件 (file:./local.db 或 ./local.db) 用 @libsql/client，远程 Turso 用 serverless 驱动
-    const url = config.url;
-    const isLocal =
-      url.startsWith("file:") || url.startsWith("./") || url.startsWith("/");
+    const url = config.url
+    const isLocal = url.startsWith('file:') || url.startsWith('./') || url.startsWith('/')
 
     if (isLocal) {
-      ensureLocalDbDir(url);
+      ensureLocalDbDir(url)
     }
 
-    this.client = (
-      isLocal
-        ? createLibsqlClient({
-            url,
-            authToken: config.authToken || undefined,
-          })
-        : createServerlessClient({
-            url,
-            authToken: config.authToken || undefined,
-          })
-    ) as unknown as Client;
-    this.comments = new TursoCommentRepository(this.client);
-    this.users = new TursoUserRepository(this.client);
-    this.config = new TursoConfigRepository(this.client);
+    this.client = (isLocal
+      ? createLibsqlClient({
+          url,
+          authToken: config.authToken || undefined,
+        })
+      : createServerlessClient({
+          url,
+          authToken: config.authToken || undefined,
+        })) as unknown as Client
+    this.comments = new TursoCommentRepository(this.client)
+    this.users = new TursoUserRepository(this.client)
+    this.config = new TursoConfigRepository(this.client)
   }
 
   async init(): Promise<void> {
@@ -468,6 +458,6 @@ export class TursoAdapter extends DatabaseAdapter {
   }
 
   async close(): Promise<void> {
-    this.client.close();
+    this.client.close()
   }
 }

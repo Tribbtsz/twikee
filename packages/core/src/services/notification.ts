@@ -106,7 +106,7 @@ function truncateWecom(s: string, max: number): string {
 export async function postJson(
   url: string,
   body: unknown,
-  init?: { method?: string; headers?: Record<string, string>; timeoutMs?: number }
+  init?: { method?: string; headers?: Record<string, string>; timeoutMs?: number },
 ): Promise<Response> {
   const method = init?.method ?? 'POST'
   const upperMethod = method.toUpperCase()
@@ -156,12 +156,12 @@ export interface ChannelAdapter {
 export class TelegramAdapter implements ChannelAdapter {
   private botToken: string
   private chatId: string
-  
+
   constructor(config: { botToken: string; chatId: string }) {
     this.botToken = config.botToken
     this.chatId = config.chatId
   }
-  
+
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
     const text = this.formatMessage(comment, url, siteName)
@@ -169,7 +169,7 @@ export class TelegramAdapter implements ChannelAdapter {
     const res = await postJson(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
       chat_id: this.chatId,
       text,
-      parse_mode: 'HTML'
+      parse_mode: 'HTML',
     })
     // Telegram 业务错误走 HTTP 200 + { ok: false, description }
     let data: { ok?: boolean; description?: string }
@@ -182,11 +182,12 @@ export class TelegramAdapter implements ChannelAdapter {
       throw new Error(`Telegram failed: ${data?.description ?? 'unknown error'}`)
     }
   }
-  
+
   private formatMessage(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
     const type = comment.rid ? '回复' : '新评论'
     const safeLink = sanitizeUrl(comment.link)
-    return truncateHtml(`
+    return truncateHtml(
+      `
 <b>[${escapeHtml(siteName ?? 'Twikee')}] ${type}通知</b>
 
 <b>昵称:</b> ${escapeHtml(comment.nick)}
@@ -195,7 +196,9 @@ ${comment.mail ? `<b>邮箱:</b> ${escapeHtml(comment.mail)}\n` : ''}${safeLink 
 ${escapeHtml(comment.content)}
 
 <b>页面:</b> ${escapeHtml(url)}
-    `.trim(), 4096)
+    `.trim(),
+      4096,
+    )
   }
 }
 
@@ -203,14 +206,14 @@ export class WebhookAdapter implements ChannelAdapter {
   private url: string
   private method: string
   private headers: Record<string, string>
-  
+
   constructor(config: { url: string; method?: string; headers?: Record<string, string> }) {
     assertPublicHttpUrl(config.url, 'WEBHOOK_URL')
     this.url = config.url
     this.method = config.method ?? 'POST'
     this.headers = config.headers ?? {}
   }
-  
+
   async send(event: NotificationEvent): Promise<void> {
     // 重新校验：WEBHOOK_URL 可能在运行期被改掉
     assertPublicHttpUrl(this.url, 'WEBHOOK_URL')
@@ -220,7 +223,7 @@ export class WebhookAdapter implements ChannelAdapter {
     await postJson(
       this.url,
       { ...event, payload: { ...event.payload, comment } },
-      { method: this.method, headers: this.headers }
+      { method: this.method, headers: this.headers },
     )
   }
 }
@@ -229,27 +232,34 @@ export class EmailAdapter implements ChannelAdapter {
   private apiKey: string
   private from: string
   private to: string
-  
+
   constructor(config: { apiKey: string; from: string; to: string }) {
     this.apiKey = config.apiKey
     this.from = config.from
     this.to = config.to
   }
-  
+
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
-    const subject = `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`.replace(/[\r\n]+/g, ' ')
-    
-    await postJson('https://api.resend.com/emails', {
-      from: this.from,
-      to: this.to,
-      subject,
-      html: this.formatHtml(comment, url, siteName)
-    }, {
-      headers: { 'Authorization': `Bearer ${this.apiKey}` },
-    })
+    const subject = `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`.replace(
+      /[\r\n]+/g,
+      ' ',
+    )
+
+    await postJson(
+      'https://api.resend.com/emails',
+      {
+        from: this.from,
+        to: this.to,
+        subject,
+        html: this.formatHtml(comment, url, siteName),
+      },
+      {
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+      },
+    )
   }
-  
+
   private formatHtml(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
     const safeLink = sanitizeUrl(comment.link)
     const safeUrl = sanitizeUrl(url)
@@ -271,13 +281,19 @@ export class WxPusherAdapter implements ChannelAdapter {
 
   constructor(config: { appToken: string; uids: string }) {
     this.appToken = config.appToken
-    this.uids = config.uids.split(',').map(s => s.trim()).filter(Boolean)
+    this.uids = config.uids
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
   }
 
   async send(event: NotificationEvent): Promise<void> {
     const { comment, url, siteName } = event.payload
     const type = comment.rid ? '回复' : '新评论'
-    const content = truncate(`[${siteName ?? 'Twikee'}] ${type}通知\n\n昵称: ${comment.nick}${comment.mail ? `\n邮箱: ${comment.mail}` : ''}${comment.link ? `\n网站: ${comment.link}` : ''}\n内容:\n${comment.content}\n\n页面: ${url}`, 4000)
+    const content = truncate(
+      `[${siteName ?? 'Twikee'}] ${type}通知\n\n昵称: ${comment.nick}${comment.mail ? `\n邮箱: ${comment.mail}` : ''}${comment.link ? `\n网站: ${comment.link}` : ''}\n内容:\n${comment.content}\n\n页面: ${url}`,
+      4000,
+    )
     const summary = truncate(`[${siteName ?? 'Twikee'}] ${type} - ${comment.nick}`, 60)
 
     const res = await postJson('https://wxpusher.zjiecode.com/api/send/message', {
@@ -314,7 +330,10 @@ export class WecomAdapter implements ChannelAdapter {
     const { comment, url, siteName } = event.payload
     const type = comment.rid ? '回复' : '新评论'
     const quote = (s: string): string =>
-      s.split('\n').map((line) => `> ${escapeWecomMarkdown(line)}`).join('\n')
+      s
+        .split('\n')
+        .map((line) => `> ${escapeWecomMarkdown(line)}`)
+        .join('\n')
     const mdLink = (text: string, href: string): string =>
       `[${escapeWecomMarkdown(text)}](${href.replace(/\(/g, '%28').replace(/\)/g, '%29')})`
     const safeLink = sanitizeUrl(comment.link)
@@ -322,12 +341,12 @@ export class WecomAdapter implements ChannelAdapter {
     // 企业微信群机器人 markdown 上限 4096 字符
     const content = truncateWecom(
       `## ${escapeWecomMarkdown(`[${siteName ?? 'Twikee'}] ${type}通知`)}\n` +
-      `${quote(`昵称: ${comment.nick}`)}\n` +
-      (comment.mail ? `${quote(`邮箱: ${comment.mail}`)}\n` : '') +
-      (safeLink ? `> 网站: ${mdLink(safeLink, safeLink)}\n` : '') +
-      `${quote(`内容:\n${comment.content}`)}\n` +
-      (safeUrl ? `> 页面: ${mdLink(url, safeUrl)}` : `> 页面: ${escapeWecomMarkdown(url)}`),
-      4096
+        `${quote(`昵称: ${comment.nick}`)}\n` +
+        (comment.mail ? `${quote(`邮箱: ${comment.mail}`)}\n` : '') +
+        (safeLink ? `> 网站: ${mdLink(safeLink, safeLink)}\n` : '') +
+        `${quote(`内容:\n${comment.content}`)}\n` +
+        (safeUrl ? `> 页面: ${mdLink(url, safeUrl)}` : `> 页面: ${escapeWecomMarkdown(url)}`),
+      4096,
     )
 
     const res = await postJson(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${encodeURIComponent(this.key)}`, {
@@ -357,24 +376,26 @@ export class NotificationService {
   get channelCount(): number {
     return this.channels.size
   }
-  
+
   addChannel(name: string, adapter: ChannelAdapter, events: string[]): void {
     this.channels.set(name, adapter)
     this.enabledEvents.set(name, new Set(events))
   }
-  
+
   async send(event: NotificationEvent): Promise<void> {
     const promises: Promise<void>[] = []
-    
+
     for (const [name, adapter] of this.channels) {
       const events = this.enabledEvents.get(name)
       if (events?.has(event.type)) {
-        promises.push(adapter.send(event).catch(err => {
-          console.error(`Notification channel ${name} failed:`, err)
-        }))
+        promises.push(
+          adapter.send(event).catch((err) => {
+            console.error(`Notification channel ${name} failed:`, err)
+          }),
+        )
       }
     }
-    
+
     await Promise.all(promises)
   }
 }

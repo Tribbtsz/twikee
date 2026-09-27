@@ -16,14 +16,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  submit: [data: {
-    nick: string
-    mail?: string
-    link?: string
-    content: string
-    rid?: string
-    pid?: string
-  }]
+  submit: [
+    data: {
+      nick: string
+      mail?: string
+      link?: string
+      content: string
+      rid?: string
+      pid?: string
+    },
+  ]
   cancel: []
 }>()
 
@@ -110,7 +112,7 @@ const handleSubmit = async () => {
       link: link.value.trim() || undefined,
       content: content.value.trim(),
       rid: props.rid,
-      pid: props.pid
+      pid: props.pid,
     })
     content.value = ''
   } finally {
@@ -126,45 +128,23 @@ const handleSubmit = async () => {
 
       <div class="flex-1 space-y-3">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <Input
-            v-model="nick"
-            placeholder="昵称 *"
-          />
+          <Input v-model="nick" placeholder="昵称 *" />
           <div class="tk-submit__field">
-            <Input
-              v-model="mail"
-              type="email"
-              placeholder="邮箱 (可选)"
-              @blur="onMailBlur"
-            />
+            <Input v-model="mail" type="email" placeholder="邮箱 (可选)" @blur="onMailBlur" />
             <span v-if="mailTouched && mailError" class="tk-submit__error">{{ mailError }}</span>
           </div>
           <div class="tk-submit__field">
-            <Input
-              v-model="link"
-              type="url"
-              placeholder="网址 (可选)"
-              @blur="onLinkBlur"
-            />
+            <Input v-model="link" type="url" placeholder="网址 (可选)" @blur="onLinkBlur" />
             <span v-if="linkTouched && linkError" class="tk-submit__error">{{ linkError }}</span>
           </div>
         </div>
 
         <div v-if="isPreview" class="tk-submit__preview" v-html="previewHtml" />
-        <Textarea
-          v-else
-          v-model="content"
-          placeholder="说点什么吧... (支持 Markdown)"
-          :rows="4"
-        />
+        <Textarea v-else v-model="content" placeholder="说点什么吧... (支持 Markdown)" :rows="4" />
 
         <div class="flex items-center justify-between gap-2">
           <div class="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              @click="isPreview = !isPreview"
-            >
+            <Button variant="ghost" size="sm" @click="isPreview = !isPreview">
               {{ isPreview ? '编辑' : '预览' }}
             </Button>
             <a
@@ -178,19 +158,8 @@ const handleSubmit = async () => {
           </div>
 
           <div class="flex gap-2">
-            <Button
-              v-if="rid"
-              variant="ghost"
-              size="sm"
-              @click="emit('cancel')"
-            >
-              取消
-            </Button>
-            <Button
-              size="sm"
-              :disabled="!canSend || isSending"
-              @click="handleSubmit"
-            >
+            <Button v-if="rid" variant="ghost" size="sm" @click="emit('cancel')"> 取消 </Button>
+            <Button size="sm" :disabled="!canSend || isSending" @click="handleSubmit">
               {{ isSending ? '发送中...' : '发送' }}
             </Button>
           </div>

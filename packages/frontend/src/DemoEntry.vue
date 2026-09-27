@@ -27,7 +27,7 @@ const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warnin
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: envId.value,
-  el: '#twikee-comment'
+  el: '#twikee-comment',
 })
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
@@ -94,9 +94,7 @@ watch(page, loadComments)
       <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
         <div>
           <h1 class="text-xl font-bold">Twikee 评论系统</h1>
-          <p class="text-sm text-muted-foreground mt-1">
-            基于 Vue 3 + Hono + Turso 构建的现代化评论系统
-          </p>
+          <p class="text-sm text-muted-foreground mt-1">基于 Vue 3 + Hono + Turso 构建的现代化评论系统</p>
         </div>
         <a href="/admin.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 shrink-0">
           <ShieldCheck class="w-4 h-4" />
@@ -112,103 +110,75 @@ watch(page, loadComments)
       </div>
 
       <template v-if="demoCheckDone && demoEnabled">
-      <Card class="mb-6">
-        <CardHeader>
-          <h2 class="text-lg font-semibold">欢迎使用 Twikee 评论系统</h2>
-        </CardHeader>
-        <CardContent>
-          <p class="text-muted-foreground leading-relaxed mb-4">
-            这是一个现代化的评论系统，支持实时评论、点赞、回复、Markdown 语法等功能。
-            采用 Vue 3 + Vite + Tailwind CSS 4 构建前端，Hono.js 构建后端 API，
-            Turso 作为数据库存储。
-          </p>
-          <p class="text-sm text-muted-foreground mb-4">
-            技术栈：Vue 3、Vite、Tailwind CSS 4、shadcn/ui 风格组件、Hono.js、Turso (libSQL)
-          </p>
-        </CardContent>
-      </Card>
+        <Card class="mb-6">
+          <CardHeader>
+            <h2 class="text-lg font-semibold">欢迎使用 Twikee 评论系统</h2>
+          </CardHeader>
+          <CardContent>
+            <p class="text-muted-foreground leading-relaxed mb-4">
+              这是一个现代化的评论系统，支持实时评论、点赞、回复、Markdown 语法等功能。 采用 Vue 3 + Vite + Tailwind CSS
+              4 构建前端，Hono.js 构建后端 API， Turso 作为数据库存储。
+            </p>
+            <p class="text-sm text-muted-foreground mb-4">
+              技术栈：Vue 3、Vite、Tailwind CSS 4、shadcn/ui 风格组件、Hono.js、Turso (libSQL)
+            </p>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardContent class="p-4 sm:p-6">
-          <div id="twikee-comment" class="twikee-container">
-            <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
-              评论已关闭
-            </div>
-            <div v-else class="mb-6">
-              <TkSubmit
-                :url="currentUrl"
-                @submit="handleSubmit"
-              />
-            </div>
+        <Card>
+          <CardContent class="p-4 sm:p-6">
+            <div id="twikee-comment" class="twikee-container">
+              <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
+                评论已关闭
+              </div>
+              <div v-else class="mb-6">
+                <TkSubmit :url="currentUrl" @submit="handleSubmit" />
+              </div>
 
-            <div class="tk-comments-header">
-              <h3 class="tk-comments-title">
-                <MessageSquare class="w-4 h-4" />
-                评论
-                <span v-if="total > 0" class="tk-comments-count">{{ total }}</span>
-              </h3>
-            </div>
+              <div class="tk-comments-header">
+                <h3 class="tk-comments-title">
+                  <MessageSquare class="w-4 h-4" />
+                  评论
+                  <span v-if="total > 0" class="tk-comments-count">{{ total }}</span>
+                </h3>
+              </div>
 
-            <div class="tk-comments">
-              <TkComment
-                v-for="(comment, index) in commentTree"
-                :key="comment.id"
-                :comment="comment"
-                :all-comments="comments"
-                :show-divider="index < commentTree.length - 1"
-                @load="loadComments"
-              />
-            </div>
+              <div class="tk-comments">
+                <TkComment
+                  v-for="(comment, index) in commentTree"
+                  :key="comment.id"
+                  :comment="comment"
+                  :all-comments="comments"
+                  :show-divider="index < commentTree.length - 1"
+                  @load="loadComments"
+                />
+              </div>
 
-            <div v-if="!loading && !error && commentTree.length === 0" class="tk-comments-empty">
-              暂无评论，来发表第一条评论吧~
-            </div>
+              <div v-if="!loading && !error && commentTree.length === 0" class="tk-comments-empty">
+                暂无评论，来发表第一条评论吧~
+              </div>
 
-            <div v-if="totalPages > 1" class="tk-comments-pagination">
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="page <= 1"
-                @click="page--"
-              >
-                上一页
-              </Button>
-              <span class="text-sm text-muted-foreground">
-                {{ page }} / {{ totalPages }}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="page >= totalPages"
-                @click="page++"
-              >
-                下一页
-              </Button>
-            </div>
+              <div v-if="totalPages > 1" class="tk-comments-pagination">
+                <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--"> 上一页 </Button>
+                <span class="text-sm text-muted-foreground"> {{ page }} / {{ totalPages }} </span>
+                <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="page++"> 下一页 </Button>
+              </div>
 
-            <div v-if="loading" class="tk-comments-loading">
-              加载中...
-            </div>
+              <div v-if="loading" class="tk-comments-loading">加载中...</div>
 
-            <div v-if="error" class="tk-comments-error">
-              {{ error }}
-              <div class="text-sm mt-2">请确保后端服务运行在 {{ envId }}</div>
+              <div v-if="error" class="tk-comments-error">
+                {{ error }}
+                <div class="text-sm mt-2">请确保后端服务运行在 {{ envId }}</div>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       </template>
     </main>
 
     <footer class="border-t py-6 mt-8">
       <div class="max-w-4xl mx-auto px-4 text-center text-sm text-muted-foreground">
-        <a
-          href="https://github.com/Tribbtsz/twikee"
-          target="_blank"
-          class="text-primary hover:underline"
-        >
-          GitHub
-        </a>
+        <a href="https://github.com/Tribbtsz/twikee" target="_blank" class="text-primary hover:underline"> GitHub </a>
         <span class="mx-2">·</span>
         <span>由 Twikee 驱动</span>
         <span class="mx-2">·</span>
@@ -216,11 +186,7 @@ watch(page, loadComments)
       </div>
     </footer>
 
-    <Toast
-      v-model:open="toast.open"
-      :message="toast.message"
-      :type="toast.type"
-    />
+    <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />
   </div>
 </template>
 

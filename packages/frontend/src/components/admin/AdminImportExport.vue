@@ -44,7 +44,7 @@ const handleExport = async () => {
     do {
       const res = await fetch(
         `${props.apiUrl}/api/admin/comments/all?page=${page}&pageSize=${EXPORT_PAGE_SIZE}&includeSpam=true`,
-        { headers: { Authorization: `Bearer ${props.token}` } }
+        { headers: { Authorization: `Bearer ${props.token}` } },
       )
       if (!checkAuth(res)) return
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -89,26 +89,26 @@ const handleImport = () => {
 const handleFileChange = async (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  
+
   importing.value = true
   importResult.value = ''
   importFailed.value = false
-  
+
   try {
     const text = await file.text()
     const comments = JSON.parse(text)
-    
+
     if (!Array.isArray(comments)) {
       throw new Error('Invalid format')
     }
-    
+
     const res = await fetch(`${props.apiUrl}/api/admin/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${props.token}`
+        Authorization: `Bearer ${props.token}`,
       },
-      body: JSON.stringify(comments)
+      body: JSON.stringify(comments),
     })
     if (!checkAuth(res)) return
     const result = await res.json()
@@ -136,7 +136,7 @@ const handleFileChange = async (e: Event) => {
 <template>
   <div class="space-y-4">
     <h2 class="text-xl font-semibold">数据管理</h2>
-    
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card>
         <CardHeader>
@@ -146,15 +146,13 @@ const handleFileChange = async (e: Event) => {
           </h3>
         </CardHeader>
         <CardContent>
-          <p class="text-sm text-muted-foreground mb-4">
-            将所有评论导出为 JSON 文件，可用于备份或迁移。
-          </p>
+          <p class="text-sm text-muted-foreground mb-4">将所有评论导出为 JSON 文件，可用于备份或迁移。</p>
           <Button @click="handleExport" :disabled="exporting">
             {{ exporting ? '导出中...' : '导出评论' }}
           </Button>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <h3 class="font-medium flex items-center gap-2">
@@ -163,16 +161,8 @@ const handleFileChange = async (e: Event) => {
           </h3>
         </CardHeader>
         <CardContent>
-          <p class="text-sm text-muted-foreground mb-4">
-            从 JSON 文件导入评论数据，支持从旧版 Twikoo 迁移。
-          </p>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json"
-            class="hidden"
-            @change="handleFileChange"
-          />
+          <p class="text-sm text-muted-foreground mb-4">从 JSON 文件导入评论数据，支持从旧版 Twikoo 迁移。</p>
+          <input ref="fileInput" type="file" accept=".json" class="hidden" @change="handleFileChange" />
           <Button @click="handleImport" :disabled="importing">
             {{ importing ? '导入中...' : '选择文件' }}
           </Button>

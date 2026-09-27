@@ -96,7 +96,7 @@ export function createCommentRoutes() {
         ns.send({
           type: comment.rid ? 'comment.reply' : 'comment.new',
           payload: { comment, url: pageUrl, siteName: siteName || undefined },
-        })
+        }),
       )
     }
 

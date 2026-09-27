@@ -4,26 +4,29 @@ import { Blobatar } from '@blobatar/vue'
 import type { Expression } from 'blobatar'
 import 'blobatar/motion.css'
 
-const props = withDefaults(defineProps<{
-  nick?: string
-  mail?: string
-  link?: string
-  size?: 'sm' | 'md' | 'lg'
-  animate?: false | 'hover' | 'always'
-  expression?: Expression
-}>(), {
-  nick: '',
-  mail: '',
-  link: '',
-  size: 'md',
-  animate: 'hover'
-})
+const props = withDefaults(
+  defineProps<{
+    nick?: string
+    mail?: string
+    link?: string
+    size?: 'sm' | 'md' | 'lg'
+    animate?: false | 'hover' | 'always'
+    expression?: Expression
+  }>(),
+  {
+    nick: '',
+    mail: '',
+    link: '',
+    size: 'md',
+    animate: 'hover',
+  },
+)
 
 const sizeStyles = computed(() => {
   const sizes = {
     sm: 'width: 2.5rem; height: 2.5rem;',
     md: 'width: 3rem; height: 3rem;',
-    lg: 'width: 3.5rem; height: 3.5rem;'
+    lg: 'width: 3.5rem; height: 3.5rem;',
   }
   return sizes[props.size]
 })

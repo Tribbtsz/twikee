@@ -180,12 +180,27 @@ export function createAdminRoutes() {
 
   app.get('/config', async (c) => {
     const config = await c.var.db.config.getAll()
-    const { ADMIN_PASSWORD, SMTP_PASS, TELEGRAM_BOT_TOKEN, WXPUSHER_APP_TOKEN, WECOM_KEY, IMAGE_CDN_TOKEN, ...safeConfig } = config
+    const {
+      ADMIN_PASSWORD,
+      SMTP_PASS,
+      TELEGRAM_BOT_TOKEN,
+      WXPUSHER_APP_TOKEN,
+      WECOM_KEY,
+      IMAGE_CDN_TOKEN,
+      ...safeConfig
+    } = config
     return c.json(safeConfig)
   })
 
   // 密钥类配置：前端拿到的是空值，回保存时空值表示"不修改"，避免被清零
-  const SECRET_KEYS = new Set(['ADMIN_PASSWORD', 'SMTP_PASS', 'TELEGRAM_BOT_TOKEN', 'WXPUSHER_APP_TOKEN', 'WECOM_KEY', 'IMAGE_CDN_TOKEN'])
+  const SECRET_KEYS = new Set([
+    'ADMIN_PASSWORD',
+    'SMTP_PASS',
+    'TELEGRAM_BOT_TOKEN',
+    'WXPUSHER_APP_TOKEN',
+    'WECOM_KEY',
+    'IMAGE_CDN_TOKEN',
+  ])
 
   app.post('/config', async (c) => {
     const body = await safeJson(c)

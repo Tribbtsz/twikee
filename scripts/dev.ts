@@ -8,14 +8,14 @@ console.log('🚀 Starting Twikee development server...\n')
 const apiProcess = spawn('pnpm', ['dev'], {
   cwd: resolve(rootDir, 'packages/api'),
   stdio: 'inherit',
-  shell: true
+  shell: true,
 })
 
 setTimeout(() => {
   const frontendProcess = spawn('pnpm', ['dev'], {
     cwd: resolve(rootDir, 'packages/frontend'),
     stdio: 'inherit',
-    shell: true
+    shell: true,
   })
 
   frontendProcess.on('close', (code) => {

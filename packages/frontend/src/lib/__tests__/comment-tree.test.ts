@@ -93,8 +93,7 @@ describe('buildCommentTree', () => {
     // a.rid=b, b.rid=a：两者互为父子。必须都能出现在结果里（不允许静默消失），
     // 且不能死循环。这里接受两种合理结果：3 个顶层，或 2 个顶层 + 1 个子节点
     const tree = buildCommentTree([makeComment('a', 'b'), makeComment('b', 'a'), makeComment('c')])
-    const flatten = (nodes: CommentNode[]): CommentNode[] =>
-      nodes.flatMap((n) => [n, ...flatten(n.children)])
+    const flatten = (nodes: CommentNode[]): CommentNode[] => nodes.flatMap((n) => [n, ...flatten(n.children)])
     expect(flatten(tree)).toHaveLength(3)
     expect(tree.some((n) => n.id === 'c')).toBe(true)
   })

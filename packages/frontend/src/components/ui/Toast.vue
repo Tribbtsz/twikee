@@ -3,17 +3,20 @@ import { ref, watch, onUnmounted } from 'vue'
 import { cn } from '@/lib/utils'
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-vue-next'
 
-const props = withDefaults(defineProps<{
-  open?: boolean
-  message?: string
-  type?: 'success' | 'error' | 'warning' | 'info'
-  duration?: number
-}>(), {
-  open: false,
-  message: '',
-  type: 'info',
-  duration: 2000
-})
+const props = withDefaults(
+  defineProps<{
+    open?: boolean
+    message?: string
+    type?: 'success' | 'error' | 'warning' | 'info'
+    duration?: number
+  }>(),
+  {
+    open: false,
+    message: '',
+    type: 'info',
+    duration: 2000,
+  },
+)
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
@@ -22,16 +25,19 @@ const emit = defineEmits<{
 const isOpen = ref(props.open)
 let timer: ReturnType<typeof setTimeout> | null = null
 
-watch(() => props.open, (v) => {
-  isOpen.value = v
-  if (v && props.duration > 0) {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => {
-      isOpen.value = false
-      emit('update:open', false)
-    }, props.duration)
-  }
-})
+watch(
+  () => props.open,
+  (v) => {
+    isOpen.value = v
+    if (v && props.duration > 0) {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        isOpen.value = false
+        emit('update:open', false)
+      }, props.duration)
+    }
+  },
+)
 
 onUnmounted(() => {
   if (timer) clearTimeout(timer)
@@ -41,14 +47,14 @@ const icons: Record<string, typeof CheckCircle> = {
   success: CheckCircle,
   error: XCircle,
   warning: AlertTriangle,
-  info: Info
+  info: Info,
 }
 
 const iconColors: Record<string, string> = {
   success: 'text-green-500',
   error: 'text-destructive',
   warning: 'text-yellow-500',
-  info: 'text-blue-500'
+  info: 'text-blue-500',
 }
 </script>
 

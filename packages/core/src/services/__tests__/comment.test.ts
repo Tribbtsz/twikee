@@ -1,13 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { CommentService } from '../comment'
 import { DatabaseAdapter } from '../../adapters/base'
-import type {
-  CommentRepository, UserRepository, ConfigRepository,
-  CommentStats, LikeResult,
-} from '../../adapters/base'
-import type {
-  Comment, CreateCommentInput, CommentQuery,
-} from '../../types'
+import type { CommentRepository, UserRepository, ConfigRepository, CommentStats, LikeResult } from '../../adapters/base'
+import type { Comment, CreateCommentInput, CommentQuery } from '../../types'
 
 class MockCommentRepo implements CommentRepository {
   comments = new Map<string, Comment>()
@@ -17,9 +12,20 @@ class MockCommentRepo implements CommentRepository {
   async create(data: CreateCommentInput): Promise<Comment> {
     const id = crypto.randomUUID()
     const comment: Comment = {
-      id, ...data, master: false, top: false, isSpam: false, deleted: false,
-      likes: 0, createdAt: Date.now(), mail: data.mail, link: data.link,
-      ua: data.ua, ip: data.ip, rid: data.rid, pid: data.pid,
+      id,
+      ...data,
+      master: false,
+      top: false,
+      isSpam: false,
+      deleted: false,
+      likes: 0,
+      createdAt: Date.now(),
+      mail: data.mail,
+      link: data.link,
+      ua: data.ua,
+      ip: data.ip,
+      rid: data.rid,
+      pid: data.pid,
     }
     this.comments.set(id, comment)
     return comment
@@ -29,14 +35,22 @@ class MockCommentRepo implements CommentRepository {
     return this.comments.get(id) || null
   }
 
-  async getList(query: CommentQuery): Promise<{ data: Comment[]; total: number; page: number; pageSize: number; totalPages: number }> {
-    let list = Array.from(this.comments.values()).filter(c => !query.url || c.url === query.url)
-    if (!query.includeSpam) list = list.filter(c => !c.isSpam)
-    if (!query.includeDeleted) list = list.filter(c => !c.deleted)
+  async getList(
+    query: CommentQuery,
+  ): Promise<{ data: Comment[]; total: number; page: number; pageSize: number; totalPages: number }> {
+    let list = Array.from(this.comments.values()).filter((c) => !query.url || c.url === query.url)
+    if (!query.includeSpam) list = list.filter((c) => !c.isSpam)
+    if (!query.includeDeleted) list = list.filter((c) => !c.deleted)
     const total = list.length
     const page = query.page || 1
     const pageSize = query.pageSize || 10
-    return { data: list.slice((page - 1) * pageSize, page * pageSize), total, page, pageSize, totalPages: Math.ceil(total / pageSize) }
+    return {
+      data: list.slice((page - 1) * pageSize, page * pageSize),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    }
   }
 
   async update(id: string, data: any): Promise<Comment> {
@@ -72,27 +86,45 @@ class MockCommentRepo implements CommentRepository {
   }
 
   async getCount(url: string): Promise<number> {
-    return Array.from(this.comments.values()).filter(c => c.url === url && !c.isSpam).length
+    return Array.from(this.comments.values()).filter((c) => c.url === url && !c.isSpam).length
   }
 
   async getStats(): Promise<CommentStats> {
     const all = Array.from(this.comments.values())
-    return { total: all.length, approved: all.filter(c => !c.isSpam).length, pending: all.filter(c => c.isSpam).length }
+    return {
+      total: all.length,
+      approved: all.filter((c) => !c.isSpam).length,
+      pending: all.filter((c) => c.isSpam).length,
+    }
   }
 }
 
 class MockUserRepo implements UserRepository {
-  async getById() { return null }
-  async getByMail() { return null }
-  async create(data: any) { return { ...data, id: '1', createdAt: Date.now() } }
-  async update() { return null as any }
+  async getById() {
+    return null
+  }
+  async getByMail() {
+    return null
+  }
+  async create(data: any) {
+    return { ...data, id: '1', createdAt: Date.now() }
+  }
+  async update() {
+    return null as any
+  }
 }
 
 class MockConfigRepo implements ConfigRepository {
   store = new Map<string, string>()
-  async get(key: string) { return this.store.get(key) || null }
-  async set(key: string, value: string) { this.store.set(key, value) }
-  async getAll() { return Object.fromEntries(this.store) }
+  async get(key: string) {
+    return this.store.get(key) || null
+  }
+  async set(key: string, value: string) {
+    this.store.set(key, value)
+  }
+  async getAll() {
+    return Object.fromEntries(this.store)
+  }
 }
 
 class MockAdapter extends DatabaseAdapter {
@@ -101,7 +133,9 @@ class MockAdapter extends DatabaseAdapter {
   config = new MockConfigRepo()
   async init() {}
   async close() {}
-  async transaction(fn: () => Promise<any>) { return fn() }
+  async transaction(fn: () => Promise<any>) {
+    return fn()
+  }
 }
 
 describe('CommentService', () => {

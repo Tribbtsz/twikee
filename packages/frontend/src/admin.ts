@@ -9,15 +9,15 @@ export type { TwikeeOptions } from './composables/useTwikee'
 export function init(options: { el: string | Element; envId: string; dark?: string }) {
   const { el, envId } = options
   const container = typeof el === 'string' ? document.querySelector(el) : el
-  
+
   if (!container) {
     console.error('[Twikee] Container element not found')
     return
   }
-  
+
   const app = createApp(Admin, { envId })
   app.mount(container)
-  
+
   return app
 }
 
@@ -26,5 +26,5 @@ export function initAdmin(options: { el: string | Element; envId: string }) {
 }
 
 if (typeof window !== 'undefined') {
-  (window as any).twikee = { init, initAdmin }
+  ;(window as any).twikee = { init, initAdmin }
 }

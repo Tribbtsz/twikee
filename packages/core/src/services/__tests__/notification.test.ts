@@ -224,9 +224,7 @@ describe('WebhookAdapter', () => {
       async () => new Response(null, { status: 302, headers: { Location: 'http://169.254.169.254/' } }),
     )
     vi.stubGlobal('fetch', fetchMock)
-    await expect(
-      new WebhookAdapter({ url: 'https://example.com/hook' }).send(makeEvent()),
-    ).rejects.toThrow(/redirect/)
+    await expect(new WebhookAdapter({ url: 'https://example.com/hook' }).send(makeEvent())).rejects.toThrow(/redirect/)
   })
 
   it('refuses private/loopback/link-local targets at construction', () => {

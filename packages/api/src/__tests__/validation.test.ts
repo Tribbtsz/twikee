@@ -30,9 +30,9 @@ describe('CreateCommentSchema', () => {
     })
 
     it('rejects data: urls', () => {
-      expect(
-        CreateCommentSchema.safeParse({ ...base, link: 'data:text/html,<script>alert(1)</script>' }).success,
-      ).toBe(false)
+      expect(CreateCommentSchema.safeParse({ ...base, link: 'data:text/html,<script>alert(1)</script>' }).success).toBe(
+        false,
+      )
     })
 
     it('rejects other dangerous schemes', () => {

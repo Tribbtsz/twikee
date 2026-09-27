@@ -2,21 +2,24 @@
 import { ref, watch } from 'vue'
 import Button from '@/components/ui/Button.vue'
 
-const props = withDefaults(defineProps<{
-  open?: boolean
-  title?: string
-  description?: string
-  confirmText?: string
-  cancelText?: string
-  variant?: 'default' | 'destructive'
-}>(), {
-  open: false,
-  title: '确认操作',
-  description: '确定要执行此操作吗？',
-  confirmText: '确定',
-  cancelText: '取消',
-  variant: 'default'
-})
+const props = withDefaults(
+  defineProps<{
+    open?: boolean
+    title?: string
+    description?: string
+    confirmText?: string
+    cancelText?: string
+    variant?: 'default' | 'destructive'
+  }>(),
+  {
+    open: false,
+    title: '确认操作',
+    description: '确定要执行此操作吗？',
+    confirmText: '确定',
+    cancelText: '取消',
+    variant: 'default',
+  },
+)
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
@@ -25,8 +28,15 @@ const emit = defineEmits<{
 
 const isOpen = ref(props.open)
 
-watch(() => props.open, (v) => { isOpen.value = v })
-watch(isOpen, (v) => { emit('update:open', v) })
+watch(
+  () => props.open,
+  (v) => {
+    isOpen.value = v
+  },
+)
+watch(isOpen, (v) => {
+  emit('update:open', v)
+})
 
 const handleConfirm = () => {
   emit('confirm')
@@ -47,7 +57,9 @@ const handleCancel = () => {
         <p class="mt-2 text-sm text-muted-foreground">{{ description }}</p>
         <div class="mt-6 flex justify-end gap-2">
           <Button variant="outline" size="sm" @click="handleCancel">{{ cancelText }}</Button>
-          <Button :variant="variant === 'destructive' ? 'destructive' : 'default'" size="sm" @click="handleConfirm">{{ confirmText }}</Button>
+          <Button :variant="variant === 'destructive' ? 'destructive' : 'default'" size="sm" @click="handleConfirm">{{
+            confirmText
+          }}</Button>
         </div>
       </div>
     </div>

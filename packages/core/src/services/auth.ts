@@ -38,9 +38,7 @@ function getTokenTtl(): number {
 }
 
 function hashToken(userId: string, timestamp: string, adminPasswordHash: string): string {
-  return createHash('sha256')
-    .update(`${userId}:${timestamp}:${getJwtSecret()}:${adminPasswordHash}`)
-    .digest('hex')
+  return createHash('sha256').update(`${userId}:${timestamp}:${getJwtSecret()}:${adminPasswordHash}`).digest('hex')
 }
 
 /**
@@ -57,24 +55,24 @@ function safeEqual(a: string, b: string): boolean {
 
 export class AuthService {
   private db: DatabaseAdapter
-  
+
   constructor(db: DatabaseAdapter) {
     this.db = db
   }
-  
+
   async getOrCreateUser(nick: string, mail?: string, link?: string): Promise<User> {
     if (mail) {
       const existing = await this.db.users.getByMail(mail)
       if (existing) return existing
     }
-    
+
     return await this.db.users.create({ nick, mail, link })
   }
-  
+
   async getUserById(id: string): Promise<User | null> {
     return await this.db.users.getById(id)
   }
-  
+
   async verifyAdminPassword(password: string): Promise<boolean> {
     const adminPassword = await this.db.config.get('ADMIN_PASSWORD')
     if (!adminPassword) return false
@@ -94,7 +92,7 @@ export class AuthService {
   static async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10)
   }
-  
+
   /**
    * 生成绑定当前 ADMIN_PASSWORD 哈希的 token。
    * 改密后哈希变化 → 旧 token 全部失效，无需服务端黑名单。

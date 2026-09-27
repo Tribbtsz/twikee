@@ -17,13 +17,13 @@ pnpm dev
 ## 前端接入
 
 ```html
-<link rel="stylesheet" href="https://your-domain.com/style.css">
+<link rel="stylesheet" href="https://your-domain.com/style.css" />
 <script src="https://your-domain.com/twikee.umd.js"></script>
 <script>
-twikee.init({
-  el: '#comment',
-  envId: 'https://your-api-domain.com'
-})
+  twikee.init({
+    el: '#comment',
+    envId: 'https://your-api-domain.com',
+  })
 </script>
 ```
 

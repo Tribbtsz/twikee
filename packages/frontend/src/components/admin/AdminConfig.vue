@@ -78,7 +78,7 @@ const isItemDirty = (item: ConfigItem): boolean => {
   return (config.value[item.key] || '') !== (savedConfig.value[item.key] || '')
 }
 
-const allItems = computed(() => settings.flatMap(g => g.items))
+const allItems = computed(() => settings.flatMap((g) => g.items))
 
 const buildDefaults = (): Record<string, string> => {
   const defaults: Record<string, string> = {}
@@ -98,29 +98,117 @@ const settings: ConfigGroup[] = [
       { key: 'SITE_NAME', label: '站点名称', placeholder: '我的博客', desc: '用于通知邮件中显示', default: '' },
       { key: 'SITE_URL', label: '站点 URL', placeholder: 'https://example.com', desc: '用于生成评论链接', default: '' },
       { key: 'BLOGGER_NICK', label: '博主昵称', placeholder: 'Admin', desc: '匹配后显示博主标识', default: '' },
-      { key: 'BLOGGER_EMAIL', label: '博主邮箱', placeholder: 'admin@example.com', desc: '匹配后自动标记为博主', default: '' },
+      {
+        key: 'BLOGGER_EMAIL',
+        label: '博主邮箱',
+        placeholder: 'admin@example.com',
+        desc: '匹配后自动标记为博主',
+        default: '',
+      },
       { key: 'MASTER_TAG', label: '博主标识', placeholder: '博主', desc: '博主昵称旁显示的标签', default: '博主' },
       { key: 'COMMENT_PAGE_SIZE', label: '每页评论数', placeholder: '10', desc: '评论列表分页大小', default: '10' },
-      { key: 'GRAVATAR_CDN', label: 'Gravatar CDN', placeholder: 'cravatar.cn', desc: '头像 CDN 地址', default: 'cravatar.cn' },
-      { key: 'DEFAULT_GRAVATAR', label: '默认头像', placeholder: 'identicon', desc: '无头像时的默认样式', type: 'select', options: ['identicon', 'monsterid', 'wavatar', 'retro', 'robohash', 'blank'], default: 'identicon' },
-      { key: 'COMMENT_PLACEHOLDER', label: '评论占位符', placeholder: '说点什么吧...', desc: '评论框提示文字', default: '说点什么吧...' },
-      { key: 'AUTO_APPROVE', label: '自动通过评论', placeholder: 'true', desc: '开启后新评论无需审核直接发布', type: 'boolean', default: 'true' },
-      { key: 'DEMO_ENABLED', label: '启用 Demo 页面', placeholder: 'true', desc: '是否允许访问 Demo 页面', type: 'boolean', default: 'true' },
-    ]
+      {
+        key: 'GRAVATAR_CDN',
+        label: 'Gravatar CDN',
+        placeholder: 'cravatar.cn',
+        desc: '头像 CDN 地址',
+        default: 'cravatar.cn',
+      },
+      {
+        key: 'DEFAULT_GRAVATAR',
+        label: '默认头像',
+        placeholder: 'identicon',
+        desc: '无头像时的默认样式',
+        type: 'select',
+        options: ['identicon', 'monsterid', 'wavatar', 'retro', 'robohash', 'blank'],
+        default: 'identicon',
+      },
+      {
+        key: 'COMMENT_PLACEHOLDER',
+        label: '评论占位符',
+        placeholder: '说点什么吧...',
+        desc: '评论框提示文字',
+        default: '说点什么吧...',
+      },
+      {
+        key: 'AUTO_APPROVE',
+        label: '自动通过评论',
+        placeholder: 'true',
+        desc: '开启后新评论无需审核直接发布',
+        type: 'boolean',
+        default: 'true',
+      },
+      {
+        key: 'DEMO_ENABLED',
+        label: '启用 Demo 页面',
+        placeholder: 'true',
+        desc: '是否允许访问 Demo 页面',
+        type: 'boolean',
+        default: 'true',
+      },
+    ],
   },
   {
     icon: Bell,
     name: '通知设置',
     items: [
-      { key: 'NOTIFICATION_ENABLE', label: '启用通知', placeholder: 'true', desc: '是否启用评论通知', type: 'boolean', default: 'false' },
-      { key: 'NOTIFICATION_TYPE', label: '通知方式', placeholder: 'telegram', desc: '选择通知渠道', type: 'select', options: ['telegram', 'webhook', 'email', 'wxpusher', 'wecom'], default: 'telegram' },
-      { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram Bot Token', placeholder: '123456:ABC-DEF', desc: '从 @BotFather 获取，留空不修改', secret: true, default: '' },
-      { key: 'TELEGRAM_CHAT_ID', label: 'Telegram Chat ID', placeholder: '-100123456789', desc: '群组或频道 ID', default: '' },
+      {
+        key: 'NOTIFICATION_ENABLE',
+        label: '启用通知',
+        placeholder: 'true',
+        desc: '是否启用评论通知',
+        type: 'boolean',
+        default: 'false',
+      },
+      {
+        key: 'NOTIFICATION_TYPE',
+        label: '通知方式',
+        placeholder: 'telegram',
+        desc: '选择通知渠道',
+        type: 'select',
+        options: ['telegram', 'webhook', 'email', 'wxpusher', 'wecom'],
+        default: 'telegram',
+      },
+      {
+        key: 'TELEGRAM_BOT_TOKEN',
+        label: 'Telegram Bot Token',
+        placeholder: '123456:ABC-DEF',
+        desc: '从 @BotFather 获取，留空不修改',
+        secret: true,
+        default: '',
+      },
+      {
+        key: 'TELEGRAM_CHAT_ID',
+        label: 'Telegram Chat ID',
+        placeholder: '-100123456789',
+        desc: '群组或频道 ID',
+        default: '',
+      },
       { key: 'WEBHOOK_URL', label: 'Webhook URL', placeholder: 'https://...', desc: '自定义通知接口', default: '' },
-      { key: 'WXPUSHER_APP_TOKEN', label: 'WxPusher AppToken', placeholder: 'AT_xxx', desc: '在 wxpusher 控制台获取，留空不修改', secret: true, default: '' },
-      { key: 'WXPUSHER_UIDS', label: 'WxPusher UID', placeholder: 'UID_xxx,UID_yyy', desc: '接收用户 UID，多个用逗号分隔', default: '' },
-      { key: 'WECOM_KEY', label: '企业微信机器人 Key', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', desc: '群机器人 Webhook 地址中的 key，留空不修改', secret: true, default: '' },
-    ]
+      {
+        key: 'WXPUSHER_APP_TOKEN',
+        label: 'WxPusher AppToken',
+        placeholder: 'AT_xxx',
+        desc: '在 wxpusher 控制台获取，留空不修改',
+        secret: true,
+        default: '',
+      },
+      {
+        key: 'WXPUSHER_UIDS',
+        label: 'WxPusher UID',
+        placeholder: 'UID_xxx,UID_yyy',
+        desc: '接收用户 UID，多个用逗号分隔',
+        default: '',
+      },
+      {
+        key: 'WECOM_KEY',
+        label: '企业微信机器人 Key',
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        desc: '群机器人 Webhook 地址中的 key，留空不修改',
+        secret: true,
+        default: '',
+      },
+    ],
   },
   {
     icon: Mail,
@@ -129,26 +217,40 @@ const settings: ConfigGroup[] = [
       { key: 'SMTP_HOST', label: 'SMTP 服务器', placeholder: 'smtp.example.com', desc: '邮件服务器地址', default: '' },
       { key: 'SMTP_PORT', label: 'SMTP 端口', placeholder: '587', desc: '邮件服务器端口', default: '587' },
       { key: 'SMTP_USER', label: 'SMTP 用户名', placeholder: 'user@example.com', desc: '邮箱账号', default: '' },
-      { key: 'SMTP_PASS', label: 'SMTP 密码', placeholder: '', desc: '邮箱密码或授权码，留空不修改', secret: true, default: '' },
+      {
+        key: 'SMTP_PASS',
+        label: 'SMTP 密码',
+        placeholder: '',
+        desc: '邮箱密码或授权码，留空不修改',
+        secret: true,
+        default: '',
+      },
       { key: 'SMTP_FROM', label: '发件人地址', placeholder: 'noreply@example.com', desc: '发件人邮箱', default: '' },
       { key: 'SMTP_TO', label: '收件人地址', placeholder: 'admin@example.com', desc: '接收通知的邮箱', default: '' },
-    ]
+    ],
   },
   {
     icon: Shield,
     name: '安全设置',
     items: [
       { key: 'ADMIN_PASSWORD', label: '管理员密码', placeholder: '', desc: '留空则不修改', secret: true, default: '' },
-    ]
+    ],
   },
   {
     icon: Image,
     name: '图片设置',
     items: [
       { key: 'IMAGE_CDN', label: '图床类型', placeholder: '', desc: 'qcloud / smms / custom', default: '' },
-      { key: 'IMAGE_CDN_TOKEN', label: '图床 Token', placeholder: '', desc: '图床 API Token，留空不修改', secret: true, default: '' },
+      {
+        key: 'IMAGE_CDN_TOKEN',
+        label: '图床 Token',
+        placeholder: '',
+        desc: '图床 API Token，留空不修改',
+        secret: true,
+        default: '',
+      },
       { key: 'MAX_IMAGE_SIZE', label: '最大图片大小', placeholder: '5', desc: '单位 MB', default: '5' },
-    ]
+    ],
   },
 ]
 
@@ -156,7 +258,7 @@ const fetchConfig = async () => {
   loading.value = true
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
-      headers: { Authorization: `Bearer ${props.token}` }
+      headers: { Authorization: `Bearer ${props.token}` },
     })
     if (!checkAuth(res)) return
     const data = await res.json()
@@ -177,9 +279,9 @@ const saveConfig = async () => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${props.token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(config.value)
+      body: JSON.stringify(config.value),
     })
     if (!checkAuth(res)) return
     showToast('配置已保存', 'success')
@@ -221,7 +323,7 @@ onMounted(fetchConfig)
         </Button>
       </div>
     </div>
-    
+
     <div v-for="group in settings" :key="group.name" class="space-y-4">
       <Card>
         <CardHeader>
@@ -237,7 +339,12 @@ onMounted(fetchConfig)
                 <label class="text-sm font-medium">{{ item.label }}</label>
                 <p class="text-xs text-muted-foreground">{{ item.desc }}</p>
               </div>
-              <span v-if="isItemDirty(item)" class="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 mt-0.5" style="color:#ef4444;background:#fef2f2">未保存</span>
+              <span
+                v-if="isItemDirty(item)"
+                class="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 mt-0.5"
+                style="color: #ef4444; background: #fef2f2"
+                >未保存</span
+              >
             </div>
             <div v-if="item.type === 'boolean'" class="md:col-span-2 flex items-center gap-3">
               <Switch
@@ -249,7 +356,7 @@ onMounted(fetchConfig)
             <div v-else-if="item.type === 'select'" class="md:col-span-2">
               <Select
                 :model-value="getConfigValue(item)"
-                :options="(item.options || []).map(o => ({ value: o, label: o }))"
+                :options="(item.options || []).map((o) => ({ value: o, label: o }))"
                 :placeholder="item.placeholder"
                 @update:model-value="setConfigValue(item, $event)"
               />
@@ -276,10 +383,6 @@ onMounted(fetchConfig)
       @confirm="resetConfig"
     />
 
-    <Toast
-      v-model:open="toast.open"
-      :message="toast.message"
-      :type="toast.type"
-    />
+    <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />
   </div>
 </template>

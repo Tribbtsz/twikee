@@ -20,9 +20,7 @@ export interface TwikeeInitOptions {
   appearance?: TwikeeAppearanceOptions
 }
 
-export function resolveAppearance(
-  appearance?: TwikeeAppearanceOptions
-): ResolvedTwikeeAppearance {
+export function resolveAppearance(appearance?: TwikeeAppearanceOptions): ResolvedTwikeeAppearance {
   const preset = appearance?.preset ?? 'default'
   const presetOptions: Omit<ResolvedTwikeeAppearance, 'preset'> =
     preset === 'minimal'

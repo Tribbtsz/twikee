@@ -9,13 +9,13 @@ export default defineConfig({
     outDir: 'dist-admin',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'admin.html')
-      }
-    }
+        main: resolve(__dirname, 'admin.html'),
+      },
+    },
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
-    }
-  }
+      '@': resolve(__dirname, 'src'),
+    },
+  },
 })

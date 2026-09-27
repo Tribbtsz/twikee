@@ -6,17 +6,33 @@ import type { UserRepository, ConfigRepository } from '../../adapters/base'
 
 class MockConfigRepo implements ConfigRepository {
   store = new Map<string, string>()
-  async get(key: string) { return this.store.get(key) || null }
-  async set(key: string, value: string) { this.store.set(key, value) }
-  async getAll() { return Object.fromEntries(this.store) }
+  async get(key: string) {
+    return this.store.get(key) || null
+  }
+  async set(key: string, value: string) {
+    this.store.set(key, value)
+  }
+  async getAll() {
+    return Object.fromEntries(this.store)
+  }
 }
 
 class MockUserRepo implements UserRepository {
   users: any[] = []
-  async getById(_id: string) { return this.users.find(u => u.id === _id) || null }
-  async getByMail(mail: string) { return this.users.find(u => u.mail === mail) || null }
-  async create(data: any) { const u = { ...data, id: crypto.randomUUID(), createdAt: Date.now() }; this.users.push(u); return u }
-  async update(_id: string, _data: any) { return null as any }
+  async getById(_id: string) {
+    return this.users.find((u) => u.id === _id) || null
+  }
+  async getByMail(mail: string) {
+    return this.users.find((u) => u.mail === mail) || null
+  }
+  async create(data: any) {
+    const u = { ...data, id: crypto.randomUUID(), createdAt: Date.now() }
+    this.users.push(u)
+    return u
+  }
+  async update(_id: string, _data: any) {
+    return null as any
+  }
 }
 
 class MockAdapter extends DatabaseAdapter {
@@ -71,9 +87,7 @@ describe('AuthService', () => {
   it('rejects expired tokens', async () => {
     await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
     const past = Date.now() - 8 * 24 * 60 * 60 * 1000
-    const hash = createHash('sha256')
-      .update(`admin:${past}:test-secret-123:admin-hash`)
-      .digest('hex')
+    const hash = createHash('sha256').update(`admin:${past}:test-secret-123:admin-hash`).digest('hex')
     const token = `admin:${past}:${hash}`
     expect((await service.verifyToken(token)).valid).toBe(false)
   })
@@ -81,9 +95,7 @@ describe('AuthService', () => {
   it('rejects future-dated tokens', async () => {
     await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
     const future = Date.now() + 60 * 60 * 1000
-    const hash = createHash('sha256')
-      .update(`admin:${future}:test-secret-123:admin-hash`)
-      .digest('hex')
+    const hash = createHash('sha256').update(`admin:${future}:test-secret-123:admin-hash`).digest('hex')
     const token = `admin:${future}:${hash}`
     const result = await service.verifyToken(token)
     expect(result.valid).toBe(false)
@@ -94,9 +106,7 @@ describe('AuthService', () => {
   it('returns empty userId for all invalid-token paths', async () => {
     await adapter.config.set('ADMIN_PASSWORD', 'admin-hash')
     const badTimestamp = Date.now() + 60 * 60 * 1000
-    const hash = createHash('sha256')
-      .update(`admin:${badTimestamp}:test-secret-123:admin-hash`)
-      .digest('hex')
+    const hash = createHash('sha256').update(`admin:${badTimestamp}:test-secret-123:admin-hash`).digest('hex')
     for (const token of ['', 'a:b', `admin:${badTimestamp}:${hash}`]) {
       expect((await service.verifyToken(token)).userId).toBe('')
     }

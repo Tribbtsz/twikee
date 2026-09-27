@@ -8,10 +8,13 @@ import { resolveAppearance } from './types'
 import type { TwikeeAppearanceOptions } from './types'
 import { buildCommentTree } from './lib/comment-tree'
 
-const props = withDefaults(defineProps<{
-  envId: string
-  appearance?: TwikeeAppearanceOptions
-}>(), {})
+const props = withDefaults(
+  defineProps<{
+    envId: string
+    appearance?: TwikeeAppearanceOptions
+  }>(),
+  {},
+)
 
 const appearance = computed(() => resolveAppearance(props.appearance))
 
@@ -28,7 +31,7 @@ const replyingTo = ref<string | null>(null)
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: props.envId,
-  el: '#twikee-comment'
+  el: '#twikee-comment',
 })
 
 const commentsClosed = ref(false)
@@ -98,16 +101,9 @@ watch(page, loadComments)
     :data-header-divider="appearance.headerDivider"
     :data-input-focus-ring="appearance.inputFocusRing"
   >
-    <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
-      评论已关闭
-    </div>
+    <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">评论已关闭</div>
     <div v-else class="mb-6">
-      <TkSubmit
-        v-if="!replyingTo"
-        :url="currentUrl"
-        :appearance="appearance"
-        @submit="handleSubmit"
-      />
+      <TkSubmit v-if="!replyingTo" :url="currentUrl" :appearance="appearance" @submit="handleSubmit" />
     </div>
 
     <div class="tk-comments-header">
@@ -137,30 +133,12 @@ watch(page, loadComments)
     </div>
 
     <div v-if="totalPages > 1" class="tk-comments-pagination">
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="page <= 1"
-        @click="page--"
-      >
-        上一页
-      </Button>
-      <span class="tk-comments-page">
-        {{ page }} / {{ totalPages }}
-      </span>
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="page >= totalPages"
-        @click="page++"
-      >
-        下一页
-      </Button>
+      <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--"> 上一页 </Button>
+      <span class="tk-comments-page"> {{ page }} / {{ totalPages }} </span>
+      <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="page++"> 下一页 </Button>
     </div>
 
-    <div v-if="loading" class="tk-comments-loading" aria-live="polite" role="status">
-      加载中...
-    </div>
+    <div v-if="loading" class="tk-comments-loading" aria-live="polite" role="status">加载中...</div>
 
     <div v-if="error" class="tk-comments-error">
       {{ error }}
@@ -173,7 +151,7 @@ watch(page, loadComments)
   --twikee-background: oklch(0.9818 0.0054 95.0986);
   --twikee-foreground: oklch(0.3438 0.0269 95.7226);
   --twikee-card: oklch(0.9665 0.0067 97.3521);
-  --twikee-card-foreground: oklch(0.1908 0.0020 106.5859);
+  --twikee-card-foreground: oklch(0.1908 0.002 106.5859);
   --twikee-popover: oklch(1 0 0);
   --twikee-popover-foreground: oklch(0.2671 0.0196 98.939);
   --twikee-primary: oklch(0.6171 0.1375 39.0427);

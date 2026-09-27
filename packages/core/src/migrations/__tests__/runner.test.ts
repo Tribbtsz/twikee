@@ -77,9 +77,7 @@ describe('MigrationRunner on a real libsql client', () => {
     // 版本未记录
     expect((await runner.getApplied()).size).toBe(0)
     // 第一条 ALTER 必须已被回滚，否则重试会报 duplicate column
-    const tables = await client.execute(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='comments'",
-    )
+    const tables = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='comments'")
     expect(tables.rows).toHaveLength(0)
   })
 
