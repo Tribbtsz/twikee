@@ -5,6 +5,7 @@ import { CreateCommentSchema, CommentQuerySchema } from '../validation'
 import { defer } from '../lib/defer'
 import { getOrCreateVisitorId, getClientIp } from '../lib/visitor'
 import { rateLimit } from '../lib/rate-limit'
+import { safeJson } from '../lib/safe-json'
 
 /** 提交评论：每 IP 每分钟 10 条 */
 const commentLimiter = rateLimit({ windowMs: 60_000, max: 10, key: 'comment' })
@@ -34,7 +35,10 @@ export function createCommentRoutes() {
 
   app.post('/', commentLimiter, async (c) => {
     const db = c.var.db
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     const parsed = CreateCommentSchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)

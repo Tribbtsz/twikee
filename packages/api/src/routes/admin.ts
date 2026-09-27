@@ -11,6 +11,7 @@ import {
   ADMIN_CONFIG_KEY_SET,
 } from '../validation'
 import { invalidateNotifications } from '../lib/notification'
+import { safeJson } from '../lib/safe-json'
 
 type Env = {
   Variables: {
@@ -75,7 +76,10 @@ export function createAdminRoutes() {
 
   app.put('/comment/:id', async (c) => {
     const id = c.req.param('id')
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     // body 原样透传会构成 mass assignment：UpdateCommentInput 含 master/top/isSpam，
     // 一个 {"master":true} 就能把任意评论者设为博主，绕过下面的 moderate/top 端点
     const parsed = AdminUpdateCommentSchema.safeParse(body)
@@ -97,7 +101,10 @@ export function createAdminRoutes() {
   })
 
   app.post('/import', async (c) => {
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     // 逐条校验：数组元素无约束时，脏数据会绕过公开端点的全部校验直接入库
     const parsed = ImportSchema.safeParse(body)
     if (!parsed.success) {
@@ -145,7 +152,10 @@ export function createAdminRoutes() {
 
   app.post('/comment/:id/moderate', async (c) => {
     const id = c.req.param('id')
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     const parsed = ModerateSchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
@@ -156,7 +166,10 @@ export function createAdminRoutes() {
 
   app.post('/comment/:id/top', async (c) => {
     const id = c.req.param('id')
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     const parsed = TopSchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
@@ -175,7 +188,10 @@ export function createAdminRoutes() {
   const SECRET_KEYS = new Set(['ADMIN_PASSWORD', 'SMTP_PASS', 'TELEGRAM_BOT_TOKEN', 'WXPUSHER_APP_TOKEN', 'WECOM_KEY', 'IMAGE_CDN_TOKEN'])
 
   app.post('/config', async (c) => {
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     const parsed = AdminConfigSchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: 'Invalid config' }, 400)

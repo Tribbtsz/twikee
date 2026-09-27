@@ -1,5 +1,23 @@
 import { z } from 'zod'
 
+/**
+ * 评论 id（rid/pid 指向的目标）。
+ * 长度上限用于挡住垃圾数据：comments.id 是 UUID 或导入保留的 id，
+ * 正常情况下不可能超过 64 字符。
+ */
+const CommentIdSchema = z.string().min(1).max(64)
+
+/**
+ * 只允许 http/https 的链接字段。
+ * z.string().url() 走 WHATWG 标准，会接受 javascript:alert(1) 和
+ * data:text/html,... —— 这两个都能在点击时执行脚本。原始 link 会落库，
+ * 安全性不能只依赖各前端渲染方。
+ */
+const SafeUrlSchema = z
+  .string()
+  .url()
+  .refine((v) => /^https?:\/\//i.test(v), { message: 'link must be an http(s) URL' })
+
 export const CommentQuerySchema = z.object({
   url: z.string().min(1, 'url is required'),
   page: z.coerce.number().int().positive().default(1),
@@ -10,10 +28,10 @@ export const CreateCommentSchema = z.object({
   url: z.string().min(1),
   nick: z.string().min(1).max(100),
   mail: z.string().email().optional().or(z.literal('')),
-  link: z.string().url().optional().or(z.literal('')),
+  link: SafeUrlSchema.optional().or(z.literal('')),
   content: z.string().min(1).max(10000),
-  rid: z.string().optional(),
-  pid: z.string().optional(),
+  rid: CommentIdSchema.optional(),
+  pid: CommentIdSchema.optional(),
 })
 
 export const LoginSchema = z.object({
@@ -96,11 +114,15 @@ export const AdminCommentQuerySchema = z.object({
 })
 
 /** 更新评论：仅允许这几个字段，master 只能由公开端点按邮箱匹配设置 */
-export const AdminUpdateCommentSchema = z.object({
-  content: z.string().min(1).max(10000).optional(),
-  isSpam: z.boolean().optional(),
-  top: z.boolean().optional(),
-})
+export const AdminUpdateCommentSchema = z
+  .object({
+    content: z.string().min(1).max(10000).optional(),
+    isSpam: z.boolean().optional(),
+    top: z.boolean().optional(),
+  })
+  // 默认行为会静默剥离未知字段，调用方无法察觉自己传了无效字段。
+  // 管理端接口应该显式报错，而不是悄悄忽略。
+  .strict()
 
 /**
  * 单条导入评论。保留 id/createdAt 等字段，导入后才能维持原有的回复层级

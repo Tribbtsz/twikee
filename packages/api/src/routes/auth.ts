@@ -3,6 +3,7 @@ import type { TursoAdapter } from '@twikee/core'
 import { AuthService } from '@twikee/core'
 import { SetupSchema, LoginSchema } from '../validation'
 import { rateLimit } from '../lib/rate-limit'
+import { safeJson } from '../lib/safe-json'
 
 type Env = {
   Variables: {
@@ -33,7 +34,10 @@ export function createAuthRoutes() {
       return c.json({ error: 'Password already set' }, 400)
     }
 
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     const parsed = SetupSchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
@@ -46,7 +50,10 @@ export function createAuthRoutes() {
   })
 
   app.post('/login', authLimiter, async (c) => {
-    const body = await c.req.json()
+    const body = await safeJson(c)
+    if (body === null) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
     const parsed = LoginSchema.safeParse(body)
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
