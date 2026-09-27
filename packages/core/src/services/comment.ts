@@ -1,5 +1,5 @@
 import type { Comment, CreateCommentInput, UpdateCommentInput, CommentQuery, PaginatedResult } from '../types'
-import type { DatabaseAdapter } from '../adapters/base'
+import type { DatabaseAdapter, LikeResult } from '../adapters/base'
 
 export class CommentService {
   private db: DatabaseAdapter
@@ -33,7 +33,7 @@ export class CommentService {
     await this.db.comments.delete(id)
   }
   
-  async like(id: string, userId: string): Promise<boolean> {
+  async like(id: string, userId: string): Promise<LikeResult> {
     return await this.db.comments.like(id, userId)
   }
   

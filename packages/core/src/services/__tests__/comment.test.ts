@@ -3,7 +3,7 @@ import { CommentService } from '../comment'
 import { DatabaseAdapter } from '../../adapters/base'
 import type {
   CommentRepository, UserRepository, ConfigRepository,
-  CommentStats,
+  CommentStats, LikeResult,
 } from '../../adapters/base'
 import type {
   Comment, CreateCommentInput, CommentQuery,
@@ -11,6 +11,8 @@ import type {
 
 class MockCommentRepo implements CommentRepository {
   comments = new Map<string, Comment>()
+  /** commentId -> userId，模拟 likes 行 */
+  likedBy = new Map<string, string>()
 
   async create(data: CreateCommentInput): Promise<Comment> {
     const id = crypto.randomUUID()
@@ -57,8 +59,16 @@ class MockCommentRepo implements CommentRepository {
     return updated
   }
 
-  async like(id: string, userId: string): Promise<boolean> {
-    return true
+  async like(id: string, userId: string): Promise<LikeResult> {
+    const liked = this.likedBy.get(id) !== userId
+    if (liked) {
+      this.likedBy.set(id, userId)
+    } else {
+      this.likedBy.delete(id)
+    }
+    const comment = this.comments.get(id)
+    if (comment) comment.likes += liked ? 1 : -1
+    return { liked, likes: comment?.likes ?? 0 }
   }
 
   async getCount(url: string): Promise<number> {
@@ -127,10 +137,23 @@ describe('CommentService', () => {
     expect(result.total).toBe(1)
   })
 
-  it('likes a comment', async () => {
+  it('likes a comment and toggles back', async () => {
     const c = await service.create({ url: '/test', nick: 'A', content: 'x' })
-    const ok = await service.like(c.id, 'user1')
-    expect(ok).toBe(true)
+    const first = await service.like(c.id, 'user1')
+    expect(first.liked).toBe(true)
+    expect(first.likes).toBe(1)
+    // 同一用户再次调用 = 取消赞，而不是再 +1
+    const second = await service.like(c.id, 'user1')
+    expect(second.liked).toBe(false)
+    expect(second.likes).toBe(0)
+  })
+
+  it('keeps per-user like counts independent', async () => {
+    const c = await service.create({ url: '/test', nick: 'A', content: 'x' })
+    await service.like(c.id, 'user1')
+    const other = await service.like(c.id, 'user2')
+    expect(other.liked).toBe(true)
+    expect(other.likes).toBe(2)
   })
 
   it('moderates: approve', async () => {

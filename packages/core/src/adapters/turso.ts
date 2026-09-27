@@ -14,6 +14,7 @@ import type {
 import {
   DatabaseAdapter,
   type CommentRepository,
+  type LikeResult,
   type UserRepository,
   type ConfigRepository,
 } from "./base";
@@ -21,6 +22,14 @@ import { MigrationRunner } from "../migrations/runner";
 import { migrations } from "../migrations";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+
+/** likes 表主键冲突（并发双击时后到者会撞上） */
+function isPrimaryKeyViolation(err: unknown): boolean {
+  const code = (err as { code?: string; extendedCode?: string } | null)?.code
+  if (code === "SQLITE_CONSTRAINT_PRIMARYKEY") return true
+  const message = String((err as Error | undefined)?.message ?? "")
+  return /UNIQUE constraint failed|PRIMARY KEY constraint failed/i.test(message)
+}
 
 // 本地 SQLite 文件：确保父目录存在，否则 libsql 会报 SQLITE_CANTOPEN(14)
 function ensureLocalDbDir(url: string): void {
@@ -38,12 +47,17 @@ class TursoCommentRepository implements CommentRepository {
   }
 
   async create(data: CreateCommentInput): Promise<Comment> {
-    const id = crypto.randomUUID();
-    const now = Date.now();
+    const id = data.id ?? crypto.randomUUID()
+    const now = data.createdAt ?? Date.now()
+    const likes = data.likes ?? 0
+    const isSpam = data.isSpam ?? false
+    const master = data.master ?? false
+    const top = data.top ?? false
+    const deleted = data.deleted ?? false
 
     await this.client.execute({
-      sql: `INSERT INTO comments (id, url, nick, mail, link, content, ua, ip, rid, pid, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO comments (id, url, nick, mail, link, content, ua, ip, rid, pid, master, top, is_spam, likes, deleted, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         id,
         data.url,
@@ -55,7 +69,13 @@ class TursoCommentRepository implements CommentRepository {
         data.ip ?? null,
         data.rid ?? null,
         data.pid ?? null,
+        master ? 1 : 0,
+        top ? 1 : 0,
+        isSpam ? 1 : 0,
+        likes,
+        deleted ? 1 : 0,
         now,
+        data.updatedAt ?? null,
       ],
     });
 
@@ -68,14 +88,15 @@ class TursoCommentRepository implements CommentRepository {
       content: data.content,
       ua: data.ua,
       ip: data.ip,
-      master: false,
-      top: false,
+      master,
+      top,
       rid: data.rid,
       pid: data.pid,
-      isSpam: false,
-      deleted: false,
-      likes: 0,
+      isSpam,
+      deleted,
+      likes,
       createdAt: now,
+      updatedAt: data.updatedAt,
     };
   }
 
@@ -177,37 +198,62 @@ class TursoCommentRepository implements CommentRepository {
     return comment;
   }
 
-  async like(id: string, userId: string): Promise<boolean> {
-    try {
-      const existing = await this.client.execute({
-        sql: "SELECT 1 FROM likes WHERE comment_id = ? AND user_id = ?",
-        args: [id, userId],
-      })
+  /**
+   * 点赞 / 取消点赞。
+   *
+   * 历史实现是「SELECT 判断 → 分别 INSERT/UPDATE」的三次独立写入：并发下两个请求
+   * 会同时读到「未赞」而双双插入，且 likes 计数与 likes 表永久漂移。
+   * 现在 likes 表是权威源，切换行 + 重算计数放进同一个 batch（驱动级事务），
+   * 并让并发双击走「后到者按取消赞处理」的收敛路径。
+   */
+  async like(id: string, userId: string): Promise<LikeResult> {
+    const syncCount = {
+      sql: 'UPDATE comments SET likes = (SELECT COUNT(*) FROM likes WHERE comment_id = ?) WHERE id = ?',
+      args: [id, id],
+    };
 
-      if (existing.rows.length > 0) {
-        await this.client.execute({
-          sql: "DELETE FROM likes WHERE comment_id = ? AND user_id = ?",
-          args: [id, userId],
-        })
-        await this.client.execute({
-          sql: "UPDATE comments SET likes = MAX(0, likes - 1) WHERE id = ?",
-          args: [id],
-        })
-        return true
+    const existing = await this.client.execute({
+      sql: 'SELECT 1 FROM likes WHERE comment_id = ? AND user_id = ?',
+      args: [id, userId],
+    });
+
+    // 当前未赞 → 本次点击意图是「赞」
+    let liked = existing.rows.length === 0;
+
+    if (liked) {
+      try {
+        await this.client.batch(
+          [
+            {
+              sql: 'INSERT INTO likes (comment_id, user_id, created_at) VALUES (?, ?, ?)',
+              args: [id, userId, Date.now()],
+            },
+            syncCount,
+          ],
+          'write',
+        );
+      } catch (err) {
+        // 并发双击：两个请求都判定为「未赞」并同时 INSERT，主键约束让后到者失败。
+        // 此时该行的赞已存在，本次点击按「取消赞」收敛，保证两次点击 = 最终未赞。
+        if (!isPrimaryKeyViolation(err)) throw err;
+        liked = false;
+        await this.client.batch(
+          [{ sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?', args: [id, userId] }, syncCount],
+          'write',
+        );
       }
-
-      await this.client.execute({
-        sql: "INSERT INTO likes (comment_id, user_id, created_at) VALUES (?, ?, ?)",
-        args: [id, userId, Date.now()],
-      })
-      await this.client.execute({
-        sql: "UPDATE comments SET likes = likes + 1 WHERE id = ?",
-        args: [id],
-      })
-      return true
-    } catch {
-      return false
+    } else {
+      await this.client.batch(
+        [{ sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?', args: [id, userId] }, syncCount],
+        'write',
+      );
     }
+
+    const result = await this.client.execute({
+      sql: 'SELECT likes FROM comments WHERE id = ?',
+      args: [id],
+    });
+    return { liked, likes: Number(result.rows[0]?.likes ?? 0) };
   }
 
   async getCount(url: string): Promise<number> {

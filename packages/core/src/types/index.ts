@@ -44,6 +44,15 @@ export interface CreateCommentInput {
   ip?: string
   rid?: string
   pid?: string
+  /** 显式指定 id（仅数据导入用，保留原评论 id 才能维持回复层级） */
+  id?: string
+  createdAt?: number
+  updatedAt?: number
+  likes?: number
+  isSpam?: boolean
+  master?: boolean
+  top?: boolean
+  deleted?: boolean
 }
 
 export interface UpdateCommentInput {

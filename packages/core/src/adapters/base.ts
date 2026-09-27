@@ -6,6 +6,13 @@ export interface CommentStats {
   pending: number
 }
 
+export interface LikeResult {
+  /** 操作后该用户是否处于「已赞」状态 */
+  liked: boolean
+  /** 操作后评论的赞总数（以 likes 表为权威源重新统计） */
+  likes: number
+}
+
 export interface CommentRepository {
   create(data: CreateCommentInput): Promise<Comment>
   getById(id: string): Promise<Comment | null>
@@ -15,7 +22,8 @@ export interface CommentRepository {
   delete(id: string): Promise<void>
   /** 软删除：标记 deleted + 清空内容，保留结构供子评论挂靠 */
   softDelete(id: string): Promise<Comment>
-  like(id: string, userId: string): Promise<boolean>
+  /** 点赞/取消点赞（同一用户重复调用即切换），返回操作后的权威状态 */
+  like(id: string, userId: string): Promise<LikeResult>
   getCount(url: string): Promise<number>
   getStats(): Promise<CommentStats>
 }
