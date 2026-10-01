@@ -33,8 +33,8 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
-    const { url, page, pageSize, includeSpam } = parsed.data
-    const result = await c.var.commentService.getList({ url: url || '', page, pageSize, includeSpam })
+    const { url, page, pageSize, includeSpam, status } = parsed.data
+    const result = await c.var.commentService.getList({ url: url || '', page, pageSize, includeSpam, status })
     return c.json(result)
   })
 
@@ -43,12 +43,12 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
-    const { url, page, pageSize, includeSpam } = parsed.data
+    const { url, page, pageSize, includeSpam, status } = parsed.data
     if (url) {
-      const result = await c.var.commentService.getList({ url, page, pageSize, includeSpam })
+      const result = await c.var.commentService.getList({ url, page, pageSize, includeSpam, status })
       return c.json(result)
     }
-    const result = await c.var.db.comments.getList({ url: '', page, pageSize, includeSpam })
+    const result = await c.var.db.comments.getList({ url: '', page, pageSize, includeSpam, status })
     return c.json(result)
   })
 

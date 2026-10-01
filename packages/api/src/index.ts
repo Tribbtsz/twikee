@@ -99,11 +99,17 @@ app.use(
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: Date.now() }))
 
 app.get('/api/config', async (c) => {
-  const gravatarCdn = await db!.config.get('GRAVATAR_CDN')
-  const demoEnabled = await db!.config.get('DEMO_ENABLED')
-  const commentsClosed = await db!.config.get('COMMENTS_CLOSED')
+  const [masterTag, commentPlaceholder, commentPageSize, demoEnabled, commentsClosed] = await Promise.all([
+    db!.config.get('MASTER_TAG'),
+    db!.config.get('COMMENT_PLACEHOLDER'),
+    db!.config.get('COMMENT_PAGE_SIZE'),
+    db!.config.get('DEMO_ENABLED'),
+    db!.config.get('COMMENTS_CLOSED'),
+  ])
   return c.json({
-    GRAVATAR_CDN: gravatarCdn || '',
+    MASTER_TAG: masterTag || '',
+    COMMENT_PLACEHOLDER: commentPlaceholder || '',
+    COMMENT_PAGE_SIZE: commentPageSize || '',
     DEMO_ENABLED: demoEnabled !== 'false',
     COMMENTS_CLOSED: commentsClosed === 'true',
   })

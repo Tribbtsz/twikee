@@ -111,6 +111,9 @@ export const AdminCommentQuerySchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // 审核状态过滤：由服务端在 SQL 层过滤，避免「客户端只过滤当前页」造成的
+  // 计数/分页错位
+  status: z.enum(['all', 'approved', 'spam']).default('all'),
 })
 
 /** 更新评论：仅允许这几个字段，master 只能由公开端点按邮箱匹配设置 */

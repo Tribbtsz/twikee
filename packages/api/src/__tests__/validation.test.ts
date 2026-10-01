@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CreateCommentSchema, ImportSchema, AdminUpdateCommentSchema } from '../validation'
+import { CreateCommentSchema, ImportSchema, AdminUpdateCommentSchema, AdminCommentQuerySchema } from '../validation'
 
 /**
  * 校验层是公开端点的第一道防线，这些用例锁住「不该进来的进不来」。
@@ -117,5 +117,29 @@ describe('ImportSchema', () => {
 
   it('rejects items missing required fields', () => {
     expect(ImportSchema.safeParse([{ url: '/p' }]).success).toBe(false)
+  })
+})
+
+describe('AdminCommentQuerySchema', () => {
+  it('defaults status to all', () => {
+    const r = AdminCommentQuerySchema.safeParse({})
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.status).toBe('all')
+  })
+
+  it('accepts approved/spam status filters', () => {
+    for (const status of ['all', 'approved', 'spam']) {
+      expect(AdminCommentQuerySchema.safeParse({ status }).success, status).toBe(true)
+    }
+  })
+
+  it('rejects unknown status', () => {
+    expect(AdminCommentQuerySchema.safeParse({ status: 'deleted' }).success).toBe(false)
+  })
+
+  it('still parses includeSpam=false correctly (no Boolean coerce trap)', () => {
+    const r = AdminCommentQuerySchema.safeParse({ includeSpam: 'false' })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.includeSpam).toBe(false)
   })
 })
