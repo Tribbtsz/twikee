@@ -9,7 +9,7 @@ import Switch from '@/components/ui/Switch.vue'
 import Select from '@/components/ui/Select.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Toast from '@/components/ui/Toast.vue'
-import { Save, RotateCcw, Mail, Bell, Shield, Image, Globe } from 'lucide-vue-next'
+import { Save, RotateCcw, Mail, Bell, Shield, Globe } from 'lucide-vue-next'
 
 type ConfigItem = {
   key: string
@@ -107,22 +107,6 @@ const settings: ConfigGroup[] = [
       },
       { key: 'MASTER_TAG', label: '博主标识', placeholder: '博主', desc: '博主昵称旁显示的标签', default: '博主' },
       { key: 'COMMENT_PAGE_SIZE', label: '每页评论数', placeholder: '10', desc: '评论列表分页大小', default: '10' },
-      {
-        key: 'GRAVATAR_CDN',
-        label: 'Gravatar CDN',
-        placeholder: 'cravatar.cn',
-        desc: '头像 CDN 地址',
-        default: 'cravatar.cn',
-      },
-      {
-        key: 'DEFAULT_GRAVATAR',
-        label: '默认头像',
-        placeholder: 'identicon',
-        desc: '无头像时的默认样式',
-        type: 'select',
-        options: ['identicon', 'monsterid', 'wavatar', 'retro', 'robohash', 'blank'],
-        default: 'identicon',
-      },
       {
         key: 'COMMENT_PLACEHOLDER',
         label: '评论占位符',
@@ -234,22 +218,6 @@ const settings: ConfigGroup[] = [
     name: '安全设置',
     items: [
       { key: 'ADMIN_PASSWORD', label: '管理员密码', placeholder: '', desc: '留空则不修改', secret: true, default: '' },
-    ],
-  },
-  {
-    icon: Image,
-    name: '图片设置',
-    items: [
-      { key: 'IMAGE_CDN', label: '图床类型', placeholder: '', desc: 'qcloud / smms / custom', default: '' },
-      {
-        key: 'IMAGE_CDN_TOKEN',
-        label: '图床 Token',
-        placeholder: '',
-        desc: '图床 API Token，留空不修改',
-        secret: true,
-        default: '',
-      },
-      { key: 'MAX_IMAGE_SIZE', label: '最大图片大小', placeholder: '5', desc: '单位 MB', default: '5' },
     ],
   },
 ]

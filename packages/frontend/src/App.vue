@@ -27,7 +27,7 @@ const currentUrl = ref('')
 const page = ref(1)
 const total = ref(0)
 const pageSize = ref(10)
-const replyingTo = ref<string | null>(null)
+const submitError = ref<string | null>(null)
 
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: props.envId,
@@ -35,12 +35,19 @@ const { loading, error, comments, fetchComments, submitComment } = useTwikee({
 })
 
 const commentsClosed = ref(false)
+const masterTag = ref('博主')
+const commentPlaceholder = ref('')
 
 const fetchConfig = async () => {
   try {
     const res = await fetch(`${apiUrl.value}/api/config`)
     const cfg = await res.json()
     commentsClosed.value = cfg.COMMENTS_CLOSED === true
+    if (cfg.MASTER_TAG) masterTag.value = String(cfg.MASTER_TAG)
+    if (cfg.COMMENT_PLACEHOLDER) commentPlaceholder.value = String(cfg.COMMENT_PLACEHOLDER)
+    const configured = Number(cfg.COMMENT_PAGE_SIZE)
+    if (Number.isFinite(configured) && configured > 0)
+      pageSize.value = Math.min(100, Math.max(1, Math.floor(configured)))
   } catch (e) {
     // 配置读不到时界面会停在默认态，留一条日志，否则排错毫无线索
     console.error('[Twikee] failed to load public config:', e)
@@ -52,25 +59,30 @@ const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
 const commentTree = computed(() => buildCommentTree(comments.value))
 
 const loadComments = async () => {
-  const data = await fetchComments(currentUrl.value, page.value)
+  const data = await fetchComments(currentUrl.value, page.value, pageSize.value)
   total.value = data.total
   pageSize.value = data.pageSize
 }
 
-const handleSubmit = async (data: any) => {
-  await submitComment({ ...data, url: currentUrl.value })
-  replyingTo.value = null
-  await loadComments()
+const handleSubmit = async (data: any): Promise<boolean> => {
+  submitError.value = null
+  try {
+    const result = await submitComment({ ...data, url: currentUrl.value })
+    if (result?.isSpam) {
+      submitError.value = '评论已提交，等待博主审核后显示'
+    }
+    await loadComments()
+    return true
+  } catch {
+    submitError.value = '评论发表失败，请稍后重试（内容已为你保留）'
+    return false
+  }
 }
 
-const handleReply = (id: string) => {
-  replyingTo.value = id
-}
-
-onMounted(() => {
+onMounted(async () => {
   currentUrl.value = window.location.pathname
-  fetchConfig()
-  loadComments()
+  await fetchConfig()
+  await loadComments()
   // Highlight specific comment when navigating from admin
   const hlId = new URLSearchParams(window.location.search).get('hl')
   if (hlId) {
@@ -103,7 +115,13 @@ watch(page, loadComments)
   >
     <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">评论已关闭</div>
     <div v-else class="mb-6">
-      <TkSubmit v-if="!replyingTo" :url="currentUrl" :appearance="appearance" @submit="handleSubmit" />
+      <TkSubmit
+        :url="currentUrl"
+        :appearance="appearance"
+        :placeholder="commentPlaceholder"
+        :on-submit="handleSubmit"
+      />
+      <p v-if="submitError" class="tk-comments-submit-error">{{ submitError }}</p>
     </div>
 
     <div class="tk-comments-header">
@@ -120,10 +138,9 @@ watch(page, loadComments)
         :comment="comment"
         :all-comments="comments"
         :api-url="apiUrl"
-        :replying="replyingTo === comment.id"
+        :master-tag="masterTag"
         :show-divider="index < commentTree.length - 1"
         :appearance="appearance"
-        @reply="handleReply"
         @load="loadComments"
       />
     </div>
@@ -283,5 +300,11 @@ watch(page, loadComments)
   padding: 2rem 0;
   color: var(--destructive);
   font-size: 0.875rem;
+}
+
+.tk-comments-submit-error {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--destructive, #ef4444);
 }
 </style>

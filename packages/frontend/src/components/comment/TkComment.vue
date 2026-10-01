@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import type { PropType } from 'vue'
 import Badge from '@/components/ui/Badge.vue'
-import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
 import TkSubmit from './TkSubmit.vue'
@@ -18,12 +17,10 @@ type CommentNode = Comment & { children?: CommentNode[]; replyToNick?: string }
 const props = defineProps({
   comment: { type: Object as PropType<CommentNode>, required: true },
   allComments: { type: Array as PropType<Comment[]>, default: () => [] },
-  replyId: { type: String, default: '' },
-  replying: { type: Boolean, default: false },
-  isAdmin: { type: Boolean, default: false },
   apiUrl: { type: String, default: '' },
   isReply: { type: Boolean, default: false },
   showDivider: { type: Boolean, default: false },
+  masterTag: { type: String, default: '博主' },
   appearance: {
     type: Object as PropType<ResolvedTwikeeAppearance>,
     default: undefined,
@@ -31,10 +28,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{
-  reply: [id: string]
   load: []
-  moderate: [id: string, action: 'approve' | 'spam']
-  top: [id: string, top: boolean]
 }>()
 
 const isContentExpanded = ref(false)
@@ -212,7 +206,7 @@ const scrollToComment = (id: string) => {
   }
 }
 
-const handleReplySubmit = async (data: any) => {
+const handleReplySubmit = async (data: any): Promise<boolean> => {
   replyError.value = null
   try {
     const res = await fetch(`${props.apiUrl}/api/comment`, {
@@ -227,17 +221,19 @@ const handleReplySubmit = async (data: any) => {
     if (res.ok) {
       replyingToId.value = null
       emit('load')
-    } else {
-      const err = await res.json().catch(() => null)
-      replyError.value = err?.error || '回复失败，请重试'
+      return true
     }
+    const err = await res.json().catch(() => null)
+    replyError.value = err?.error || '回复失败，请重试'
+    return false
   } catch (e) {
     console.error('[Twikee] reply failed:', e)
     replyError.value = '网络错误，请重试'
+    return false
   }
 }
 
-const handleChildReplySubmit = async (data: any, childId: string) => {
+const handleChildReplySubmit = async (data: any, childId: string): Promise<boolean> => {
   replyError.value = null
   try {
     const res = await fetch(`${props.apiUrl}/api/comment`, {
@@ -252,13 +248,15 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
     if (res.ok) {
       replyingToId.value = null
       emit('load')
-    } else {
-      const err = await res.json().catch(() => null)
-      replyError.value = err?.error || '回复失败，请重试'
+      return true
     }
+    const err = await res.json().catch(() => null)
+    replyError.value = err?.error || '回复失败，请重试'
+    return false
   } catch (e) {
     console.error('[Twikee] child reply failed:', e)
     replyError.value = '网络错误，请重试'
+    return false
   }
 }
 </script>
@@ -296,7 +294,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
               回复 <span class="tk-comment__reply-to-name">@{{ comment.replyToNick }}</span>
             </span>
 
-            <Badge v-if="comment.master" variant="default" class="tk-badge">博主</Badge>
+            <Badge v-if="comment.master" variant="default" class="tk-badge">{{ masterTag }}</Badge>
             <Badge v-if="comment.top" variant="secondary" class="tk-badge">置顶</Badge>
             <a
               v-if="comment.pinnedFromId && pinnedFromInfo"
@@ -334,37 +332,13 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
             :url="comment.url"
             :rid="comment.id"
             :appearance="appearance"
-            @submit="handleReplySubmit"
+            :on-submit="handleReplySubmit"
             @cancel="replyingToId = null"
           />
         </div>
 
         <div class="tk-comment__actions">
           <TkAction :liked="liked" :like-count="likeCount" @like="onLike" @reply="onReply" />
-
-          <div v-if="isAdmin" class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              v-if="comment.isSpam"
-              variant="ghost"
-              size="sm"
-              class="h-6 text-xs"
-              @click="emit('moderate', comment.id, 'approve')"
-            >
-              显示
-            </Button>
-            <Button v-else variant="ghost" size="sm" class="h-6 text-xs" @click="emit('moderate', comment.id, 'spam')">
-              隐藏
-            </Button>
-            <Button
-              v-if="!comment.rid"
-              variant="ghost"
-              size="sm"
-              class="h-6 text-xs"
-              @click="emit('top', comment.id, !comment.top)"
-            >
-              {{ comment.top ? '取消置顶' : '置顶' }}
-            </Button>
-          </div>
         </div>
       </div>
     </div>
@@ -399,7 +373,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
                   回复 <span class="tk-comment__reply-to-name">@{{ child.replyToNick }}</span>
                 </span>
 
-                <Badge v-if="child.master" variant="default" class="tk-badge">博主</Badge>
+                <Badge v-if="child.master" variant="default" class="tk-badge">{{ masterTag }}</Badge>
                 <Badge v-if="child.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
               </div>
 
@@ -414,7 +388,7 @@ const handleChildReplySubmit = async (data: any, childId: string) => {
                 :url="comment.url"
                 :rid="child.id"
                 :appearance="appearance"
-                @submit="(data: any) => handleChildReplySubmit(data, child.id)"
+                :on-submit="(data: any) => handleChildReplySubmit(data, child.id)"
                 @cancel="replyingToId = null"
               />
             </div>

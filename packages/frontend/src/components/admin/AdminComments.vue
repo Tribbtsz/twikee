@@ -98,6 +98,7 @@ const fetchComments = async (url: string) => {
       page: commentsPage.value.toString(),
       pageSize: commentsPageSize.value.toString(),
       includeSpam: 'true',
+      status: activeTab.value,
     })
     const res = await fetch(`${props.apiUrl}/api/admin/comments?${params}`, {
       headers: { Authorization: `Bearer ${props.token}` },
@@ -130,19 +131,6 @@ const switchTab = (tab: StatusTab) => {
   commentsPage.value = 1
   if (currentUrl.value) fetchComments(currentUrl.value)
 }
-
-const filteredComments = computed(() => {
-  if (activeTab.value === 'all') return comments.value
-  if (activeTab.value === 'spam') return comments.value.filter((c) => c.isSpam)
-  return comments.value.filter((c) => !c.isSpam)
-})
-
-const tabCounts = computed(() => {
-  const all = comments.value.length
-  const spam = comments.value.filter((c) => c.isSpam).length
-  const approved = all - spam
-  return { all, approved, spam }
-})
 
 const moderate = async (id: string, action: 'approve' | 'spam' | 'delete') => {
   if (action === 'delete') {
@@ -217,13 +205,15 @@ const displayUrl = (url: string) => {
 
 const getPageUrl = (comment: any): string | undefined => {
   if (!comment.url) return undefined
-  if (props.siteUrl) {
-    return `${props.siteUrl}${comment.url}?hl=${comment.id}`
+  let base: string
+  if (/^https?:\/\//i.test(comment.url)) {
+    base = comment.url
+  } else {
+    const origin = props.siteUrl || (typeof window !== 'undefined' ? window.location.origin : '')
+    base = `${origin}${comment.url}`
   }
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}${comment.url}?hl=${comment.id}`
-  }
-  return `${comment.url}?hl=${comment.id}`
+  // url 可能自带查询串，直接拼 ? 会变成 ...?a=1?hl=...
+  return `${base}${base.includes('?') ? '&' : '?'}hl=${comment.id}`
 }
 
 const filteredPages = computed(() => {
@@ -349,14 +339,13 @@ watch(pagesPage, () => {}, { flush: 'post' })
           @click="switchTab(tab.key)"
         >
           {{ tab.label }}
-          <span v-if="tab.key === 'spam' && tabCounts.spam > 0" class="ml-1 text-xs">({{ tabCounts.spam }})</span>
         </button>
       </div>
 
       <div v-if="loadingComments" class="text-center py-8 text-muted-foreground">加载中...</div>
 
       <div v-else class="space-y-3 mt-3">
-        <Card v-for="comment in filteredComments" :key="comment.id">
+        <Card v-for="comment in comments" :key="comment.id">
           <CardContent class="p-4">
             <div class="flex justify-between items-start gap-4">
               <div class="flex-1 min-w-0">
@@ -406,7 +395,7 @@ watch(pagesPage, () => {}, { flush: 'post' })
           </CardContent>
         </Card>
 
-        <div v-if="filteredComments.length === 0" class="text-center py-8 text-muted-foreground">
+        <div v-if="comments.length === 0" class="text-center py-8 text-muted-foreground">
           {{ activeTab === 'spam' ? '暂无待审核评论' : activeTab === 'approved' ? '暂无已发布评论' : '暂无评论' }}
         </div>
 

@@ -19,6 +19,8 @@ const pageSize = ref(10)
 const demoEnabled = ref(true)
 const demoCheckDone = ref(false)
 const commentsClosed = ref(false)
+const masterTag = ref('博主')
+const commentPlaceholder = ref('')
 const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' | 'warning' })
 
 const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
@@ -35,12 +37,12 @@ const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
 const commentTree = computed(() => buildCommentTree(comments.value))
 
 const loadComments = async () => {
-  const data = await fetchComments(currentUrl.value, page.value)
+  const data = await fetchComments(currentUrl.value, page.value, pageSize.value)
   total.value = data.total
   pageSize.value = data.pageSize
 }
 
-const handleSubmit = async (data: any) => {
+const handleSubmit = async (data: any): Promise<boolean> => {
   try {
     const result = await submitComment({ ...data, url: currentUrl.value })
     if (result.isSpam) {
@@ -49,8 +51,10 @@ const handleSubmit = async (data: any) => {
       showToast('评论发表成功', 'success')
     }
     await loadComments()
+    return true
   } catch {
     showToast('评论发表失败，请稍后重试', 'error')
+    return false
   }
 }
 
@@ -61,6 +65,11 @@ onMounted(async () => {
     const cfg = await res.json()
     demoEnabled.value = cfg.DEMO_ENABLED !== false
     commentsClosed.value = cfg.COMMENTS_CLOSED === true
+    if (cfg.MASTER_TAG) masterTag.value = String(cfg.MASTER_TAG)
+    if (cfg.COMMENT_PLACEHOLDER) commentPlaceholder.value = String(cfg.COMMENT_PLACEHOLDER)
+    const configured = Number(cfg.COMMENT_PAGE_SIZE)
+    if (Number.isFinite(configured) && configured > 0)
+      pageSize.value = Math.min(100, Math.max(1, Math.floor(configured)))
   } catch {
     // If config fetch fails, allow demo
   }
@@ -132,7 +141,7 @@ watch(page, loadComments)
                 评论已关闭
               </div>
               <div v-else class="mb-6">
-                <TkSubmit :url="currentUrl" @submit="handleSubmit" />
+                <TkSubmit :url="currentUrl" :placeholder="commentPlaceholder" :on-submit="handleSubmit" />
               </div>
 
               <div class="tk-comments-header">
@@ -149,6 +158,7 @@ watch(page, loadComments)
                   :key="comment.id"
                   :comment="comment"
                   :all-comments="comments"
+                  :master-tag="masterTag"
                   :show-divider="index < commentTree.length - 1"
                   @load="loadComments"
                 />

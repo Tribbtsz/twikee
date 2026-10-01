@@ -13,19 +13,23 @@ const props = defineProps<{
   rid?: string
   pid?: string
   appearance?: ResolvedTwikeeAppearance
+  /** 评论内容输入框占位符（来自 COMMENT_PLACEHOLDER 配置） */
+  placeholder?: string
+  /**
+   * 真正的提交函数。返回 false 或抛错表示失败，此时保留输入内容；
+   * 只有明确成功（返回非 false）才清空。
+   */
+  onSubmit?: (data: {
+    nick: string
+    mail?: string
+    link?: string
+    content: string
+    rid?: string
+    pid?: string
+  }) => boolean | void | Promise<boolean | void>
 }>()
 
 const emit = defineEmits<{
-  submit: [
-    data: {
-      nick: string
-      mail?: string
-      link?: string
-      content: string
-      rid?: string
-      pid?: string
-    },
-  ]
   cancel: []
 }>()
 
@@ -106,7 +110,7 @@ const handleSubmit = async () => {
 
   isSending.value = true
   try {
-    emit('submit', {
+    const ok = await props.onSubmit?.({
       nick: nick.value.trim(),
       mail: mail.value.trim() || undefined,
       link: link.value.trim() || undefined,
@@ -114,7 +118,10 @@ const handleSubmit = async () => {
       rid: props.rid,
       pid: props.pid,
     })
-    content.value = ''
+    // 只有明确成功才清空；失败（false）或抛错时保留内容，避免用户白写
+    if (ok !== false) content.value = ''
+  } catch (e) {
+    console.error('[Twikee] submit failed:', e)
   } finally {
     isSending.value = false
   }
@@ -140,7 +147,7 @@ const handleSubmit = async () => {
         </div>
 
         <div v-if="isPreview" class="tk-submit__preview" v-html="previewHtml" />
-        <Textarea v-else v-model="content" placeholder="说点什么吧... (支持 Markdown)" :rows="4" />
+        <Textarea v-else v-model="content" :placeholder="placeholder || '说点什么吧... (支持 Markdown)'" :rows="4" />
 
         <div class="flex items-center justify-between gap-2">
           <div class="flex gap-2">

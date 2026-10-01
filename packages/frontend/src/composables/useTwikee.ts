@@ -39,20 +39,24 @@ export function useTwikee(options: TwikeeOptions) {
     return url
   })
 
-  const fetchComments = async (url: string, page = 1) => {
+  const fetchComments = async (url: string, page = 1, pageSize = 10) => {
     try {
       loading.value = true
-      const res = await fetch(`${baseUrl.value}/api/comment?url=${encodeURIComponent(url)}&page=${page}`)
+      error.value = null
+      const res = await fetch(
+        `${baseUrl.value}/api/comment?url=${encodeURIComponent(url)}&page=${page}&pageSize=${pageSize}`,
+      )
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       }
       const data = await res.json()
       comments.value = data.data || []
+      error.value = null
       return {
         data: data.data || [],
         total: data.total || 0,
         page: data.page || 1,
-        pageSize: data.pageSize || 10,
+        pageSize: data.pageSize || pageSize,
       }
     } catch (e) {
       error.value = '加载评论失败'
@@ -61,7 +65,7 @@ export function useTwikee(options: TwikeeOptions) {
         data: [],
         total: 0,
         page: 1,
-        pageSize: 10,
+        pageSize,
       }
     } finally {
       loading.value = false
