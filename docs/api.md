@@ -26,7 +26,6 @@
 | `SMTP_FROM` / `SMTP_TO` | 邮件（Resend）发件人 / 收件人 |
 | `SMTP_PASS`（密钥） | 邮件（Resend）API Key |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | 预留字段，当前邮件通道未使用 |
-| `IMAGE_CDN_TOKEN`（密钥） | 图床 Token |
 
 标记为密钥的键不会经 `GET /api/admin/config` 返回；保存时留空表示不修改。
 
@@ -38,7 +37,7 @@
 - 跨域部署（评论页与 API 不同域）时浏览器不会随 fetch 发送 Cookie，由前端持久化的 `x-user-id` 保证身份稳定；服务端会同时尝试把身份固化进 Cookie。
 - 响应以服务端为准：`{ success, liked, likes }`。前端不要本地维护计数。
 - 评论不存在（含已软删除）返回 404。
-- 限流：每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；登录相关每分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
+- 限流：每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；登录/初始化密码每 IP 每 5 分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
 
 ### Webhook 通知 `WEBHOOK_URL`
 

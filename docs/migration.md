@@ -80,7 +80,7 @@ packages/core/src/migrations/
 |------|------|
 | **版本号只增不改**，已发布的版本禁止回改 SQL | 线上库已按旧 SQL 应用过，改了也不会重跑；新库和老库会出现结构不一致 |
 | **新迁移必须注册进 `index.ts`** | 执行器只认注册表，漏注册是静默失效 |
-| **SQL 尽量写成幂等的** | 执行器非事务，失败重试会重跑整个版本（见下） |
+| **SQL 尽量写成幂等的** | 迁移已按版本包在事务里；但多实例并发下同一条 DDL 仍可能被重复执行，幂等更安全（见下） |
 | **DDL 与数据迁移分开成不同 version** | 缩小失败重试的影响面，便于排查 |
 | **单条 SQL 只做一件事** | 便于定位失败点 |
 
@@ -100,23 +100,31 @@ CREATE TABLE foo (...)
 
 ## 已知限制与可靠性说明
 
-### 1. 执行器**不是事务的**
+### 1. 每个版本在事务中执行（已修复）
 
-`runner.run()` 对每个版本逐条执行 SQL，**全部成功后**才写入 `_migrations` 版本号：
+`runner.run()` 把「一个版本的全部 SQL + 写 `_migrations`」放进同一个事务，**失败即整体回滚**，重跑从干净状态开始：
 
 ```ts
-for (const sql of m.sql) {
-  await this.client.execute({ sql })   // 逐条执行，无事务包裹
+const tx = await client.transaction('write')
+try {
+  for (const stmt of stmts) await tx.execute(stmt)
+  await tx.commit()
+} catch (err) {
+  await tx.rollback()
+  throw err
 }
-await this.client.execute({ sql: 'INSERT INTO _migrations ...' })  // 最后才记账
 ```
 
-后果：若某版本中途某条 SQL 失败，版本号不会记录，**下次请求会从该版本第一条 SQL 重新执行**。
+> ⚠️ 不要退回 `client.batch(stmts, 'write')`：本地 `@libsql/client` 会按 mode 生成
+> BEGIN/COMMIT/ROLLBACK，但远程 `@tursodatabase/serverless/compat` 的
+> `LibSQLClient.batch` 会丢弃 `mode`、退化为 autocommit（见其 `dist/compat/index.js`），
+> 生产环境将不再是事务。`transaction()` 在两个驱动上都可用。
+> 客户端没实现 `transaction()` 时才退回 `batch('write')` 兜底。
 
-- v1 全用 `IF NOT EXISTS`，重跑安全；
-- v2 含 `ALTER TABLE ADD COLUMN`（**不幂等**），重复执行会报 `duplicate column name`。
+即便如此，仍建议把 SQL 写成幂等的：
 
-因此：**新增迁移时务必让 SQL 尽量幂等**；对无法幂等的 DDL，接受"失败后需人工介入"这一前提，并先备份。
+- v1 全用 `IF NOT EXISTS`，天然可重跑；
+- v2 含 `ALTER TABLE ADD COLUMN`（**不幂等**）。事务保证了单实例失败回滚，但多实例并发同时首次应用同一版本时仍可能冲突（见第 2 节），幂等能进一步降低影响。
 
 ### 2. 多实例并发执行，无锁保护
 

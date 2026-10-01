@@ -19,9 +19,10 @@ pnpm dev
 ```bash
 TURSO_DATABASE_URL=libsql://your-db.turso.io
 TURSO_AUTH_TOKEN=your-turso-auth-token
-TWIKEE_ADMIN_PASSWORD=your-admin-password
 TWIKEE_SECRET=your-secret-key
 ```
+
+> 管理员密码不在环境变量里设置：首次打开 `/admin` 时按提示通过 `POST /api/auth/setup` 设置，保存在数据库 `ADMIN_PASSWORD` 中。
 
 可选环境变量：
 
