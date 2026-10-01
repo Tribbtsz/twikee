@@ -183,9 +183,14 @@ const initDb = async () => {
 3. 部署完成后**主动访问一次 API** 触发迁移，并确认返回正常：
 
    ```bash
+   # 探活：应返回 {"status":"ok","timestamp":...}
+   # 注意：Vercel 上必须让 /health 走 rewrite 才能到函数，否则会被静态兜底页接走
    curl -s https://your-api-domain.com/health
+   # 真正打开数据库（触发并验证 migration）：应返回 {"data":[...],"total":N,...}
    curl -s "https://your-api-domain.com/api/comment?url=/"
    ```
+
+   如果 `/health` 返回的是 HTML 而不是 JSON，说明 `vercel.json` 的 rewrite 缺失或被改了。
 
 4. 核对迁移是否应用（可选）：
 

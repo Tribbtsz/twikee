@@ -9,6 +9,10 @@
       "destination": "/api/[...slug]"
     },
     {
+      "source": "/health",
+      "destination": "/api/[...slug]"
+    },
+    {
       "source": "/admin",
       "destination": "/admin.html"
     }
