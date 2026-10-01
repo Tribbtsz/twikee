@@ -39,7 +39,9 @@ class MockCommentRepo implements CommentRepository {
     query: CommentQuery,
   ): Promise<{ data: Comment[]; total: number; page: number; pageSize: number; totalPages: number }> {
     let list = Array.from(this.comments.values()).filter((c) => !query.url || c.url === query.url)
-    if (!query.includeSpam) list = list.filter((c) => !c.isSpam)
+    if (query.status === 'spam') list = list.filter((c) => c.isSpam)
+    else if (query.status === 'approved') list = list.filter((c) => !c.isSpam)
+    else if (!query.includeSpam) list = list.filter((c) => !c.isSpam)
     if (!query.includeDeleted) list = list.filter((c) => !c.deleted)
     const total = list.length
     const page = query.page || 1

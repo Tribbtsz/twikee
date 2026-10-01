@@ -68,6 +68,8 @@ export interface CommentQuery {
   pageSize?: number
   includeSpam?: boolean
   includeDeleted?: boolean
+  /** 管理端按审核状态过滤；'all' 时忽略 includeSpam 的额外过滤 */
+  status?: 'all' | 'approved' | 'spam'
 }
 
 export interface PaginatedResult<T> {

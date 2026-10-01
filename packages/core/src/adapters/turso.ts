@@ -122,7 +122,7 @@ class TursoCommentRepository implements CommentRepository {
   }
 
   async getList(query: CommentQuery): Promise<PaginatedResult<Comment>> {
-    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false } = query
+    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false, status } = query
     const offset = (page - 1) * pageSize
 
     const conditions: string[] = []
@@ -131,7 +131,11 @@ class TursoCommentRepository implements CommentRepository {
       conditions.push('url = ?')
       args.push(url)
     }
-    if (!includeSpam) conditions.push('is_spam = 0')
+    // 显式 status 优先于 includeSpam：approved/spam 直接落 SQL 条件，
+    // 这样 count 与 list 用同一个 where，分页与计数天然一致
+    if (status === 'spam') conditions.push('is_spam = 1')
+    else if (status === 'approved') conditions.push('is_spam = 0')
+    else if (!includeSpam) conditions.push('is_spam = 0')
     if (!includeDeleted) conditions.push('deleted = 0')
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
@@ -382,9 +386,9 @@ class TursoUserRepository implements UserRepository {
     return {
       id: row.id as string,
       nick: row.nick as string,
-      mail: row.mail as string | undefined,
-      link: row.link as string | undefined,
-      avatar: row.avatar as string | undefined,
+      mail: normalizeText(row.mail),
+      link: normalizeText(row.link),
+      avatar: normalizeText(row.avatar),
       createdAt: row.created_at as number,
     }
   }
