@@ -38,7 +38,7 @@ const commentsClosed = ref(false)
 const masterTag = ref('博主')
 const commentPlaceholder = ref('')
 
-const fetchConfig = async () => {
+const fetchConfig = async (): Promise<number | null> => {
   try {
     const res = await fetch(`${apiUrl.value}/api/config`)
     const cfg = await res.json()
@@ -46,11 +46,14 @@ const fetchConfig = async () => {
     if (cfg.MASTER_TAG) masterTag.value = String(cfg.MASTER_TAG)
     if (cfg.COMMENT_PLACEHOLDER) commentPlaceholder.value = String(cfg.COMMENT_PLACEHOLDER)
     const configured = Number(cfg.COMMENT_PAGE_SIZE)
-    if (Number.isFinite(configured) && configured > 0)
-      pageSize.value = Math.min(100, Math.max(1, Math.floor(configured)))
+    // 每页条数交给调用方去应用：列表请求是并发发出的，
+    // 这里直接改 pageSize 会被列表返回值的 pageSize 覆盖掉。
+    if (Number.isFinite(configured) && configured > 0) return Math.min(100, Math.max(1, Math.floor(configured)))
+    return null
   } catch (e) {
     // 配置读不到时界面会停在默认态，留一条日志，否则排错毫无线索
     console.error('[Twikee] failed to load public config:', e)
+    return null
   }
 }
 
@@ -81,8 +84,16 @@ const handleSubmit = async (data: any): Promise<boolean> => {
 
 onMounted(async () => {
   currentUrl.value = window.location.pathname
-  await fetchConfig()
+  // 配置只影响每页条数和占位文案，没必要让评论列表排队等它：
+  // 两个请求并发发出去，先到的那个触发函数冷启动，后一个基本吃现成。
+  const configuredPageSize = fetchConfig()
   await loadComments()
+  // 配置里的每页条数跟列表用的不一致时补一次；COMMENT_PAGE_SIZE 没配就不会走到这
+  const size = await configuredPageSize
+  if (size && size !== pageSize.value) {
+    pageSize.value = size
+    await loadComments()
+  }
   // Highlight specific comment when navigating from admin
   const hlId = new URLSearchParams(window.location.search).get('hl')
   if (hlId) {

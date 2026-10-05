@@ -84,7 +84,15 @@ app.use('/api/*', async (c, next) => {
   c.set('db', db!)
   c.set('commentService', commentService!)
   c.set('authService', authService!)
-  c.set('notificationService', await getNotificationService(db!))
+  await next()
+})
+
+// 通知服务只有「发评论」用得到，而它要读一次 config。
+// 挂在 /api/* 上会让列表、公开配置这些 GET 都白搭一次远程查询 —— 冷启动时尤其贵。
+app.use('/api/comment', async (c, next) => {
+  if (c.req.method === 'POST') {
+    c.set('notificationService', await getNotificationService(c.var.db))
+  }
   await next()
 })
 
@@ -99,19 +107,16 @@ app.use(
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: Date.now() }))
 
 app.get('/api/config', async (c) => {
-  const [masterTag, commentPlaceholder, commentPageSize, demoEnabled, commentsClosed] = await Promise.all([
-    db!.config.get('MASTER_TAG'),
-    db!.config.get('COMMENT_PLACEHOLDER'),
-    db!.config.get('COMMENT_PAGE_SIZE'),
-    db!.config.get('DEMO_ENABLED'),
-    db!.config.get('COMMENTS_CLOSED'),
-  ])
+  // 一次 getAll 取代五次 config.get：每次 get 都是一个独立的远程查询
+  const cfg = await db!.config.getAll()
+  // 公开配置很少变，让 CDN 兜住，省掉每次打开评论区的这一趟
+  c.header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=600')
   return c.json({
-    MASTER_TAG: masterTag || '',
-    COMMENT_PLACEHOLDER: commentPlaceholder || '',
-    COMMENT_PAGE_SIZE: commentPageSize || '',
-    DEMO_ENABLED: demoEnabled !== 'false',
-    COMMENTS_CLOSED: commentsClosed === 'true',
+    MASTER_TAG: cfg.MASTER_TAG || '',
+    COMMENT_PLACEHOLDER: cfg.COMMENT_PLACEHOLDER || '',
+    COMMENT_PAGE_SIZE: cfg.COMMENT_PAGE_SIZE || '',
+    DEMO_ENABLED: cfg.DEMO_ENABLED !== 'false',
+    COMMENTS_CLOSED: cfg.COMMENTS_CLOSED === 'true',
   })
 })
 
