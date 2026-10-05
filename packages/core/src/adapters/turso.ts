@@ -218,13 +218,25 @@ class TursoCommentRepository implements CommentRepository {
    *
    * 历史实现是「SELECT 判断 → 分别 INSERT/UPDATE」的三次独立写入：并发下两个请求
    * 会同时读到「未赞」而双双插入，且 likes 计数与 likes 表永久漂移。
-   * 现在 likes 表是权威源，切换行 + 重算计数放进同一个 batch（驱动级事务），
+   * 现在 likes 表是权威源，切换行 + 重算计数放进同一个事务，
    * 并让并发双击走「后到者按取消赞处理」的收敛路径。
+   *
+   * 这里不能用 batch()：线上远程驱动 @tursodatabase/serverless/compat 的 batch
+   * 只转发 sql，**会把 args 丢掉**（见其 dist/compat/index.js 里 `return normalized.sql`），
+   * 带参数的语句必然抛 BATCH_ERROR。它的 transaction() 是正常的，所以走事务。
    */
   async like(id: string, userId: string): Promise<LikeResult> {
     const syncCount = {
       sql: 'UPDATE comments SET likes = (SELECT COUNT(*) FROM likes WHERE comment_id = ?) WHERE id = ?',
       args: [id, id],
+    }
+    const insertLike = {
+      sql: 'INSERT INTO likes (comment_id, user_id, created_at) VALUES (?, ?, ?)',
+      args: [id, userId, Date.now()],
+    }
+    const deleteLike = {
+      sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?',
+      args: [id, userId],
     }
 
     const existing = await this.client.execute({
@@ -237,31 +249,16 @@ class TursoCommentRepository implements CommentRepository {
 
     if (liked) {
       try {
-        await this.client.batch(
-          [
-            {
-              sql: 'INSERT INTO likes (comment_id, user_id, created_at) VALUES (?, ?, ?)',
-              args: [id, userId, Date.now()],
-            },
-            syncCount,
-          ],
-          'write',
-        )
+        await this.runAtomic([insertLike, syncCount])
       } catch (err) {
         // 并发双击：两个请求都判定为「未赞」并同时 INSERT，主键约束让后到者失败。
         // 此时该行的赞已存在，本次点击按「取消赞」收敛，保证两次点击 = 最终未赞。
         if (!isPrimaryKeyViolation(err)) throw err
         liked = false
-        await this.client.batch(
-          [{ sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?', args: [id, userId] }, syncCount],
-          'write',
-        )
+        await this.runAtomic([deleteLike, syncCount])
       }
     } else {
-      await this.client.batch(
-        [{ sql: 'DELETE FROM likes WHERE comment_id = ? AND user_id = ?', args: [id, userId] }, syncCount],
-        'write',
-      )
+      await this.runAtomic([deleteLike, syncCount])
     }
 
     const result = await this.client.execute({
@@ -269,6 +266,34 @@ class TursoCommentRepository implements CommentRepository {
       args: [id],
     })
     return { liked, likes: Number(result.rows[0]?.likes ?? 0) }
+  }
+
+  /**
+   * 原子执行一组写语句。
+   *
+   * 优先 transaction()：远程 compat 的 batch() 会丢 args（见 like() 的注释），
+   * 带参数语句走它必挂。只有客户端没实现事务时才退回 batch —— 那种情况下
+   * 本方法只保证「语句都发出去」，原子性由驱动自己决定。
+   */
+  private async runAtomic(stmts: Array<{ sql: string; args?: unknown[] }>): Promise<void> {
+    if (typeof this.client.transaction === 'function') {
+      const tx = await this.client.transaction('write')
+      try {
+        for (const stmt of stmts) {
+          await tx.execute(stmt as { sql: string; args?: any[] })
+        }
+        await tx.commit()
+      } catch (err) {
+        try {
+          await tx.rollback()
+        } catch {
+          // 连接已断开等：回滚失败不应掩盖原始错误
+        }
+        throw err
+      }
+      return
+    }
+    await this.client.batch(stmts as Array<{ sql: string; args?: any[] }>, 'write')
   }
 
   async getCount(url: string): Promise<number> {

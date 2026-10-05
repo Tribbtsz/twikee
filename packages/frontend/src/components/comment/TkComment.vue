@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import type { PropType } from 'vue'
 import Badge from '@/components/ui/Badge.vue'
 import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
 import TkSubmit from './TkSubmit.vue'
 import { marked } from 'marked'
-import { sanitizeHtml, getLikeVisitorId } from '@/lib/utils'
+import { sanitizeHtml } from '@/lib/utils'
+import { createLikeController } from '@/lib/like'
+import type { LikeController } from '@/lib/like'
 import type { Comment } from '@twikee/core'
 import type { ResolvedTwikeeAppearance } from '@/types'
 
@@ -36,8 +38,6 @@ const likeCount = ref(props.comment.likes || 0)
 const liked = ref(false)
 const replyingToId = ref<string | null>(null)
 const childLikeStates = ref<Record<string, { liked: boolean; count: number }>>({})
-const liking = ref(false)
-const childLiking = ref<Record<string, boolean>>({})
 const replyError = ref<string | null>(null)
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
@@ -59,27 +59,82 @@ if (typeof window !== 'undefined') {
   liked.value = localStorage.getItem(likeStorageKey.value) === '1'
 }
 
+// 点赞：本地先动、请求合并，服务端结果回来再校正（实现见 lib/like.ts）
+const likeController = createLikeController({
+  apiUrl: props.apiUrl,
+  commentId: props.comment.id,
+  read: () => ({ liked: liked.value, count: likeCount.value }),
+  apply: (next) => {
+    liked.value = next.liked
+    likeCount.value = next.count
+  },
+  persist: (isLiked) => {
+    if (isLiked) localStorage.setItem(likeStorageKey.value, '1')
+    else localStorage.removeItem(likeStorageKey.value)
+  },
+  onError: (err) => console.error('[Twikee] 点赞失败:', err),
+})
+
 // 后台审核/删除后重新拉取列表时，组件因 :key="comment.id" 被复用、不会重新 setup，
-// 不同步就会一直显示陈旧计数
+// 不同步就会一直显示陈旧计数。但本地有未确认的乐观值时不能覆盖，否则连点会被旧值打断。
 watch(
   () => props.comment.likes,
   (value) => {
-    if (typeof value === 'number') likeCount.value = value
+    if (typeof value === 'number' && !likeController.isBusy()) likeCount.value = value
   },
 )
 
-const getChildLikeState = (childId: string, likes?: number) => {
-  let state = childLikeStates.value[childId]
-  if (!state) {
-    const storageLiked = typeof window !== 'undefined' && localStorage.getItem(`twikee_liked_${childId}`) === '1'
-    state = { liked: storageLiked, count: likes || 0 }
-    childLikeStates.value[childId] = state
-  } else if (typeof likes === 'number') {
-    // count 归服务端所有，每次从 props 同步；liked 是客户端本地记忆，保留
-    state.count = likes
+// 子评论的点赞状态：由 watch 从 props 播种，控制器只负责乐观改写
+const childLikeControllers = new Map<string, LikeController>()
+
+const getChildLikeState = (childId: string, likes?: number) =>
+  childLikeStates.value[childId] ?? { liked: false, count: likes || 0 }
+
+const childController = (childId: string, likes = 0): LikeController => {
+  let controller = childLikeControllers.get(childId)
+  if (!controller) {
+    controller = createLikeController({
+      apiUrl: props.apiUrl,
+      commentId: childId,
+      read: () => childLikeStates.value[childId] ?? { liked: false, count: likes },
+      apply: (next) => {
+        childLikeStates.value = { ...childLikeStates.value, [childId]: next }
+      },
+      persist: (isLiked) => {
+        const key = `twikee_liked_${childId}`
+        if (isLiked) localStorage.setItem(key, '1')
+        else localStorage.removeItem(key)
+      },
+      onError: (err) => console.error('[Twikee] 子评论点赞失败:', err),
+    })
+    childLikeControllers.set(childId, controller)
   }
-  return state
+  return controller
 }
+
+watch(
+  () => props.comment.children,
+  (children) => {
+    if (!children || children.length === 0) return
+    const next = { ...childLikeStates.value }
+    for (const child of children) {
+      const current = next[child.id]
+      if (!current) {
+        const storageLiked = typeof window !== 'undefined' && localStorage.getItem(`twikee_liked_${child.id}`) === '1'
+        next[child.id] = { liked: storageLiked, count: child.likes || 0 }
+      } else if (typeof child.likes === 'number' && !childLikeControllers.get(child.id)?.isBusy()) {
+        next[child.id] = { ...current, count: child.likes }
+      }
+    }
+    childLikeStates.value = next
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  likeController.dispose()
+  for (const controller of childLikeControllers.values()) controller.dispose()
+})
 
 const showReplyBox = computed(() => replyingToId.value === props.comment.id)
 
@@ -115,71 +170,10 @@ const renderChildContent = (content: string) => {
   return sanitizeHtml(marked.parse(content) as string)
 }
 
-const onLike = async () => {
-  if (liking.value) return
-  liking.value = true
-  try {
-    const res = await fetch(`${props.apiUrl}/api/comment/${props.comment.id}/like`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      if (data.success) {
-        // 以服务端返回为准。旧实现是本地 ±1，而服务端旧逻辑每次请求都换新
-        // 身份导致只能插入不能删除，两侧计数必然越差越多。
-        liked.value = data.liked
-        if (typeof data.likes === 'number') {
-          likeCount.value = data.likes
-        } else {
-          likeCount.value += data.liked ? 1 : -1
-        }
-        if (data.liked) {
-          localStorage.setItem(likeStorageKey.value, '1')
-        } else {
-          localStorage.removeItem(likeStorageKey.value)
-        }
-      }
-    }
-  } catch (e) {
-    console.error('点赞失败:', e)
-  } finally {
-    liking.value = false
-  }
-}
+// 点击只改本地（乐观）；请求由控制器合并后发出
+const onLike = () => likeController.toggle()
 
-const onChildLike = async (childId: string) => {
-  const state = childLikeStates.value[childId]
-  if (!state || childLiking.value[childId]) return
-  childLiking.value[childId] = true
-  try {
-    const res = await fetch(`${props.apiUrl}/api/comment/${childId}/like`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': getLikeVisitorId() },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      if (data.success) {
-        // 同上：以服务端结果为准，不再本地自增
-        state.liked = data.liked
-        if (typeof data.likes === 'number') {
-          state.count = data.likes
-        } else {
-          state.count += data.liked ? 1 : -1
-        }
-        if (data.liked) {
-          localStorage.setItem(`twikee_liked_${childId}`, '1')
-        } else {
-          localStorage.removeItem(`twikee_liked_${childId}`)
-        }
-      }
-    }
-  } catch (e) {
-    console.error('子评论点赞失败:', e)
-  } finally {
-    childLiking.value[childId] = false
-  }
-}
+const onChildLike = (childId: string, likes = 0) => childController(childId, likes).toggle()
 
 const onReply = () => {
   replyingToId.value = replyingToId.value === props.comment.id ? null : props.comment.id
@@ -397,7 +391,7 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
               <TkAction
                 :liked="getChildLikeState(child.id, child.likes).liked"
                 :like-count="getChildLikeState(child.id, child.likes).count"
-                @like="onChildLike(child.id)"
+                @like="onChildLike(child.id, child.likes)"
                 @reply="onChildReply(child.id)"
               />
             </div>
