@@ -35,7 +35,9 @@ CORS_ORIGIN=https://your-blog.com
 TWIKEE_TOKEN_TTL=604800000
 ```
 
-> 注意：`TWIKEE_SECRET` 用于签名管理端登录 token；token 同时绑定管理员密码，改密后所有已登录会话自动失效。若 `TWIKEE_SECRET` 缺失，服务会临时自动生成——生产环境务必显式设置，否则重启后所有登录态失效。
+> 注意：`TWIKEE_SECRET` 用于签名管理端登录 token；token 同时绑定管理员密码，改密后所有已登录会话自动失效。
+> 生产环境缺这个变量会 **fail-fast**：签发/校验 token 时直接抛错，登录与管理接口返回 500，
+> 不会静默降级、也不会「临时自动生成」。只有非生产环境才用随机密钥，且进程重启即失效。
 
 上游有更新时，在 Fork 仓库点击 `Sync fork -> Update branch`，Vercel 会自动部署。
 

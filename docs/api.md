@@ -1,15 +1,34 @@
 # API
 
+### 公开
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| `GET` | `/health` | 健康检查（部署冒烟用） |
+| `GET` | `/api/config` | 获取公开配置（只返回 5 个公开键） |
 | `GET` | `/api/comment` | 获取评论列表 |
 | `POST` | `/api/comment` | 创建评论 |
-| `POST` | `/api/comment/:id/like` | 点赞 |
-| `GET` | `/api/config` | 获取公开配置 |
-| `POST` | `/api/auth/setup` | 初始化密码 |
-| `POST` | `/api/auth/login` | 管理员登录 |
-| `GET` | `/api/admin/comments` | 管理评论列表 |
-| `POST` | `/api/admin/config` | 更新配置 |
+| `POST` | `/api/comment/:id/like` | 点赞（同一身份再调即取消） |
+| `GET` | `/api/auth/status` | 是否已设置管理员密码：`{ initialized }` |
+| `POST` | `/api/auth/setup` | 首次设置管理员密码（已设置则 400） |
+| `POST` | `/api/auth/login` | 管理员登录，返回 token |
+| `POST` | `/api/auth/verify` | 校验 token 是否有效 |
+
+### 管理端（需 `Authorization: Bearer <token>`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/admin/comments` | 评论列表（按 url / 状态 / 是否含垃圾过滤，分页） |
+| `GET` | `/api/admin/comments/all` | 同上；不传 `url` 时跨全部页面取，供导出/总览 |
+| `GET` | `/api/admin/pages` | 有评论的页面聚合（条数、垃圾数、最后评论时间） |
+| `PUT` | `/api/admin/comment/:id` | 修改评论（字段白名单校验，防 mass assignment） |
+| `DELETE` | `/api/admin/comment/:id` | 删除评论（软删除） |
+| `POST` | `/api/admin/comment/:id/moderate` | 审核：按 `action` 通过 / 标记垃圾 |
+| `POST` | `/api/admin/comment/:id/top` | 置顶 / 取消置顶（`{ top: boolean }`） |
+| `POST` | `/api/admin/import` | 导入评论（逐条校验，单次最多 1000 条） |
+| `GET` | `/api/admin/config` | 读取全部配置（密钥类字段不回传） |
+| `POST` | `/api/admin/config` | 更新配置（密钥留空表示不修改） |
+| `GET` | `/api/admin/stats` | 评论统计（总数 / 已通过 / 待审核） |
 
 通知推送支持 Telegram Bot、Webhook、Email、WxPusher、企业微信群机器人，可在管理后台配置。
 

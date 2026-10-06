@@ -12,7 +12,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-本地访问 `http://localhost:5173`，管理后台访问 `http://localhost:5173/admin`。
+本地访问 `http://localhost:5173`，管理后台访问 `http://localhost:5173/admin`；启动时会自动打开组件演示页 `/demo.html`。
 
 ## 前端接入
 

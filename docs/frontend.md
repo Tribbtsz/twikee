@@ -21,3 +21,17 @@ twikee.init({
 | `el` | `string \| Element` | 评论挂载容器 |
 | `envId` | `string` | Twikee API 地址 |
 | `appearance` | `object` | 外观配置，见 [外观配置](./appearance.md) |
+
+## 管理端（initAdmin）
+
+同一份 `twikee.umd.js` 还导出管理端入口，用于把后台嵌到别处。自带的后台页面在 `/admin`，通常不需要手动调：
+
+```html
+<div id="admin"></div>
+<script>
+  twikee.initAdmin({
+    el: '#admin',
+    envId: 'https://your-api-domain.com',
+  })
+</script>
+```

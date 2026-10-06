@@ -114,7 +114,8 @@ export function createCommentRoutes() {
       return c.json({ error: 'Comment not found' }, 404)
     }
 
-    // 身份由服务端签发的 Cookie 决定，不再信任客户端传入的 x-user-id
+    // 身份：HttpOnly Cookie 优先，跨域部署（博客与 API 不同域，带不上 Cookie）
+    // 时退到请求头 x-user-id，详见 lib/visitor.ts
     const userId = getOrCreateVisitorId(c)
     try {
       const result = await c.var.commentService.like(id, userId)
