@@ -1,8 +1,15 @@
+---
+title: 数据库迁移
+description: Twikee 数据库迁移的执行时机、新增迁移的规范、已知限制与线上升级流程。
+---
+
 # 数据库迁移 (Migration)
 
 Twikee 的数据库结构变更通过 migration 管理。本文说明**什么时候跑、怎么新增、有哪些坑、线上怎么升级**。
 
-> ⚠️ 改结构前请务必读完「[已知限制与可靠性说明](#已知限制与可靠性说明)」和「[线上升级流程](#线上升级流程)」两节。
+::: warning 先读本文
+改结构前请务必读完[已知限制与可靠性说明](#已知限制与可靠性说明)和[线上升级流程](#线上升级流程)两节。
+:::
 
 ## 什么时候执行
 
@@ -49,9 +56,7 @@ packages/core/src/migrations/
    export const addFooColumn: Migration = {
      version: 3,
      name: 'add-foo-column',
-     sql: [
-       `ALTER TABLE comments ADD COLUMN foo TEXT`,
-     ],
+     sql: [`ALTER TABLE comments ADD COLUMN foo TEXT`],
    }
    ```
 
@@ -60,11 +65,7 @@ packages/core/src/migrations/
    ```ts
    import { addFooColumn } from './003-add-foo-column'
 
-   export const migrations: Migration[] = [
-     initial,
-     softDeleteTop,
-     addFooColumn,
-   ]
+   export const migrations: Migration[] = [initial, softDeleteTop, addFooColumn]
    ```
 
 3. **构建并验证**：
@@ -115,11 +116,9 @@ try {
 }
 ```
 
-> ⚠️ 不要退回 `client.batch(stmts, 'write')`：本地 `@libsql/client` 会按 mode 生成
-> BEGIN/COMMIT/ROLLBACK，但远程 `@tursodatabase/serverless/compat` 的
-> `LibSQLClient.batch` 会丢弃 `mode`、退化为 autocommit（见其 `dist/compat/index.js`），
-> 生产环境将不再是事务。`transaction()` 在两个驱动上都可用。
-> 客户端没实现 `transaction()` 时才退回 `batch('write')` 兜底。
+::: danger 不要退回 client.batch
+不要退回 `client.batch(stmts, 'write')`：本地 `@libsql/client` 会按 mode 生成 BEGIN/COMMIT/ROLLBACK，但远程 `@tursodatabase/serverless/compat` 的 `LibSQLClient.batch` 会丢弃 `mode`、退化为 autocommit（见其 `dist/compat/index.js`），生产环境将不再是事务。`transaction()` 在两个驱动上都可用。客户端没实现 `transaction()` 时才退回 `batch('write')` 兜底。
+:::
 
 即便如此，仍建议把 SQL 写成幂等的：
 
@@ -146,14 +145,14 @@ const initDb = async () => {
   if (!initPromise) {
     initPromise = (async () => {
       const adapter = new TursoAdapter(...)
-      await adapter.init()            // 含 migration，失败在此抛错
+      await adapter.init() // 含 migration，失败在此抛错
       const comments = new CommentService(adapter)
       const auth = new AuthService(adapter)
-      db = adapter                    // 全部成功后才赋值
+      db = adapter // 全部成功后才赋值
       commentService = comments
       authService = auth
     })().catch((e) => {
-      initPromise = null              // 失败后释放，允许后续请求重试
+      initPromise = null // 失败后释放，允许后续请求重试
       throw e
     })
   }
@@ -202,7 +201,7 @@ const initDb = async () => {
 
 ## 相关文件
 
-- 执行器：[`packages/core/src/migrations/runner.ts`](../packages/core/src/migrations/runner.ts)
-- 注册表：[`packages/core/src/migrations/index.ts`](../packages/core/src/migrations/index.ts)
-- 适配器入口：[`packages/core/src/adapters/turso.ts`](../packages/core/src/adapters/turso.ts)
-- 部署说明：[`docs/deployment.md`](./deployment.md)
+- 执行器：[`runner.ts`](https://github.com/Tribbtsz/twikee/blob/main/packages/core/src/migrations/runner.ts)
+- 注册表：[`index.ts`](https://github.com/Tribbtsz/twikee/blob/main/packages/core/src/migrations/index.ts)
+- 适配器入口：[`turso.ts`](https://github.com/Tribbtsz/twikee/blob/main/packages/core/src/adapters/turso.ts)
+- 部署说明：[部署](/guide/deployment)

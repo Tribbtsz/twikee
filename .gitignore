@@ -8,6 +8,10 @@ dist-admin/
 dist-site/
 *.local
 
+# Docs site (VitePress)
+packages/docs/.vitepress/dist/
+packages/docs/.vitepress/cache/
+
 # 注意：不要在这里写 *.js —— 会连 eslint.config.js / postcss.config.js
 # 这类需要入库的文件一起忽略掉，导致 CI 上莫名缺失。只忽略确切的产物名。
 
@@ -45,5 +49,8 @@ coverage/
 # Temp
 tmp/
 temp/
+
+# OpenChamber / agent tooling artifacts
+.openchamber/
 .vercel
 .env.vercel

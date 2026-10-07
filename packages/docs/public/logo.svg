@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Twikee">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1" />
+      <stop offset="1" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#g)" />
+  <path
+    d="M17 22.5c0-2.485 2.015-4.5 4.5-4.5h21c2.485 0 4.5 2.015 4.5 4.5v13c0 2.485-2.015 4.5-4.5 4.5H30.6l-8.35 6.16A1.5 1.5 0 0 1 20 45.02V40h-3c-2.485 0-4.5-2.015-4.5-4.5v-13Z"
+    fill="#fff"
+  />
+  <circle cx="25" cy="29" r="2.5" fill="#3b82f6" />
+  <circle cx="32" cy="29" r="2.5" fill="#6366f1" />
+  <circle cx="39" cy="29" r="2.5" fill="#3b82f6" />
+</svg>

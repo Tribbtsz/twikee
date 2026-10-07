@@ -10,11 +10,13 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist-site',
+    // 与 VitePress 的 /assets 分开，避免两个构建产物在同一目录下互相覆盖
+    assetsDir: 'demo-assets',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        admin: resolve(__dirname, 'admin.html'),
+        // 站点根路径由 VitePress 文档站占用；演示页对外是 /demo，管理后台是 /admin
         demo: resolve(__dirname, 'demo.html'),
+        admin: resolve(__dirname, 'admin.html'),
       },
     },
   },
