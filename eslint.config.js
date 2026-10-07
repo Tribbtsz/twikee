@@ -13,6 +13,7 @@ export default tseslint.config(
       '**/dist-admin/**',
       '**/node_modules/**',
       '**/.vite/**',
+      '**/.vitepress/**',
       '**/coverage/**',
     ],
   },
@@ -46,6 +47,19 @@ export default tseslint.config(
       'no-var': 'error',
       // 路由/组件处理的是后端任意 JSON 响应，收紧 any 收益低、噪音大
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
+  // ---- Node 脚本（.mjs）----
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.node },
+    },
+    rules: {
+      'no-console': 'off',
     },
   },
 

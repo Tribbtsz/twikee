@@ -8,6 +8,7 @@
     "dev": "tsx scripts/dev.ts",
     "dev:api": "pnpm --filter @twikee/api dev",
     "dev:frontend": "pnpm --filter @twikee/frontend dev",
+    "dev:docs": "pnpm --filter @twikee/docs dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",

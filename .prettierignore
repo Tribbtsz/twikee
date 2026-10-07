@@ -1,3 +1,3 @@
-# 文档保持现状，不参与 prettier 格式化
+# 文档站内容不参与 prettier 格式化（VitePress 的 Markdown/表格较敏感）
 # （node_modules / dist / coverage 等已由 .gitignore 默认忽略）
-docs/
+packages/docs/

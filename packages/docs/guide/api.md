@@ -1,4 +1,11 @@
-# API
+---
+title: API 参考
+description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook 通知与导入的行为约定。
+---
+
+# API 参考
+
+## 接口一览
 
 ### 公开
 
@@ -32,7 +39,9 @@
 
 通知推送支持 Telegram Bot、Webhook、Email、WxPusher、企业微信群机器人，可在管理后台配置。
 
-通知配置键（`POST /api/admin/config`）：
+## 通知配置键
+
+通过 `POST /api/admin/config` 设置：
 
 | 键 | 说明 |
 |----|------|
