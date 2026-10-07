@@ -101,7 +101,19 @@ CREATE TABLE foo (...)
 
 ## 已知限制与可靠性说明
 
-### 1. 每个版本在事务中执行（已修复）
+本节说明当前**必须接受的限制**、可以**依赖的保证**，以及**不要改坏的地方**。
+
+### 当前限制：多实例并发执行，无锁保护
+
+serverless 下多个冷实例可能同时进入 `run()`。若恰好有未应用的迁移，两个实例可能同时执行同一条 DDL，其中一个会因冲突报错而返回 500。
+
+- 通常是**暂时性**的：冲突实例报错后，下一个请求会发现版本已应用而跳过，服务自愈；
+- 但**迁移期间可能出现短暂 5xx**，请避开流量高峰发布；
+- 因此**尽量把 SQL 写成幂等的**，把并发重跑的代价降到最低。
+
+这是目前唯一需要接受的限制。下面两项是已经成立的行为保证，可以直接依赖。
+
+### 可靠性保证：每个版本的迁移都在事务里
 
 `runner.run()` 把「一个版本的全部 SQL + 写 `_migrations`」放进同一个事务，**失败即整体回滚**，重跑从干净状态开始：
 
@@ -116,23 +128,12 @@ try {
 }
 ```
 
-::: danger 不要退回 client.batch
-不要退回 `client.batch(stmts, 'write')`：本地 `@libsql/client` 会按 mode 生成 BEGIN/COMMIT/ROLLBACK，但远程 `@tursodatabase/serverless/compat` 的 `LibSQLClient.batch` 会丢弃 `mode`、退化为 autocommit（见其 `dist/compat/index.js`），生产环境将不再是事务。`transaction()` 在两个驱动上都可用。客户端没实现 `transaction()` 时才退回 `batch('write')` 兜底。
-:::
-
 即便如此，仍建议把 SQL 写成幂等的：
 
 - v1 全用 `IF NOT EXISTS`，天然可重跑；
-- v2 含 `ALTER TABLE ADD COLUMN`（**不幂等**）。事务保证了单实例失败回滚，但多实例并发同时首次应用同一版本时仍可能冲突（见第 2 节），幂等能进一步降低影响。
+- v2 含 `ALTER TABLE ADD COLUMN`（**不幂等**）。事务保证了单实例失败回滚，但多实例并发同时首次应用同一版本时仍可能冲突（见上一节「当前限制」），幂等能进一步降低影响。
 
-### 2. 多实例并发执行，无锁保护
-
-serverless 下多个冷实例可能同时进入 `run()`。若恰好有未应用的迁移，两个实例可能同时执行同一条 DDL，其中一个会因冲突报错而返回 500。
-
-- 通常是**暂时性**的：冲突实例报错后，下一个请求会发现版本已应用而跳过，服务自愈；
-- 但**迁移期间可能出现短暂 5xx**，请避开流量高峰发布。
-
-### 3. 初始化失败后可自动重试（已修复）
+### 可靠性保证：初始化原子、失败可重试
 
 `initDb()` 采用「先完整初始化到局部变量、全部成功后再发布」的写法，并用 `initPromise` 让并发请求共享同一次初始化：
 
@@ -167,6 +168,12 @@ const initDb = async () => {
 - **并发只初始化一次**：多个并发请求共享同一个 `initPromise`，避免重复跑 migration。
 
 若迁移持续失败，接口会稳定返回 500 `Database initialization failed`，具体原因见服务端日志中 `[Twikee] database initialization failed` 后的原始错误。
+
+### 维护者须知：不要退回 `client.batch`
+
+::: danger 保持迁移的事务语义
+不要用 `client.batch(stmts, 'write')` 替代 `transaction()`。本地 `@libsql/client` 会按 mode 生成 BEGIN/COMMIT/ROLLBACK，但远程 `@tursodatabase/serverless/compat` 的 `LibSQLClient.batch` 会丢弃 `mode`、退化为 autocommit（见其 `dist/compat/index.js`）：一旦退回，生产环境的迁移**不再是一个事务**，失败不会整体回滚。`transaction()` 在两个驱动上都可用；只有客户端确实没实现 `transaction()` 时，才退回 `batch('write')` 兜底。
+:::
 
 ## 线上升级流程
 

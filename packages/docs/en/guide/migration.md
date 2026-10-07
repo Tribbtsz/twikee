@@ -99,9 +99,21 @@ ALTER TABLE comments ADD COLUMN bar TEXT
 CREATE TABLE foo (...)
 ```
 
-## Known limitations
+## Known limitations and guarantees
 
-### 1. Each version runs in a transaction (fixed)
+This section covers the **limitations you have to accept today**, the **guarantees you can rely on**, and **what not to break**.
+
+### Current limitation: concurrent instances, no locking
+
+Under serverless, multiple cold instances may enter `run()` at the same time. If there is an unapplied migration, two instances may execute the same DDL concurrently and one returns 500 on the conflict.
+
+- It is usually **transient**: after the conflict the next request sees the version already applied and skips, so the service self-heals.
+- Still, **brief 5xx errors can occur during migration** — avoid deploying at peak traffic.
+- So **write idempotent SQL whenever possible**, keeping the cost of a concurrent re-run low.
+
+This is the only limitation you have to live with. The next two items are guarantees that already hold today.
+
+### Guarantee: each version runs in a transaction
 
 `runner.run()` puts "all SQL for a version + writing `_migrations`" into a single transaction, so **a failure rolls everything back** and a retry starts clean:
 
@@ -116,23 +128,12 @@ try {
 }
 ```
 
-::: danger Do not fall back to client.batch
-Do not fall back to `client.batch(stmts, 'write')`: the local `@libsql/client` emits BEGIN/COMMIT/ROLLBACK based on mode, but the remote `@tursodatabase/serverless/compat` `LibSQLClient.batch` drops `mode` and degrades to autocommit (see its `dist/compat/index.js`), so production is no longer transactional. `transaction()` works on both drivers. Only fall back to `batch('write')` when the client does not implement `transaction()`.
-:::
-
 Even so, prefer idempotent SQL:
 
 - v1 uses `IF NOT EXISTS` throughout, so it is naturally re-runnable.
-- v2 contains `ALTER TABLE ADD COLUMN` (**not idempotent**). The transaction guarantees rollback on a single-instance failure, but concurrent instances applying the same version for the first time can still collide (see point 2); idempotency further reduces the impact.
+- v2 contains `ALTER TABLE ADD COLUMN` (**not idempotent**). The transaction guarantees rollback on a single-instance failure, but concurrent instances applying the same version for the first time can still collide (see "Current limitation" above); idempotency further reduces the impact.
 
-### 2. Concurrent instances, no locking
-
-Under serverless, multiple cold instances may enter `run()` at the same time. If there is an unapplied migration, two instances may execute the same DDL concurrently and one returns 500 on the conflict.
-
-- It is usually **transient**: after the conflict the next request sees the version already applied and skips, so the service self-heals.
-- Still, **brief 5xx errors can occur during migration** — avoid deploying at peak traffic.
-
-### 3. Initialization can retry after failure (fixed)
+### Guarantee: initialization is atomic and retryable
 
 `initDb()` initializes fully into local variables and only publishes them once everything succeeds, while an `initPromise` lets concurrent requests share the same initialization:
 
@@ -167,6 +168,12 @@ Guarantees:
 - **Initialize once under concurrency**: concurrent requests share one `initPromise`, avoiding duplicate migration runs.
 
 If migrations keep failing, the API returns 500 `Database initialization failed`. The original error appears in the server log after `[Twikee] database initialization failed`.
+
+### Maintainer note: never fall back to `client.batch`
+
+::: danger Keep migrations transactional
+Do not replace `transaction()` with `client.batch(stmts, 'write')`. The local `@libsql/client` emits BEGIN/COMMIT/ROLLBACK based on mode, but the remote `@tursodatabase/serverless/compat` `LibSQLClient.batch` drops `mode` and degrades to autocommit (see its `dist/compat/index.js`): if you fall back, production migrations are **no longer one transaction** and a failure will not roll back as a whole. `transaction()` works on both drivers; only fall back to `batch('write')` when the client genuinely does not implement `transaction()`.
+:::
 
 ## Production upgrade flow
 
