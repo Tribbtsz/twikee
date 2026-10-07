@@ -5,8 +5,8 @@
 //   1. packages/frontend/dist-site      演示页 / 管理后台（assetsDir = demo-assets）
 //   2. packages/docs/.vitepress/dist    文档站（站点根路径，assetsDir = assets）
 //   3. packages/frontend/dist           可嵌入产物 twikee.umd.js / twikee.es.js / style.css
-import { copyFileSync, cpSync, existsSync, rmSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { copyFileSync, cpSync, existsSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -30,12 +30,6 @@ const siteDir = targets[0][1]
 
 // 文档站放到站点根路径：/、/guide/*、/en/*、/assets/*、sitemap.xml、robots.txt
 cpSync(targets[1][1], siteDir, { recursive: true })
-
-// VitePress 会产出 404.html，但 Vercel 把它当普通静态文件用 200 返回，
-// 未知路径就成了「软 404」（状态码 200 + 404 页面），对 SEO 不利。
-// 删掉它，让 Vercel 回退到自带错误页——那样状态码才是真正的 404。
-rmSync(join(siteDir, '404.html'), { force: true })
-
 // 可嵌入产物放到根路径，供第三方站点通过 /twikee.umd.js 与 /style.css 引入
 const embeddableFiles = ['twikee.umd.js', 'twikee.es.js', 'style.css', 'index.d.ts']
 let copied = 0
