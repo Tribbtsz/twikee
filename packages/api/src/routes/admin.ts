@@ -9,6 +9,7 @@ import {
   AdminUpdateCommentSchema,
   ImportSchema,
   ADMIN_CONFIG_KEY_SET,
+  WEBHOOK_METHODS,
 } from '../validation'
 import { invalidateNotifications } from '../lib/notification'
 import { safeJson } from '../lib/safe-json'
@@ -35,8 +36,8 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
-    const { url, page, pageSize, includeSpam, status } = parsed.data
-    const result = await c.var.commentService.getList({ url: url || '', page, pageSize, includeSpam, status })
+    const { url, page, pageSize, includeSpam, status, keyword } = parsed.data
+    const result = await c.var.commentService.getList({ url: url || '', page, pageSize, includeSpam, status, keyword })
     return c.json(result)
   })
 
@@ -45,12 +46,12 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
-    const { url, page, pageSize, includeSpam, status } = parsed.data
+    const { url, page, pageSize, includeSpam, status, keyword } = parsed.data
     if (url) {
-      const result = await c.var.commentService.getList({ url, page, pageSize, includeSpam, status })
+      const result = await c.var.commentService.getList({ url, page, pageSize, includeSpam, status, keyword })
       return c.json(result)
     }
-    const result = await c.var.db.comments.getList({ url: '', page, pageSize, includeSpam, status })
+    const result = await c.var.db.comments.getList({ url: '', page, pageSize, includeSpam, status, keyword })
     return c.json(result)
   })
 
@@ -104,6 +105,21 @@ export function createAdminRoutes() {
     } catch {
       return c.json({ error: 'Comment not found' }, 404)
     }
+  })
+
+  /**
+   * 彻底删除：从数据库中移除评论行及其点赞记录，邮箱/IP/UA 等一并清除，
+   * 不可恢复（用于隐私合规/被遗忘权场景）。与软删除不同，不保留任何痕迹。
+   * 挂在 /api/admin/* 下，演示模式自动 403。
+   */
+  app.delete('/comment/:id/permanent', async (c) => {
+    const id = c.req.param('id')
+    const comment = await c.var.commentService.getById(id)
+    if (!comment) {
+      return c.json({ error: 'Comment not found' }, 404)
+    }
+    await c.var.commentService.hardDelete(id)
+    return c.json({ success: true })
   })
 
   app.post('/import', async (c) => {
@@ -245,6 +261,23 @@ export function createAdminRoutes() {
           assertPublicHttpUrl(value.trim(), 'WEBHOOK_URL')
         } catch (e) {
           return c.json({ error: (e as Error).message }, 400)
+        }
+      }
+      // Webhook 请求方法只允许白名单里的方法
+      if (key === 'WEBHOOK_METHOD' && typeof value === 'string' && value.trim()) {
+        if (!(WEBHOOK_METHODS as readonly string[]).includes(value.trim().toUpperCase())) {
+          return c.json({ error: `WEBHOOK_METHOD must be one of: ${WEBHOOK_METHODS.join(', ')}` }, 400)
+        }
+      }
+      // 自定义请求头必须是 JSON 对象，保存时即校验，避免运行时才炸
+      if (key === 'WEBHOOK_HEADERS' && typeof value === 'string' && value.trim()) {
+        try {
+          const parsedHeaders = JSON.parse(value)
+          if (!parsedHeaders || typeof parsedHeaders !== 'object' || Array.isArray(parsedHeaders)) {
+            throw new Error('not an object')
+          }
+        } catch {
+          return c.json({ error: 'WEBHOOK_HEADERS must be a JSON object, e.g. {"Authorization": "Bearer xxx"}' }, 400)
         }
       }
       if (key === 'ADMIN_PASSWORD') {

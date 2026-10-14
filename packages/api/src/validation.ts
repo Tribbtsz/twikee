@@ -67,6 +67,8 @@ export const ADMIN_CONFIG_KEYS = [
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_CHAT_ID',
   'WEBHOOK_URL',
+  'WEBHOOK_METHOD',
+  'WEBHOOK_HEADERS',
   'WXPUSHER_APP_TOKEN',
   'WXPUSHER_UIDS',
   'WECOM_KEY',
@@ -79,6 +81,7 @@ export const ADMIN_CONFIG_KEYS = [
   'SMTP_TO',
   // 安全
   'ADMIN_PASSWORD',
+  'BLOCKED_IPS',
   // 图片
   'IMAGE_CDN',
   'IMAGE_CDN_TOKEN',
@@ -113,6 +116,8 @@ export const AdminCommentQuerySchema = z.object({
   // 审核状态过滤：由服务端在 SQL 层过滤，避免「客户端只过滤当前页」造成的
   // 计数/分页错位
   status: z.enum(['all', 'approved', 'spam']).default('all'),
+  // 关键词搜索：匹配评论内容或昵称（服务端 LIKE，走参数化）
+  keyword: z.string().max(100).optional(),
 })
 
 /** 更新评论：仅允许这几个字段，master 只能由公开端点按邮箱匹配设置 */
@@ -156,3 +161,32 @@ export const ImportCommentSchema = z.object({
 export const MAX_IMPORT_COUNT = 1000
 
 export const ImportSchema = z.array(ImportCommentSchema).max(MAX_IMPORT_COUNT)
+
+/**
+ * 批量评论数：urls 为逗号分隔的页面 url 列表，最多 20 个。
+ * 每个 url 复用单条 COUNT 查询（上限 20，并发发出），返回 { counts: { url: n } }。
+ */
+export const CommentCountQuerySchema = z.object({
+  urls: z.string().min(1, 'urls is required').max(42000),
+})
+
+export const MAX_COUNT_URLS = 20
+
+/** 举报评论：原因可选，不填时通知里显示"未填写" */
+export const ReportSchema = z.object({
+  reason: z.string().max(200).optional(),
+})
+
+/** 访客编辑自己的评论：内容 + 创建时签发的 editToken */
+export const EditOwnCommentSchema = z.object({
+  content: z.string().min(1).max(10000),
+  editToken: z.string().min(1).max(128),
+})
+
+/** 访客删除自己的评论（软删除）：仅需 editToken */
+export const DeleteOwnCommentSchema = z.object({
+  editToken: z.string().min(1).max(128),
+})
+
+/** Webhook 请求方法白名单 */
+export const WEBHOOK_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const

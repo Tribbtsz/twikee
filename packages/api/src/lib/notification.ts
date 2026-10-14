@@ -28,19 +28,39 @@ function buildFromConfig(cfg: Record<string, string>): NotificationService | nul
 
   const service = new NotificationService()
   const type = cfg['NOTIFICATION_TYPE']
+  // 所有渠道都订阅评论通知 + 举报通知（admin.report 由访客举报触发）
+  const commentEvents = ['comment.new', 'comment.reply', 'admin.report']
 
   if (type === 'telegram') {
     const botToken = cfg['TELEGRAM_BOT_TOKEN']
     const chatId = cfg['TELEGRAM_CHAT_ID']
     if (botToken && chatId) {
-      service.addChannel('telegram', new TelegramAdapter({ botToken, chatId }), ['comment.new', 'comment.reply'])
+      service.addChannel('telegram', new TelegramAdapter({ botToken, chatId }), commentEvents)
     } else {
       console.warn('[Twikee] telegram misconfigured: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID missing')
     }
   } else if (type === 'webhook') {
     const webhookUrl = cfg['WEBHOOK_URL']
     if (webhookUrl) {
-      service.addChannel('webhook', new WebhookAdapter({ url: webhookUrl }), ['comment.new', 'comment.reply'])
+      // 自定义请求方法与请求头：headers 存的是 JSON 字符串，解析失败时降级为空对象
+      //（保存时已做格式校验，这里是防御性兜底）
+      let headers: Record<string, string> = {}
+      const rawHeaders = cfg['WEBHOOK_HEADERS']
+      if (rawHeaders) {
+        try {
+          const parsed = JSON.parse(rawHeaders)
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            headers = Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)]))
+          }
+        } catch {
+          console.warn('[Twikee] WEBHOOK_HEADERS is not valid JSON, ignoring')
+        }
+      }
+      service.addChannel(
+        'webhook',
+        new WebhookAdapter({ url: webhookUrl, method: cfg['WEBHOOK_METHOD'] || undefined, headers }),
+        commentEvents,
+      )
     } else {
       console.warn('[Twikee] webhook misconfigured: WEBHOOK_URL missing')
     }
@@ -49,7 +69,7 @@ function buildFromConfig(cfg: Record<string, string>): NotificationService | nul
     const from = cfg['SMTP_FROM']
     const to = cfg['SMTP_TO']
     if (apiKey && from && to) {
-      service.addChannel('email', new EmailAdapter({ apiKey, from, to }), ['comment.new', 'comment.reply'])
+      service.addChannel('email', new EmailAdapter({ apiKey, from, to }), commentEvents)
     } else {
       console.warn('[Twikee] email misconfigured: SMTP_PASS/SMTP_FROM/SMTP_TO missing')
     }
@@ -57,14 +77,14 @@ function buildFromConfig(cfg: Record<string, string>): NotificationService | nul
     const appToken = cfg['WXPUSHER_APP_TOKEN']
     const uids = cfg['WXPUSHER_UIDS']
     if (appToken && uids) {
-      service.addChannel('wxpusher', new WxPusherAdapter({ appToken, uids }), ['comment.new', 'comment.reply'])
+      service.addChannel('wxpusher', new WxPusherAdapter({ appToken, uids }), commentEvents)
     } else {
       console.warn('[Twikee] wxpusher misconfigured: WXPUSHER_APP_TOKEN/WXPUSHER_UIDS missing')
     }
   } else if (type === 'wecom') {
     const key = cfg['WECOM_KEY']
     if (key) {
-      service.addChannel('wecom', new WecomAdapter({ key }), ['comment.new', 'comment.reply'])
+      service.addChannel('wecom', new WecomAdapter({ key }), commentEvents)
     } else {
       console.warn('[Twikee] wecom misconfigured: WECOM_KEY missing')
     }

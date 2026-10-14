@@ -121,7 +121,24 @@ app.get('/api/config', configLimiter, async (c) => {
     COMMENT_PAGE_SIZE: cfg.COMMENT_PAGE_SIZE || '',
     DEMO_ENABLED: cfg.DEMO_ENABLED !== 'false',
     COMMENTS_CLOSED: cfg.COMMENTS_CLOSED === 'true',
+    // 图床上传地址（公开）：前端直传图片用。token 是密钥，不下发；
+    // 需要鉴权的图床请把 token 拼在 IMAGE_CDN 的 URL 里（如 ?token=xxx）。
+    IMAGE_CDN: cfg.IMAGE_CDN || '',
+    MAX_IMAGE_SIZE: cfg.MAX_IMAGE_SIZE || '',
   })
+})
+
+// 演示模式下禁用新增的公开写端点（举报、编辑/删除自己的评论）：
+// 创建评论与点赞在 demo 模式下保持可用（既有行为不变），其余新增写操作返回 403。
+// 注意：必须注册在 app.route('/api/comment') 之前，Hono 按注册顺序匹配。
+app.use('/api/comment/*', async (c, next) => {
+  if (process.env.DEMO_MODE) {
+    const method = c.req.method
+    if (method === 'PUT' || method === 'DELETE' || (method === 'POST' && c.req.path.endsWith('/report'))) {
+      return c.json({ error: 'Not available in demo mode' }, 403)
+    }
+  }
+  await next()
 })
 
 app.route('/api/comment', createCommentRoutes())
