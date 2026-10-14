@@ -127,14 +127,14 @@ describe('AdminCommentQuerySchema', () => {
     if (r.success) expect(r.data.status).toBe('all')
   })
 
-  it('accepts approved/spam status filters', () => {
-    for (const status of ['all', 'approved', 'spam']) {
+  it('accepts approved/spam/deleted status filters', () => {
+    for (const status of ['all', 'approved', 'spam', 'deleted']) {
       expect(AdminCommentQuerySchema.safeParse({ status }).success, status).toBe(true)
     }
   })
 
   it('rejects unknown status', () => {
-    expect(AdminCommentQuerySchema.safeParse({ status: 'deleted' }).success).toBe(false)
+    expect(AdminCommentQuerySchema.safeParse({ status: 'nope' }).success).toBe(false)
   })
 
   it('still parses includeSpam=false correctly (no Boolean coerce trap)', () => {

@@ -103,9 +103,16 @@ describe('new public endpoints', () => {
     expect(res.status).toBe(400)
   })
 
-  it('GET /count caps at 20 urls', async () => {
-    const { app, calls } = makeCommentApp()
+  it('GET /count rejects more than 20 urls', async () => {
+    const { app } = makeCommentApp()
     const urls = Array.from({ length: 25 }, (_, i) => `/p${i}`).join(',')
+    const res = await app.request('/count?urls=' + encodeURIComponent(urls))
+    expect(res.status).toBe(400)
+  })
+
+  it('GET /count accepts exactly 20 urls', async () => {
+    const { app, calls } = makeCommentApp()
+    const urls = Array.from({ length: 20 }, (_, i) => `/p${i}`).join(',')
     const res = await app.request('/count?urls=' + encodeURIComponent(urls))
     expect(res.status).toBe(200)
     expect(calls.getCount).toHaveLength(20)

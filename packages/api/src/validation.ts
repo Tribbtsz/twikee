@@ -115,7 +115,7 @@ export const AdminCommentQuerySchema = z.object({
     .transform((v) => v === 'true'),
   // 审核状态过滤：由服务端在 SQL 层过滤，避免「客户端只过滤当前页」造成的
   // 计数/分页错位
-  status: z.enum(['all', 'approved', 'spam']).default('all'),
+  status: z.enum(['all', 'approved', 'spam', 'deleted']).default('all'),
   // 关键词搜索：匹配评论内容或昵称（服务端 LIKE，走参数化）
   keyword: z.string().max(100).optional(),
 })

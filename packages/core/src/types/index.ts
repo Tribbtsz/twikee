@@ -69,7 +69,7 @@ export interface CommentQuery {
   includeSpam?: boolean
   includeDeleted?: boolean
   /** 管理端按审核状态过滤；'all' 时忽略 includeSpam 的额外过滤 */
-  status?: 'all' | 'approved' | 'spam'
+  status?: 'all' | 'approved' | 'spam' | 'deleted'
   /** 管理端关键词搜索：匹配 content / nick（LIKE，参数化） */
   keyword?: string
 }

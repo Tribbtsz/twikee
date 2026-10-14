@@ -88,7 +88,7 @@ Keys marked as secret are never returned by `GET /api/admin/config`; sending an 
 
 ### Batch comment counts `GET /api/comment/count`
 
-- The `urls` query string is a comma-separated list of page urls, up to 20: `GET /api/comment/count?urls=/post/a,/post/b`.
+- The `urls` query string is a comma-separated list of page urls, up to 20: `GET /api/comment/count?urls=/post/a,/post/b`. More than 20 returns 400 (no silent truncation).
 - Returns `{ counts: { "/post/a": 3, "/post/b": 0 } }`, using the same counting rules as the comment list (spam and deleted comments excluded).
 - Built for blog index / archive pages that need a per-article comment count without pulling full lists.
 
@@ -117,6 +117,7 @@ Keys marked as secret are never returned by `GET /api/admin/config`; sending an 
 ### Admin keyword search
 
 - `GET /api/admin/comments` and `/api/admin/comments/all` accept a `keyword` query parameter that matches comment content or nick via a parameterized `LIKE` (wildcards escaped).
+- The `status` parameter additionally accepts `deleted`: shows only soft-deleted comments (the admin "Deleted" tab), handy for recovering accidental deletions.
 - It composes with the `status` tab and pagination; the admin comment list has a search box (fires 400ms after typing stops).
 
 ### IP blocklist `BLOCKED_IPS`

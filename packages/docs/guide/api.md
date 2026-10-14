@@ -90,7 +90,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 
 ### 批量评论数 `GET /api/comment/count`
 
-- 查询串 `urls` 为逗号分隔的页面 url，最多 20 个：`GET /api/comment/count?urls=/post/a,/post/b`。
+- 查询串 `urls` 为逗号分隔的页面 url，最多 20 个：`GET /api/comment/count?urls=/post/a,/post/b`。超过 20 个返回 400（不会静默截断）。
 - 返回 `{ counts: { "/post/a": 3, "/post/b": 0 } }`，计数口径与评论列表一致（排除垃圾评论与已删除）。
 - 供博客首页、归档页等需要"每篇文章评论数"的场景，避免逐页拉列表。
 
@@ -119,6 +119,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 ### 管理端关键词搜索
 
 - `GET /api/admin/comments` 与 `/api/admin/comments/all` 支持 `keyword` 查询参数，按评论内容或昵称做 `LIKE` 搜索（参数化查询，通配符已转义）。
+- `status` 参数在 `all/approved/spam` 之外还支持 `deleted`：只看已软删除的评论（管理后台"已删除" tab），方便找回误删。
 - 与 `status` tab、分页共存；管理后台评论列表页有搜索框（输入停 400ms 后自动触发）。
 
 ### IP 黑名单 `BLOCKED_IPS`

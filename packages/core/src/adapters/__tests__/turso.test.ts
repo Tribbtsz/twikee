@@ -53,6 +53,17 @@ describe('TursoAdapter comments.getList status filter', () => {
     expect(r.totalPages).toBe(1)
     expect(r.data.every((c) => c.isSpam)).toBe(true)
   })
+
+  it('status=deleted returns only soft-deleted comments', async () => {
+    const created = await adapter.comments.create({ url: '/p', nick: 'C', content: 'to-delete' })
+    await adapter.comments.softDelete(created.id)
+    const deleted = await adapter.comments.getList({ url: '/p', includeSpam: true, status: 'deleted' })
+    expect(deleted.total).toBe(1)
+    expect(deleted.data[0].id).toBe(created.id)
+    // 普通筛选看不到已删除的
+    const all = await adapter.comments.getList({ url: '/p', includeSpam: true, status: 'all' })
+    expect(all.total).toBe(2)
+  })
 })
 
 describe('TursoAdapter comments.getList keyword search', () => {

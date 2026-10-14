@@ -178,9 +178,12 @@ export function createCommentRoutes() {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
-      .slice(0, MAX_COUNT_URLS)
     if (urls.length === 0) {
       return c.json({ error: 'urls is required' }, 400)
+    }
+    // 超过上限直接 400（而不是静默截断），让调用方明确知道被拒绝了
+    if (urls.length > MAX_COUNT_URLS) {
+      return c.json({ error: `too many urls, max ${MAX_COUNT_URLS}` }, 400)
     }
     if (urls.some((u) => u.length > 2000)) {
       return c.json({ error: 'url too long' }, 400)

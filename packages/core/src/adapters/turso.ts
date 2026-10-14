@@ -228,8 +228,10 @@ class TursoCommentRepository implements CommentRepository {
     // 这样 count 与 list 用同一个 where，分页与计数天然一致
     if (status === 'spam') conditions.push('is_spam = 1')
     else if (status === 'approved') conditions.push('is_spam = 0')
-    else if (!includeSpam) conditions.push('is_spam = 0')
-    if (!includeDeleted) conditions.push('deleted = 0')
+    else if (status !== 'deleted' && !includeSpam) conditions.push('is_spam = 0')
+    // 已删除筛选：只看 deleted = 1（不论 spam 状态，方便找回误删）
+    if (status === 'deleted') conditions.push('deleted = 1')
+    else if (!includeDeleted) conditions.push('deleted = 0')
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const countSql = `SELECT COUNT(*) as count FROM comments ${where}`
