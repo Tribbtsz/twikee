@@ -4,6 +4,7 @@ export type { CommentStats, LikeResult } from './adapters/base'
 export { TursoAdapter } from './adapters/turso'
 export { CommentService } from './services/comment'
 export { AuthService } from './services/auth'
+export { signEditToken, verifyEditToken, EDIT_WINDOW_MS } from './services/auth'
 export {
   NotificationService,
   TelegramAdapter,

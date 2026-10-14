@@ -1,6 +1,6 @@
 import type { User } from '../types'
 import type { DatabaseAdapter } from '../adapters/base'
-import { createHash, timingSafeEqual, randomBytes } from 'crypto'
+import { createHash, createHmac, timingSafeEqual, randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
 
 let cachedSecret: string | null = null
@@ -52,6 +52,30 @@ function safeEqual(a: string, b: string): boolean {
   if (bufA.length !== bufB.length) return false
   return timingSafeEqual(bufA, bufB)
 }
+
+/**
+ * 访客编辑凭证：创建评论成功后签发给评论者本人，用于 30 分钟内
+ * 编辑/删除自己的评论（公开 PUT / DELETE /api/comment/:id）。
+ *
+ * token = HMAC-SHA256("twikee-edit:" + commentId, TWIKEE_SECRET)，无状态：
+ * 伪造需要知道服务端密钥；有效期不靠 token 本身，而靠评论的 createdAt
+ *（服务端校验 Date.now() - createdAt < EDIT_WINDOW_MS）。
+ */
+export function signEditToken(commentId: string): string {
+  return createHmac('sha256', getJwtSecret()).update(`twikee-edit:${commentId}`).digest('hex')
+}
+
+/** 校验编辑凭证（常量时间比较，防时序攻击） */
+export function verifyEditToken(commentId: string, token: string): boolean {
+  if (!token || token.length > 128) return false
+  const expected = signEditToken(commentId)
+  const a = Buffer.from(token, 'utf8')
+  const b = Buffer.from(expected, 'utf8')
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+/** 访客可编辑/删除自己评论的时间窗口（30 分钟） */
+export const EDIT_WINDOW_MS = 30 * 60 * 1000
 
 export class AuthService {
   private db: DatabaseAdapter

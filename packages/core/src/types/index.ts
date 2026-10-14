@@ -70,6 +70,8 @@ export interface CommentQuery {
   includeDeleted?: boolean
   /** 管理端按审核状态过滤；'all' 时忽略 includeSpam 的额外过滤 */
   status?: 'all' | 'approved' | 'spam'
+  /** 管理端关键词搜索：匹配 content / nick（LIKE，参数化） */
+  keyword?: string
 }
 
 export interface PaginatedResult<T> {
@@ -99,6 +101,8 @@ export interface NotificationEvent {
     comment: Comment
     url: string
     siteName?: string
+    /** admin.report 的举报原因（访客填写，可空） */
+    reason?: string
   }
 }
 

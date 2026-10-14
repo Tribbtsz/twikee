@@ -137,3 +137,25 @@ describe('AuthService', () => {
     expect(u2.id).toBe(u1.id)
   })
 })
+
+describe('edit tokens', () => {
+  it('sign/verify roundtrips for the same comment id', async () => {
+    const { signEditToken, verifyEditToken } = await import('../auth')
+    const token = signEditToken('comment-1')
+    expect(typeof token).toBe('string')
+    expect(token.length).toBe(64)
+    expect(verifyEditToken('comment-1', token)).toBe(true)
+  })
+
+  it('rejects forged or cross-comment tokens', async () => {
+    const { signEditToken, verifyEditToken } = await import('../auth')
+    const token = signEditToken('comment-1')
+    expect(verifyEditToken('comment-1', 'forged')).toBe(false)
+    expect(verifyEditToken('comment-1', '')).toBe(false)
+    // 别的评论的 token 不能拿来用
+    expect(verifyEditToken('comment-2', token)).toBe(false)
+    // 篡改一个字符即失效
+    const tampered = token.slice(0, -1) + (token.endsWith('0') ? '1' : '0')
+    expect(verifyEditToken('comment-1', tampered)).toBe(false)
+  })
+})

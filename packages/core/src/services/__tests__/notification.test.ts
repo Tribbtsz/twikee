@@ -374,6 +374,19 @@ describe('NotificationService', () => {
     expect(b.send).not.toHaveBeenCalled()
   })
 
+  it('delivers admin.report events to subscribed channels', async () => {
+    const a = { send: vi.fn(async () => {}) }
+    const svc = new NotificationService()
+    svc.addChannel('a', a, ['comment.new', 'comment.reply', 'admin.report'])
+    const event = makeEvent()
+    event.type = 'admin.report'
+    event.payload.reason = '广告'
+    await svc.send(event)
+    expect(a.send).toHaveBeenCalledTimes(1)
+    expect(a.send.mock.calls[0][0].type).toBe('admin.report')
+    expect(a.send.mock.calls[0][0].payload.reason).toBe('广告')
+  })
+
   it('isolates channel failures', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const bad = {

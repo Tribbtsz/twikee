@@ -163,8 +163,7 @@ export class TelegramAdapter implements ChannelAdapter {
   }
 
   async send(event: NotificationEvent): Promise<void> {
-    const { comment, url, siteName } = event.payload
-    const text = this.formatMessage(comment, url, siteName)
+    const text = this.formatMessage(event)
 
     const res = await postJson(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
       chat_id: this.chatId,
@@ -183,7 +182,25 @@ export class TelegramAdapter implements ChannelAdapter {
     }
   }
 
-  private formatMessage(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
+  private formatMessage(event: NotificationEvent): string {
+    const { comment, url, siteName, reason } = event.payload
+    if (event.type === 'admin.report') {
+      const safeLink = sanitizeUrl(comment.link)
+      return truncateHtml(
+        `
+<b>[${escapeHtml(siteName ?? 'Twikee')}] 评论举报</b>
+
+<b>被举报评论:</b> ${escapeHtml(comment.nick)}
+<b>举报原因:</b> ${escapeHtml(reason || '未填写')}
+${safeLink ? `<b>网站:</b> ${escapeHtml(safeLink)}\n` : ''}
+<b>评论内容:</b>
+${escapeHtml(comment.content)}
+
+<b>页面:</b> ${escapeHtml(url)}
+    `.trim(),
+        4096,
+      )
+    }
     const type = comment.rid ? '回复' : '新评论'
     const safeLink = sanitizeUrl(comment.link)
     return truncateHtml(
@@ -240,19 +257,19 @@ export class EmailAdapter implements ChannelAdapter {
   }
 
   async send(event: NotificationEvent): Promise<void> {
-    const { comment, url, siteName } = event.payload
-    const subject = `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`.replace(
-      /[\r\n]+/g,
-      ' ',
-    )
+    const { comment, siteName } = event.payload
+    const subject =
+      event.type === 'admin.report'
+        ? `[${siteName ?? 'Twikee'}] 评论举报 - ${comment.nick}`
+        : `[${siteName ?? 'Twikee'}] ${comment.rid ? '新回复' : '新评论'} - ${comment.nick}`
 
     await postJson(
       'https://api.resend.com/emails',
       {
         from: this.from,
         to: this.to,
-        subject,
-        html: this.formatHtml(comment, url, siteName),
+        subject: subject.replace(/[\r\n]+/g, ' '),
+        html: this.formatHtml(event),
       },
       {
         headers: { Authorization: `Bearer ${this.apiKey}` },
@@ -260,9 +277,21 @@ export class EmailAdapter implements ChannelAdapter {
     )
   }
 
-  private formatHtml(comment: NotificationEvent['payload']['comment'], url: string, siteName?: string): string {
+  private formatHtml(event: NotificationEvent): string {
+    const { comment, url, siteName, reason } = event.payload
     const safeLink = sanitizeUrl(comment.link)
     const safeUrl = sanitizeUrl(url)
+    if (event.type === 'admin.report') {
+      return `
+      <h2>${escapeHtml(siteName ?? 'Twikee')} - 评论举报</h2>
+      <p><strong>被举报评论:</strong> ${escapeHtml(comment.nick)}</p>
+      <p><strong>举报原因:</strong> ${escapeHtml(reason || '未填写')}</p>
+      ${safeLink ? `<p><strong>网站:</strong> <a href="${escapeHtml(safeLink)}">${escapeHtml(safeLink)}</a></p>` : ''}
+      <p><strong>评论内容:</strong></p>
+      <div style="background: #f5f5f5; padding: 10px; border-radius: 5px;">${escapeHtml(truncate(comment.content, 5000))}</div>
+      ${safeUrl ? `<p><strong>页面:</strong> <a href="${escapeHtml(safeUrl)}">${escapeHtml(safeUrl)}</a></p>` : `<p><strong>页面:</strong> ${escapeHtml(url)}</p>`}
+    `
+    }
     return `
       <h2>${escapeHtml(siteName ?? 'Twikee')} - ${comment.rid ? '新回复' : '新评论'}</h2>
       <p><strong>昵称:</strong> ${escapeHtml(comment.nick)}</p>
@@ -288,10 +317,11 @@ export class WxPusherAdapter implements ChannelAdapter {
   }
 
   async send(event: NotificationEvent): Promise<void> {
-    const { comment, url, siteName } = event.payload
-    const type = comment.rid ? '回复' : '新评论'
+    const { comment, url, siteName, reason } = event.payload
+    const type = event.type === 'admin.report' ? '评论举报' : comment.rid ? '回复' : '新评论'
+    const reportLine = event.type === 'admin.report' ? `\n举报原因: ${reason || '未填写'}` : ''
     const content = truncate(
-      `[${siteName ?? 'Twikee'}] ${type}通知\n\n昵称: ${comment.nick}${comment.mail ? `\n邮箱: ${comment.mail}` : ''}${comment.link ? `\n网站: ${comment.link}` : ''}\n内容:\n${comment.content}\n\n页面: ${url}`,
+      `[${siteName ?? 'Twikee'}] ${type}通知${reportLine}\n\n昵称: ${comment.nick}${comment.mail ? `\n邮箱: ${comment.mail}` : ''}${comment.link ? `\n网站: ${comment.link}` : ''}\n内容:\n${comment.content}\n\n页面: ${url}`,
       4000,
     )
     const summary = truncate(`[${siteName ?? 'Twikee'}] ${type} - ${comment.nick}`, 60)
@@ -327,8 +357,8 @@ export class WecomAdapter implements ChannelAdapter {
   }
 
   async send(event: NotificationEvent): Promise<void> {
-    const { comment, url, siteName } = event.payload
-    const type = comment.rid ? '回复' : '新评论'
+    const { comment, url, siteName, reason } = event.payload
+    const type = event.type === 'admin.report' ? '评论举报' : comment.rid ? '回复' : '新评论'
     const quote = (s: string): string =>
       s
         .split('\n')
@@ -338,10 +368,12 @@ export class WecomAdapter implements ChannelAdapter {
       `[${escapeWecomMarkdown(text)}](${href.replace(/\(/g, '%28').replace(/\)/g, '%29')})`
     const safeLink = sanitizeUrl(comment.link)
     const safeUrl = sanitizeUrl(url)
+    const reportSection = event.type === 'admin.report' ? `${quote(`举报原因: ${reason || '未填写'}`)}\n` : ''
     // 企业微信群机器人 markdown 上限 4096 字符
     const content = truncateWecom(
       `## ${escapeWecomMarkdown(`[${siteName ?? 'Twikee'}] ${type}通知`)}\n` +
         `${quote(`昵称: ${comment.nick}`)}\n` +
+        reportSection +
         (comment.mail ? `${quote(`邮箱: ${comment.mail}`)}\n` : '') +
         (safeLink ? `> 网站: ${mdLink(safeLink, safeLink)}\n` : '') +
         `${quote(`内容:\n${comment.content}`)}\n` +

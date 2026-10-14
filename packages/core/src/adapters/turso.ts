@@ -207,7 +207,7 @@ class TursoCommentRepository implements CommentRepository {
   }
 
   async getList(query: CommentQuery): Promise<PaginatedResult<Comment>> {
-    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false, status } = query
+    const { url, page = 1, pageSize = 10, includeSpam = false, includeDeleted = false, status, keyword } = query
     const offset = (page - 1) * pageSize
 
     const conditions: string[] = []
@@ -215,6 +215,14 @@ class TursoCommentRepository implements CommentRepository {
     if (url) {
       conditions.push('url = ?')
       args.push(url)
+    }
+    // 关键词搜索：匹配内容或昵称。LIKE 通配符先转义，查询走参数化防注入。
+    // SQLite 的 LIKE 对 ASCII 默认大小写不敏感，中文不受大小写影响。
+    const kw = keyword?.trim()
+    if (kw) {
+      const escaped = kw.replace(/[\\%_]/g, (m) => `\\${m}`)
+      conditions.push(`(content LIKE ? ESCAPE '\\' OR nick LIKE ? ESCAPE '\\')`)
+      args.push(`%${escaped}%`, `%${escaped}%`)
     }
     // 显式 status 优先于 includeSpam：approved/spam 直接落 SQL 条件，
     // 这样 count 与 list 用同一个 where，分页与计数天然一致
@@ -282,10 +290,12 @@ class TursoCommentRepository implements CommentRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await this.client.execute({
-      sql: 'DELETE FROM comments WHERE id = ?',
-      args: [id],
-    })
+    // 硬删除：评论行 + 其点赞记录一起清除，不留孤儿行。
+    // 点赞记录只含访客 UUID（无邮箱/IP 等 PII），但评论都没了留着也无意义。
+    await this.runAtomic([
+      { sql: 'DELETE FROM likes WHERE comment_id = ?', args: [id] },
+      { sql: 'DELETE FROM comments WHERE id = ?', args: [id] },
+    ])
   }
 
   async softDelete(id: string): Promise<Comment> {
