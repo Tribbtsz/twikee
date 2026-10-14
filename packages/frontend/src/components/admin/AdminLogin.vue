@@ -86,7 +86,15 @@ const handleLogin = async () => {
     const data = await res.json()
 
     if (data.error) {
-      error.value = '密码错误'
+      // 别把所有失败都说成"密码错误"：429 是限流（5 分钟 10 次），401 才是密码错，
+      // 其他（如 403 演示模式禁用、500）直接展示服务端返回的原因，方便定位
+      if (res.status === 429) {
+        error.value = '尝试太频繁，请 5 分钟后再试'
+      } else if (res.status === 401) {
+        error.value = '密码错误'
+      } else {
+        error.value = typeof data.error === 'string' ? data.error : '登录失败'
+      }
     } else {
       emit('login', data.token)
     }

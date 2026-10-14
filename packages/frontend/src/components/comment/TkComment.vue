@@ -825,6 +825,26 @@ const deleteOwn = async (id: string) => {
   gap: 0.75rem;
 }
 
+/* 编辑/举报按钮：与 TkAction 的赞/回复同一样式。
+ * 注意：tk-action__btn 的样式定义在 TkAction.vue 的 scoped 块里，
+ * 作用不到这里的按钮，所以这里要再定义一遍（否则是大黑字默认样式）。 */
+.tk-comment__more-actions .tk-action__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.tk-comment__more-actions .tk-action__btn:hover {
+  color: var(--primary);
+}
+
 /* 编辑自己的评论 */
 .tk-comment__edit {
   margin: 0.5rem 0;

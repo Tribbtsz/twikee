@@ -72,12 +72,13 @@ const commentsPageSize = ref(20)
 const commentsTotal = ref(0)
 const commentsTotalPages = computed(() => Math.ceil(commentsTotal.value / commentsPageSize.value))
 
-type StatusTab = 'all' | 'approved' | 'spam'
+type StatusTab = 'all' | 'approved' | 'spam' | 'deleted'
 const activeTab = ref<StatusTab>('all')
 const tabs: { key: StatusTab; label: string }[] = [
   { key: 'all', label: '全部' },
   { key: 'approved', label: '已发布' },
   { key: 'spam', label: '待审核' },
+  { key: 'deleted', label: '已删除' },
 ]
 
 const fetchPages = async () => {
