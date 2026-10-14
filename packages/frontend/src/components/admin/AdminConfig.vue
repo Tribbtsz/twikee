@@ -9,7 +9,7 @@ import Switch from '@/components/ui/Switch.vue'
 import Select from '@/components/ui/Select.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Toast from '@/components/ui/Toast.vue'
-import { Save, RotateCcw, Mail, Bell, Shield, Globe } from 'lucide-vue-next'
+import { Save, RotateCcw, Mail, Bell, Shield, Globe, Image as ImageIcon } from 'lucide-vue-next'
 
 type ConfigItem = {
   key: string
@@ -169,6 +169,22 @@ const settings: ConfigGroup[] = [
       },
       { key: 'WEBHOOK_URL', label: 'Webhook URL', placeholder: 'https://...', desc: '自定义通知接口', default: '' },
       {
+        key: 'WEBHOOK_METHOD',
+        label: 'Webhook 请求方法',
+        placeholder: 'POST',
+        desc: '通知请求使用的 HTTP 方法',
+        type: 'select',
+        options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        default: 'POST',
+      },
+      {
+        key: 'WEBHOOK_HEADERS',
+        label: 'Webhook 自定义请求头',
+        placeholder: '{"Authorization": "Bearer xxx"}',
+        desc: 'JSON 对象，如 {"Authorization": "Bearer xxx"}，留空不发送',
+        default: '',
+      },
+      {
         key: 'WXPUSHER_APP_TOKEN',
         label: 'WxPusher AppToken',
         placeholder: 'AT_xxx',
@@ -217,6 +233,41 @@ const settings: ConfigGroup[] = [
     name: '安全设置',
     items: [
       { key: 'ADMIN_PASSWORD', label: '管理员密码', placeholder: '', desc: '留空则不修改', secret: true, default: '' },
+      {
+        key: 'BLOCKED_IPS',
+        label: 'IP 黑名单',
+        placeholder: '1.2.3.4, 5.6.7.8',
+        desc: '逗号分隔，被拉黑的 IP 无法发表评论',
+        default: '',
+      },
+    ],
+  },
+  {
+    icon: ImageIcon,
+    name: '图片设置',
+    items: [
+      {
+        key: 'IMAGE_CDN',
+        label: '图床上传地址',
+        placeholder: 'https://img.example.com/upload',
+        desc: '评论框图片直传地址。接口约定：POST multipart，文件字段名为 file，返回 JSON 含 url 字段；需鉴权请把 token 拼在 URL 里',
+        default: '',
+      },
+      {
+        key: 'IMAGE_CDN_TOKEN',
+        label: '图床 Token',
+        placeholder: '',
+        desc: '服务端预留，留空不修改（前端直传不使用此 token）',
+        secret: true,
+        default: '',
+      },
+      {
+        key: 'MAX_IMAGE_SIZE',
+        label: '图片大小上限（MB）',
+        placeholder: '5',
+        desc: '前端上传时的大小限制，默认 5MB',
+        default: '5',
+      },
     ],
   },
 ]

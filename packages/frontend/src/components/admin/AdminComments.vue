@@ -10,6 +10,7 @@ import Toast from '@/components/ui/Toast.vue'
 import {
   Eye,
   EyeOff,
+  Trash,
   Trash2,
   Pin,
   PinOff,
@@ -42,6 +43,12 @@ const checkAuth = (res: Response) => {
 
 const showDeleteDialog = ref(false)
 const deleteTargetId = ref<string | null>(null)
+// 彻底删除：二次确认，数据库层面移除（含邮箱/IP 等全部信息，不可恢复）
+const showPermanentDeleteDialog = ref(false)
+const permanentDeleteTargetId = ref<string | null>(null)
+// 评论关键词搜索（服务端 LIKE，搜内容/昵称）
+const commentsSearchQuery = ref('')
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
 const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' })
 
 const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -100,6 +107,8 @@ const fetchComments = async (url: string) => {
       includeSpam: 'true',
       status: activeTab.value,
     })
+    const keyword = commentsSearchQuery.value.trim()
+    if (keyword) params.set('keyword', keyword)
     const res = await fetch(`${props.apiUrl}/api/admin/comments?${params}`, {
       headers: { Authorization: `Bearer ${props.token}` },
     })
@@ -117,6 +126,7 @@ const fetchComments = async (url: string) => {
 const viewPageComments = (url: string) => {
   currentUrl.value = url
   commentsPage.value = 1
+  commentsSearchQuery.value = ''
   activeTab.value = 'all'
   fetchComments(url)
 }
@@ -175,6 +185,30 @@ const confirmDelete = async () => {
   } catch (e) {
     console.error('[Twikee] delete failed:', e)
     showToast('删除失败', 'error')
+  }
+}
+
+/** 彻底删除：数据库层面移除，邮箱/IP 等全部信息一并清除，不可恢复 */
+const askPermanentDelete = (id: string) => {
+  permanentDeleteTargetId.value = id
+  showPermanentDeleteDialog.value = true
+}
+
+const confirmPermanentDelete = async () => {
+  if (!permanentDeleteTargetId.value) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/admin/comment/${permanentDeleteTargetId.value}/permanent`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${props.token}` },
+    })
+    if (!checkAuth(res)) return
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    showToast('评论已彻底删除', 'success')
+    await fetchComments(currentUrl.value!)
+    emit('refresh')
+  } catch (e) {
+    console.error('[Twikee] permanent delete failed:', e)
+    showToast('彻底删除失败', 'error')
   }
 }
 
@@ -238,6 +272,14 @@ const filteredPagesTotalPages = computed(() => Math.ceil(filteredPagesTotal.valu
 onMounted(fetchPages)
 watch(commentsPage, () => {
   if (currentUrl.value) fetchComments(currentUrl.value)
+})
+// 关键词搜索：输入停 400ms 后触发，回到第一页（与状态 tab 共存）
+watch(commentsSearchQuery, () => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    commentsPage.value = 1
+    if (currentUrl.value) fetchComments(currentUrl.value)
+  }, 400)
 })
 </script>
 
@@ -321,6 +363,10 @@ watch(commentsPage, () => {
           </div>
         </div>
         <div class="flex gap-2 items-center">
+          <div class="relative">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input v-model="commentsSearchQuery" placeholder="搜索内容/昵称..." class="pl-9 w-48" />
+          </div>
           <Button variant="outline" size="sm" aria-label="刷新评论列表" @click="fetchComments(currentUrl!)">
             <RefreshCw class="w-4 h-4" />
           </Button>
@@ -405,6 +451,15 @@ watch(commentsPage, () => {
                 <Button variant="ghost" size="sm" aria-label="删除评论" @click="moderate(comment.id, 'delete')">
                   <Trash2 class="w-4 h-4 text-destructive" />
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="彻底删除评论"
+                  title="彻底删除：从数据库移除，含邮箱/IP 等全部信息，不可恢复"
+                  @click="askPermanentDelete(comment.id)"
+                >
+                  <Trash class="w-4 h-4 text-destructive" />
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -431,6 +486,15 @@ watch(commentsPage, () => {
       confirm-text="删除"
       variant="destructive"
       @confirm="confirmDelete"
+    />
+
+    <Dialog
+      v-model:open="showPermanentDeleteDialog"
+      title="彻底删除评论"
+      description="将从数据库中彻底移除这条评论，评论者的邮箱、IP 等全部信息一并清除，不可恢复。确定吗？"
+      confirm-text="彻底删除"
+      variant="destructive"
+      @confirm="confirmPermanentDelete"
     />
 
     <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />

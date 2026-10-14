@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
 import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/utils'
+import { ImagePlus } from 'lucide-vue-next'
 import type { ResolvedTwikeeAppearance } from '@/types'
 
 // marked 的 options 是全局副作用：TkComment 在模块顶层调过 setOptions，
@@ -19,6 +20,12 @@ const props = defineProps<{
   appearance?: ResolvedTwikeeAppearance
   /** 评论内容输入框占位符（来自 COMMENT_PLACEHOLDER 配置） */
   placeholder?: string
+  /**
+   * 图床上传配置（来自公开配置 IMAGE_CDN / MAX_IMAGE_SIZE）。
+   * 未配置（url 为空）时不显示上传按钮。
+   * 图床接口约定：POST multipart，文件字段名为 `file`，返回 JSON 含 `url` 字段。
+   */
+  imageUpload?: { url: string; maxSizeMb: number }
   /**
    * 真正的提交函数。返回 false 或抛错表示失败，此时保留输入内容；
    * 只有明确成功（返回非 false）才清空。
@@ -48,6 +55,10 @@ const linkError = ref('')
 
 const mailTouched = ref(false)
 const linkTouched = ref(false)
+const imageInput = ref<HTMLInputElement | null>(null)
+const contentInput = ref<unknown>(null)
+const isUploading = ref(false)
+const uploadError = ref('')
 
 const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const urlReg = /^https?:\/\/.+\..+/
@@ -130,6 +141,67 @@ const handleSubmit = async () => {
     isSending.value = false
   }
 }
+
+/** 图床是否可用：配置了上传地址才显示按钮 */
+const imageUploadEnabled = computed(() => !!props.imageUpload?.url)
+
+/**
+ * 图片直传图床（不经过 Twikee 服务端，避免 Vercel 函数超时和流量费）。
+ * 接口约定：POST multipart，文件字段名为 `file`，成功返回 JSON 含 `url` 字段。
+ */
+const onPickImage = () => {
+  uploadError.value = ''
+  imageInput.value?.click()
+}
+
+const insertImageMarkdown = (imageUrl: string) => {
+  const snippet = `![](${imageUrl})`
+  // 尽量插在光标处；拿不到 textarea 引用时退回追加到末尾
+  const el = (contentInput.value as { $el?: HTMLTextAreaElement } | null)?.$el
+  if (el && typeof el.selectionStart === 'number') {
+    const start = el.selectionStart
+    const end = el.selectionEnd ?? start
+    content.value = `${content.value.slice(0, start)}${snippet}${content.value.slice(end)}`
+  } else {
+    content.value = content.value ? `${content.value}\n${snippet}` : snippet
+  }
+}
+
+const onImageSelected = async (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  // 重置 input，保证选同一文件也能再次触发 change
+  if (imageInput.value) imageInput.value.value = ''
+  if (!file || !props.imageUpload?.url) return
+
+  const maxBytes = Math.max(1, props.imageUpload.maxSizeMb || 5) * 1024 * 1024
+  if (file.size > maxBytes) {
+    uploadError.value = `图片超过大小限制（${props.imageUpload.maxSizeMb || 5}MB）`
+    return
+  }
+  if (!file.type.startsWith('image/')) {
+    uploadError.value = '请选择图片文件'
+    return
+  }
+
+  isUploading.value = true
+  uploadError.value = ''
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(props.imageUpload.url, { method: 'POST', body: form })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json().catch(() => null)
+    // 约定返回 JSON 含 url 字段；兼容包一层 data 的图床
+    const imageUrl: unknown = data?.url ?? data?.data?.url
+    if (typeof imageUrl !== 'string' || !imageUrl) throw new Error('bad response')
+    insertImageMarkdown(imageUrl)
+  } catch (err) {
+    console.error('[Twikee] image upload failed:', err)
+    uploadError.value = '图片上传失败，请重试'
+  } finally {
+    isUploading.value = false
+  }
+}
 </script>
 
 <template>
@@ -153,17 +225,32 @@ const handleSubmit = async () => {
         <div v-if="isPreview" class="tk-submit__preview" v-html="previewHtml" />
         <Textarea
           v-else
+          ref="contentInput"
           v-model="content"
           :placeholder="placeholder || '说点什么吧... (支持 Markdown)'"
           aria-label="评论内容"
           :rows="4"
         />
+        <span v-if="uploadError" class="tk-submit__error">{{ uploadError }}</span>
 
         <div class="flex items-center justify-between gap-2">
-          <div class="flex gap-2">
+          <div class="flex gap-2 items-center">
             <Button variant="ghost" size="sm" @click="isPreview = !isPreview">
               {{ isPreview ? '编辑' : '预览' }}
             </Button>
+            <Button
+              v-if="imageUploadEnabled"
+              variant="ghost"
+              size="sm"
+              :disabled="isUploading"
+              aria-label="上传图片"
+              title="上传图片"
+              @click="onPickImage"
+            >
+              <ImagePlus class="w-4 h-4 mr-1" />
+              {{ isUploading ? '上传中...' : '图片' }}
+            </Button>
+            <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onImageSelected" />
             <a
               href="https://guides.github.com/features/mastering-markdown/"
               target="_blank"

@@ -10,6 +10,7 @@ import Toast from './components/ui/Toast.vue'
 import { useTwikee } from './composables/useTwikee'
 import { MessageSquare, ShieldCheck } from 'lucide-vue-next'
 import { buildCommentTree } from './lib/comment-tree'
+import { saveEditToken } from './lib/edit-token'
 
 const envId = ref((window as any).TWIKEE_API_URL || '')
 const currentUrl = ref('')
@@ -21,6 +22,8 @@ const demoCheckDone = ref(false)
 const commentsClosed = ref(false)
 const masterTag = ref('博主')
 const commentPlaceholder = ref('')
+const imageCdnUrl = ref('')
+const imageMaxSizeMb = ref(5)
 const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' | 'warning' })
 
 const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
@@ -45,6 +48,7 @@ const loadComments = async () => {
 const handleSubmit = async (data: any): Promise<boolean> => {
   try {
     const result = await submitComment({ ...data, url: currentUrl.value })
+    if (result?.id && result?.editToken) saveEditToken(result.id, result.editToken)
     if (result.isSpam) {
       showToast('评论已提交，正在等待博主审核', 'warning')
     } else {
@@ -67,6 +71,9 @@ onMounted(async () => {
     commentsClosed.value = cfg.COMMENTS_CLOSED === true
     if (cfg.MASTER_TAG) masterTag.value = String(cfg.MASTER_TAG)
     if (cfg.COMMENT_PLACEHOLDER) commentPlaceholder.value = String(cfg.COMMENT_PLACEHOLDER)
+    if (cfg.IMAGE_CDN) imageCdnUrl.value = String(cfg.IMAGE_CDN)
+    const maxSize = Number(cfg.MAX_IMAGE_SIZE)
+    if (Number.isFinite(maxSize) && maxSize > 0) imageMaxSizeMb.value = Math.floor(maxSize)
     const configured = Number(cfg.COMMENT_PAGE_SIZE)
     if (Number.isFinite(configured) && configured > 0)
       pageSize.value = Math.min(100, Math.max(1, Math.floor(configured)))
@@ -141,7 +148,12 @@ watch(page, loadComments)
                 评论已关闭
               </div>
               <div v-else class="mb-6">
-                <TkSubmit :url="currentUrl" :placeholder="commentPlaceholder" :on-submit="handleSubmit" />
+                <TkSubmit
+                  :url="currentUrl"
+                  :placeholder="commentPlaceholder"
+                  :image-upload="{ url: imageCdnUrl, maxSizeMb: imageMaxSizeMb }"
+                  :on-submit="handleSubmit"
+                />
               </div>
 
               <div class="tk-comments-header">

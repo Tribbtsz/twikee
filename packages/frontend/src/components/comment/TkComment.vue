@@ -11,6 +11,7 @@ import { createLikeController } from '@/lib/like'
 import type { LikeController } from '@/lib/like'
 import type { Comment } from '@twikee/core'
 import type { ResolvedTwikeeAppearance } from '@/types'
+import { getEditToken, saveEditToken, clearEditToken } from '@/lib/edit-token'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -39,6 +40,21 @@ const liked = ref(false)
 const replyingToId = ref<string | null>(null)
 const childLikeStates = ref<Record<string, { liked: boolean; count: number }>>({})
 const replyError = ref<string | null>(null)
+
+// 举报
+const reportTargetId = ref<string | null>(null)
+const reportReason = ref('')
+const reportSending = ref(false)
+const reportFeedback = ref<string | null>(null)
+
+// 编辑/删除自己的评论（30 分钟内，凭 localStorage 里的 editToken）
+const editingId = ref<string | null>(null)
+const editContent = ref('')
+const editSaving = ref(false)
+const editError = ref<string | null>(null)
+
+/** 是否显示"编辑"按钮：本地有未过期的 editToken 即为本人 */
+const canEdit = (id: string): boolean => getEditToken(id) !== null
 
 const likeStorageKey = computed(() => `twikee_liked_${props.comment.id}`)
 
@@ -213,6 +229,9 @@ const handleReplySubmit = async (data: any): Promise<boolean> => {
       }),
     })
     if (res.ok) {
+      // 服务端随创建响应返回 editToken：30 分钟内可凭它编辑/删除这条回复
+      const created = await res.json().catch(() => null)
+      if (created?.id && created?.editToken) saveEditToken(created.id, created.editToken)
       replyingToId.value = null
       emit('load')
       return true
@@ -240,6 +259,8 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
       }),
     })
     if (res.ok) {
+      const created = await res.json().catch(() => null)
+      if (created?.id && created?.editToken) saveEditToken(created.id, created.editToken)
       replyingToId.value = null
       emit('load')
       return true
@@ -251,6 +272,110 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
     console.error('[Twikee] child reply failed:', e)
     replyError.value = '网络错误，请重试'
     return false
+  }
+}
+
+// 举报：打开弹窗
+const openReport = (id: string) => {
+  reportTargetId.value = id
+  reportReason.value = ''
+  reportFeedback.value = null
+}
+
+const closeReport = () => {
+  reportTargetId.value = null
+  reportReason.value = ''
+}
+
+const submitReport = async () => {
+  if (!reportTargetId.value || reportSending.value) return
+  reportSending.value = true
+  reportFeedback.value = null
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment/${reportTargetId.value}/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reportReason.value.trim().slice(0, 200) || undefined }),
+    })
+    if (res.ok) {
+      reportFeedback.value = '已举报，管理员会尽快处理'
+      setTimeout(closeReport, 1500)
+    } else {
+      reportFeedback.value = '举报失败，请稍后重试'
+    }
+  } catch {
+    reportFeedback.value = '网络错误，请稍后重试'
+  } finally {
+    reportSending.value = false
+  }
+}
+
+// 编辑自己的评论
+const startEdit = (id: string, content: string) => {
+  editingId.value = id
+  editContent.value = content
+  editError.value = null
+}
+
+const cancelEdit = () => {
+  editingId.value = null
+  editContent.value = ''
+  editError.value = null
+}
+
+const saveEdit = async () => {
+  const id = editingId.value
+  if (!id || editSaving.value) return
+  const token = getEditToken(id)
+  if (!token) {
+    editError.value = '编辑凭证已过期（仅创建后 30 分钟内可编辑）'
+    return
+  }
+  const content = editContent.value.trim()
+  if (!content) {
+    editError.value = '内容不能为空'
+    return
+  }
+  editSaving.value = true
+  editError.value = null
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, editToken: token }),
+    })
+    if (res.ok) {
+      cancelEdit()
+      emit('load')
+    } else {
+      const err = await res.json().catch(() => null)
+      editError.value = err?.error || '保存失败，请重试'
+    }
+  } catch {
+    editError.value = '网络错误，请重试'
+  } finally {
+    editSaving.value = false
+  }
+}
+
+// 删除自己的评论（软删除）
+const deleteOwn = async (id: string) => {
+  const token = getEditToken(id)
+  if (!token) return
+  if (!window.confirm('确定要删除这条评论吗？')) return
+  try {
+    const res = await fetch(`${props.apiUrl}/api/comment/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ editToken: token }),
+    })
+    if (res.ok) {
+      clearEditToken(id)
+      cancelEdit()
+      emit('load')
+    }
+  } catch (e) {
+    console.error('[Twikee] delete own comment failed:', e)
   }
 }
 </script>
@@ -304,7 +429,27 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
           <time class="tk-comment__time">{{ displayTime }}</time>
         </div>
 
+        <div v-if="editingId === comment.id" class="tk-comment__edit">
+          <textarea
+            v-model="editContent"
+            class="tk-comment__edit-input"
+            rows="4"
+            maxlength="10000"
+            aria-label="编辑评论内容"
+          />
+          <div v-if="editError" class="tk-comment__error">{{ editError }}</div>
+          <div class="tk-comment__edit-actions">
+            <button class="tk-comment__edit-btn tk-comment__edit-btn--primary" :disabled="editSaving" @click="saveEdit">
+              {{ editSaving ? '保存中...' : '保存' }}
+            </button>
+            <button class="tk-comment__edit-btn" @click="cancelEdit">取消</button>
+            <button class="tk-comment__edit-btn tk-comment__edit-btn--danger" @click="deleteOwn(comment.id)">
+              删除这条评论
+            </button>
+          </div>
+        </div>
         <div
+          v-else
           class="tk-comment__content"
           :class="{ 'tk-comment__content--collapsed': !isContentExpanded }"
           v-html="renderedContent"
@@ -333,6 +478,17 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
 
         <div class="tk-comment__actions">
           <TkAction :liked="liked" :like-count="likeCount" @like="onLike" @reply="onReply" />
+          <div class="tk-comment__more-actions">
+            <button
+              v-if="canEdit(comment.id)"
+              class="tk-action__btn"
+              aria-label="编辑评论"
+              @click="startEdit(comment.id, comment.content)"
+            >
+              编辑
+            </button>
+            <button class="tk-action__btn" aria-label="举报评论" @click="openReport(comment.id)">举报</button>
+          </div>
         </div>
       </div>
     </div>
@@ -374,7 +530,30 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
               <time class="tk-comment__time">{{ formatTime(child.createdAt) }}</time>
             </div>
 
-            <div class="tk-comment__content" v-html="renderChildContent(child.content)" />
+            <div v-if="editingId === child.id" class="tk-comment__edit">
+              <textarea
+                v-model="editContent"
+                class="tk-comment__edit-input"
+                rows="4"
+                maxlength="10000"
+                aria-label="编辑评论内容"
+              />
+              <div v-if="editError" class="tk-comment__error">{{ editError }}</div>
+              <div class="tk-comment__edit-actions">
+                <button
+                  class="tk-comment__edit-btn tk-comment__edit-btn--primary"
+                  :disabled="editSaving"
+                  @click="saveEdit"
+                >
+                  {{ editSaving ? '保存中...' : '保存' }}
+                </button>
+                <button class="tk-comment__edit-btn" @click="cancelEdit">取消</button>
+                <button class="tk-comment__edit-btn tk-comment__edit-btn--danger" @click="deleteOwn(child.id)">
+                  删除这条评论
+                </button>
+              </div>
+            </div>
+            <div v-else class="tk-comment__content" v-html="renderChildContent(child.content)" />
 
             <div v-if="replyingToId === child.id" class="tk-comment__reply-box" @focusout="handleReplyBoxFocusOut">
               <div v-if="replyError" class="tk-comment__error">{{ replyError }}</div>
@@ -394,8 +573,46 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
                 @like="onChildLike(child.id, child.likes)"
                 @reply="onChildReply(child.id)"
               />
+              <div class="tk-comment__more-actions">
+                <button
+                  v-if="canEdit(child.id)"
+                  class="tk-action__btn"
+                  aria-label="编辑评论"
+                  @click="startEdit(child.id, child.content)"
+                >
+                  编辑
+                </button>
+                <button class="tk-action__btn" aria-label="举报评论" @click="openReport(child.id)">举报</button>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 举报弹窗 -->
+    <div v-if="reportTargetId" class="tk-report__overlay" @click.self="closeReport">
+      <div class="tk-report__dialog" role="dialog" aria-modal="true" aria-label="举报评论">
+        <h4 class="tk-report__title">举报评论</h4>
+        <p class="tk-report__desc">请填写举报原因，管理员会尽快处理。</p>
+        <textarea
+          v-model="reportReason"
+          class="tk-report__input"
+          rows="3"
+          maxlength="200"
+          placeholder="举报原因（可选，最多 200 字）"
+          aria-label="举报原因"
+        />
+        <div v-if="reportFeedback" class="tk-report__feedback">{{ reportFeedback }}</div>
+        <div class="tk-report__actions">
+          <button class="tk-comment__edit-btn" @click="closeReport">取消</button>
+          <button
+            class="tk-comment__edit-btn tk-comment__edit-btn--primary"
+            :disabled="reportSending"
+            @click="submitReport"
+          >
+            {{ reportSending ? '提交中...' : '提交举报' }}
+          </button>
         </div>
       </div>
     </div>
@@ -600,6 +817,133 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
   align-items: center;
   justify-content: space-between;
   margin-top: 0.25rem;
+}
+
+.tk-comment__more-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 编辑自己的评论 */
+.tk-comment__edit {
+  margin: 0.5rem 0;
+}
+
+.tk-comment__edit-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  resize: vertical;
+}
+
+.tk-comment__edit-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.tk-comment__edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tk-comment__edit-btn {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.tk-comment__edit-btn:hover {
+  opacity: 0.85;
+}
+
+.tk-comment__edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tk-comment__edit-btn--primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.tk-comment__edit-btn--danger {
+  color: var(--destructive, #ef4444);
+}
+
+/* 举报弹窗 */
+.tk-report__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.tk-report__dialog {
+  width: 100%;
+  max-width: 24rem;
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.tk-report__title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.tk-report__desc {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0 0 0.75rem;
+}
+
+.tk-report__input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  resize: vertical;
+}
+
+.tk-report__input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.tk-report__feedback {
+  font-size: 0.8125rem;
+  color: var(--primary);
+  margin-top: 0.5rem;
+}
+
+.tk-report__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .tk-comment__replies {

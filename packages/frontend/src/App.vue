@@ -7,6 +7,7 @@ import Button from './components/ui/Button.vue'
 import { resolveAppearance } from './types'
 import type { TwikeeAppearanceOptions } from './types'
 import { buildCommentTree } from './lib/comment-tree'
+import { saveEditToken } from './lib/edit-token'
 
 const props = withDefaults(
   defineProps<{
@@ -37,6 +38,8 @@ const { loading, error, comments, fetchComments, submitComment } = useTwikee({
 const commentsClosed = ref(false)
 const masterTag = ref('博主')
 const commentPlaceholder = ref('')
+const imageCdnUrl = ref('')
+const imageMaxSizeMb = ref(5)
 
 const fetchConfig = async (): Promise<number | null> => {
   try {
@@ -45,6 +48,9 @@ const fetchConfig = async (): Promise<number | null> => {
     commentsClosed.value = cfg.COMMENTS_CLOSED === true
     if (cfg.MASTER_TAG) masterTag.value = String(cfg.MASTER_TAG)
     if (cfg.COMMENT_PLACEHOLDER) commentPlaceholder.value = String(cfg.COMMENT_PLACEHOLDER)
+    if (cfg.IMAGE_CDN) imageCdnUrl.value = String(cfg.IMAGE_CDN)
+    const maxSize = Number(cfg.MAX_IMAGE_SIZE)
+    if (Number.isFinite(maxSize) && maxSize > 0) imageMaxSizeMb.value = Math.floor(maxSize)
     const configured = Number(cfg.COMMENT_PAGE_SIZE)
     // 每页条数交给调用方去应用：列表请求是并发发出的，
     // 这里直接改 pageSize 会被列表返回值的 pageSize 覆盖掉。
@@ -71,6 +77,8 @@ const handleSubmit = async (data: any): Promise<boolean> => {
   submitError.value = null
   try {
     const result = await submitComment({ ...data, url: currentUrl.value })
+    // 服务端随创建响应返回 editToken：30 分钟内可凭它编辑/删除这条评论
+    if (result?.id && result?.editToken) saveEditToken(result.id, result.editToken)
     if (result?.isSpam) {
       submitError.value = '评论已提交，等待博主审核后显示'
     }
@@ -130,6 +138,7 @@ watch(page, loadComments)
         :url="currentUrl"
         :appearance="appearance"
         :placeholder="commentPlaceholder"
+        :image-upload="{ url: imageCdnUrl, maxSizeMb: imageMaxSizeMb }"
         :on-submit="handleSubmit"
       />
       <p v-if="submitError" class="tk-comments-submit-error">{{ submitError }}</p>

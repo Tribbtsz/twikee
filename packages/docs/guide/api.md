@@ -12,10 +12,14 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/health` | 健康检查（部署冒烟用） |
-| `GET` | `/api/config` | 获取公开配置（只返回 5 个公开键） |
+| `GET` | `/api/config` | 获取公开配置（MASTER_TAG、COMMENT_PLACEHOLDER、COMMENT_PAGE_SIZE、DEMO_ENABLED、COMMENTS_CLOSED、IMAGE_CDN、MAX_IMAGE_SIZE） |
 | `GET` | `/api/comment` | 获取评论列表 |
-| `POST` | `/api/comment` | 创建评论 |
+| `POST` | `/api/comment` | 创建评论（成功时返回 `editToken`，30 分钟内可编辑/删除） |
 | `POST` | `/api/comment/:id/like` | 点赞（同一身份再调即取消） |
+| `GET` | `/api/comment/count?urls=/a,/b` | 批量评论数（最多 20 个 url，返回 `{ counts }`） |
+| `POST` | `/api/comment/:id/report` | 举报评论（`{ reason? }`，触发管理员通知） |
+| `PUT` | `/api/comment/:id` | 编辑自己的评论（`{ content, editToken }`，30 分钟内） |
+| `DELETE` | `/api/comment/:id` | 删除自己的评论（`{ editToken }`，软删除） |
 | `GET` | `/api/auth/status` | 是否已设置管理员密码：`{ initialized }` |
 | `POST` | `/api/auth/setup` | 首次设置管理员密码（已设置则 400） |
 | `POST` | `/api/auth/login` | 管理员登录，返回 token |
@@ -25,11 +29,12 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `GET` | `/api/admin/comments` | 评论列表（按 url / 状态 / 是否含垃圾过滤，分页） |
+| `GET` | `/api/admin/comments` | 评论列表（按 url / 状态 / 是否含垃圾 / 关键词过滤，分页） |
 | `GET` | `/api/admin/comments/all` | 同上；不传 `url` 时跨全部页面取，供导出/总览 |
 | `GET` | `/api/admin/pages` | 有评论的页面聚合（条数、垃圾数、最后评论时间） |
 | `PUT` | `/api/admin/comment/:id` | 修改评论（字段白名单校验，防 mass assignment） |
 | `DELETE` | `/api/admin/comment/:id` | 删除评论（软删除） |
+| `DELETE` | `/api/admin/comment/:id/permanent` | 彻底删除（数据库层面移除，邮箱/IP 等一并清除，不可恢复） |
 | `POST` | `/api/admin/comment/:id/moderate` | 审核：按 `action` 通过 / 标记垃圾 |
 | `POST` | `/api/admin/comment/:id/top` | 置顶 / 取消置顶（`{ top: boolean }`） |
 | `POST` | `/api/admin/import` | 导入评论（逐条校验，单次最多 1000 条） |
@@ -49,6 +54,8 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 | `NOTIFICATION_TYPE` | 通知渠道：`telegram` / `webhook` / `email` / `wxpusher` / `wecom` |
 | `TELEGRAM_BOT_TOKEN`（密钥） / `TELEGRAM_CHAT_ID` | Telegram Bot |
 | `WEBHOOK_URL` | 自定义通知接口 |
+| `WEBHOOK_METHOD` | Webhook 请求方法：`GET` / `POST`（默认） / `PUT` / `PATCH` / `DELETE` |
+| `WEBHOOK_HEADERS` | Webhook 自定义请求头，JSON 对象，如 `{"Authorization": "Bearer xxx"}`，留空不发送 |
 | `WXPUSHER_APP_TOKEN`（密钥） / `WXPUSHER_UIDS` | WxPusher，UID 多个用逗号分隔 |
 | `WECOM_KEY`（密钥） | 企业微信群机器人 Webhook 地址中的 key |
 | `SMTP_FROM` / `SMTP_TO` | 邮件（Resend）发件人 / 收件人 |
@@ -67,7 +74,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
   连点合并成一个请求、请求串行不并发），服务端结果回来后按它校正；计数始终由库里的 `likes` 表决定，
   前端不自己记账。
 - 评论不存在（含已软删除）返回 404。
-- 限流：点赞每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；`GET /api/comment` 与 `GET /api/config` 每 IP 每分钟 120 次；登录/初始化密码每 IP 每 5 分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
+- 限流：点赞每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；`GET /api/comment` 与 `GET /api/config` 每 IP 每分钟 120 次；批量评论数 `GET /api/comment/count` 每 IP 每分钟 120 次；举报 `POST /api/comment/:id/report`、编辑/删除自己的评论每 IP 每分钟 10 次；登录/初始化密码每 IP 每 5 分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
 
 ### Webhook 通知 `WEBHOOK_URL`
 
@@ -80,3 +87,47 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 - 接受评论数组，单次最多 1000 条，逐条按 schema 校验。
 - 保留原 `id`：只有保留 id，`rid` 指向的回复关系才能在导入后继续成立（否则所有回复都会变成顶层评论）。`createdAt`/`isSpam`/`top`/`master` 等字段同样会保留。注意：`likes` 不保留——点赞计数以 `likes` 表为权威源，导入的 likes 会在首次点赞后被重算覆盖，因此导入时统一置 0。
 - id 与库中现有评论冲突的条会计入失败，响应中的 `failedItems` 给出每条失败原因。
+
+### 批量评论数 `GET /api/comment/count`
+
+- 查询串 `urls` 为逗号分隔的页面 url，最多 20 个：`GET /api/comment/count?urls=/post/a,/post/b`。
+- 返回 `{ counts: { "/post/a": 3, "/post/b": 0 } }`，计数口径与评论列表一致（排除垃圾评论与已删除）。
+- 供博客首页、归档页等需要"每篇文章评论数"的场景，避免逐页拉列表。
+
+### 举报 `POST /api/comment/:id/report`
+
+- 访客举报不当评论：`POST /api/comment/:id/report`，body `{ "reason": "广告" }`（可选，最多 200 字）。
+- 不存在或已删除的评论返回 404。
+- 成功后给管理员已配置的通知渠道发送 `admin.report` 事件（含被举报评论、原因、页面链接）。
+- 限流每 IP 每分钟 10 次；演示模式下不可用（403）。
+
+### 编辑 / 删除自己的评论
+
+- 创建评论成功后，服务端随响应返回 `editToken`（HMAC 签发，与评论 id 绑定）。
+- 30 分钟内可凭它编辑/删除这条评论：
+  - `PUT /api/comment/:id`，body `{ "content": "新内容", "editToken": "..." }`
+  - `DELETE /api/comment/:id`，body `{ "editToken": "..." }`（软删除）
+- token 错误、过期（超 30 分钟）返回 403；评论不存在/已删除返回 404。
+- 前端把 `editToken` 存 `localStorage`（key 含评论 id），有有效凭证的评论会显示"编辑"按钮。
+- 演示模式下不可用（403）。
+
+### 彻底删除 `DELETE /api/admin/comment/:id/permanent`
+
+- 与软删除（`DELETE /api/admin/comment/:id`）不同：从数据库中移除评论行及其点赞记录，评论者的邮箱、IP、UA 等全部信息一并清除，不可恢复。
+- 适用于隐私合规（被遗忘权）场景。不存在的 id 返回 404；演示模式下返回 403。
+
+### 管理端关键词搜索
+
+- `GET /api/admin/comments` 与 `/api/admin/comments/all` 支持 `keyword` 查询参数，按评论内容或昵称做 `LIKE` 搜索（参数化查询，通配符已转义）。
+- 与 `status` tab、分页共存；管理后台评论列表页有搜索框（输入停 400ms 后自动触发）。
+
+### IP 黑名单 `BLOCKED_IPS`
+
+- 管理后台"安全设置"中配置，逗号分隔的 IP 列表，如 `1.2.3.4, 5.6.7.8`。
+- 命中黑名单的 IP 调用 `POST /api/comment` 直接返回 403。
+
+### 图片上传（图床）
+
+- 管理后台"图片设置"中配置图床上传地址 `IMAGE_CDN`（公开）与图片大小上限 `MAX_IMAGE_SIZE`（MB，默认 5）。
+- 配置后评论框出现"图片"按钮：文件**直传图床**（不经过 Twikee 服务端，避免函数超时和流量费），成功后以 Markdown `![](url)` 插入内容；未配置时不显示按钮。
+- 图床接口约定：`POST multipart`，文件字段名为 `file`，成功返回 JSON 含 `url` 字段（兼容包一层的 `data.url`）。需要鉴权的图床请把 token 拼在 `IMAGE_CDN` 的 URL 里（如 `?token=xxx`）——`IMAGE_CDN_TOKEN` 是密钥，不会下发给前端。
