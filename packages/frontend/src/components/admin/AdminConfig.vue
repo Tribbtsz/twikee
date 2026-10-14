@@ -317,6 +317,7 @@ onMounted(fetchConfig)
             <div v-if="item.type === 'boolean'" class="md:col-span-2 flex items-center gap-3">
               <Switch
                 :model-value="getConfigValue(item) === 'true'"
+                :aria-label="item.label"
                 @update:model-value="setConfigValue(item, $event ? 'true' : 'false')"
               />
               <span class="text-sm text-muted-foreground">{{ getConfigValue(item) === 'true' ? '开启' : '关闭' }}</span>
@@ -326,6 +327,7 @@ onMounted(fetchConfig)
                 :model-value="getConfigValue(item)"
                 :options="(item.options || []).map((o) => ({ value: o, label: o }))"
                 :placeholder="item.placeholder"
+                :aria-label="item.label"
                 @update:model-value="setConfigValue(item, $event)"
               />
             </div>
@@ -335,6 +337,7 @@ onMounted(fetchConfig)
                 :type="item.secret ? 'password' : 'text'"
                 :autocomplete="item.secret ? 'new-password' : undefined"
                 :placeholder="item.placeholder"
+                :aria-label="item.label"
                 @update:model-value="setConfigValue(item, $event)"
               />
             </div>

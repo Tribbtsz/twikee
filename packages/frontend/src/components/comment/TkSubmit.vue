@@ -135,19 +135,25 @@ const handleSubmit = async () => {
 
       <div class="flex-1 space-y-3">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <Input v-model="nick" placeholder="昵称 *" />
+          <Input v-model="nick" placeholder="昵称 *" aria-label="昵称" />
           <div class="tk-submit__field">
-            <Input v-model="mail" type="email" placeholder="邮箱 (可选)" @blur="onMailBlur" />
+            <Input v-model="mail" type="email" placeholder="邮箱 (可选)" aria-label="邮箱" @blur="onMailBlur" />
             <span v-if="mailTouched && mailError" class="tk-submit__error">{{ mailError }}</span>
           </div>
           <div class="tk-submit__field">
-            <Input v-model="link" type="url" placeholder="网址 (可选)" @blur="onLinkBlur" />
+            <Input v-model="link" type="url" placeholder="网址 (可选)" aria-label="网址" @blur="onLinkBlur" />
             <span v-if="linkTouched && linkError" class="tk-submit__error">{{ linkError }}</span>
           </div>
         </div>
 
         <div v-if="isPreview" class="tk-submit__preview" v-html="previewHtml" />
-        <Textarea v-else v-model="content" :placeholder="placeholder || '说点什么吧... (支持 Markdown)'" :rows="4" />
+        <Textarea
+          v-else
+          v-model="content"
+          :placeholder="placeholder || '说点什么吧... (支持 Markdown)'"
+          aria-label="评论内容"
+          :rows="4"
+        />
 
         <div class="flex items-center justify-between gap-2">
           <div class="flex gap-2">

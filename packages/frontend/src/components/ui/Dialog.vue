@@ -52,7 +52,12 @@ const handleCancel = () => {
   <Teleport to="body">
     <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="fixed inset-0 bg-black/50" @click="handleCancel" />
-      <div class="relative z-50 w-full max-w-sm rounded-lg border bg-background p-6 shadow-lg">
+      <div
+        class="relative z-50 w-full max-w-sm rounded-lg border bg-background p-6 shadow-lg"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title"
+      >
         <h3 class="text-lg font-semibold">{{ title }}</h3>
         <p class="mt-2 text-sm text-muted-foreground">{{ description }}</p>
         <div class="mt-6 flex justify-end gap-2">

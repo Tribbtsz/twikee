@@ -10,6 +10,8 @@ const props = withDefaults(
     placeholder?: string
     disabled?: boolean
     class?: string
+    /** 无障碍名称：会绑定到内部原生 select 上（根是包了一层 div 的包装元素） */
+    ariaLabel?: string
   }>(),
   {
     modelValue: '',
@@ -37,7 +39,7 @@ const classes = computed(() =>
 
 <template>
   <div class="relative">
-    <select :value="modelValue" :disabled="disabled" :class="classes" @change="handleChange">
+    <select :value="modelValue" :disabled="disabled" :class="classes" :aria-label="ariaLabel" @change="handleChange">
       <option value="" disabled>{{ placeholder }}</option>
       <option v-for="opt in options" :key="opt.value" :value="opt.value" class="text-foreground">
         {{ opt.label }}

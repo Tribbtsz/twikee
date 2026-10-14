@@ -28,7 +28,7 @@
     "hono",
     "serverless"
   ],
-  "author": "",
+  "author": "Tribbtsz",
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^10.0.1",

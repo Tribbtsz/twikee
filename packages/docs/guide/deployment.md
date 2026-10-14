@@ -32,6 +32,9 @@ CORS_ORIGIN=https://your-blog.com
 
 # 管理 token 有效期（毫秒），默认 7 天
 TWIKEE_TOKEN_TTL=604800000
+
+# 演示模式：设为非空值后，管理端写操作全部返回 403（仅 GET 可读），用于公开演示站防乱改
+# DEMO_MODE=1
 ```
 
 ::: warning 关于 TWIKEE_SECRET

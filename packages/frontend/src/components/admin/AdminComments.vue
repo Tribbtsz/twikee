@@ -216,19 +216,21 @@ const getPageUrl = (comment: any): string | undefined => {
   return `${base}${base.includes('?') ? '&' : '?'}hl=${comment.id}`
 }
 
+const searchQuery = computed(() => pagesSearchQuery.value.trim().toLowerCase())
+
 const filteredPages = computed(() => {
-  if (!pagesSearchQuery.value) {
+  if (!searchQuery.value) {
     const start = (pagesPage.value - 1) * pagesPageSize.value
     return pages.value.slice(start, start + pagesPageSize.value)
   }
-  const filtered = pages.value.filter((p) => p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase()))
+  const filtered = pages.value.filter((p) => p.url.toLowerCase().includes(searchQuery.value))
   const start = (pagesPage.value - 1) * pagesPageSize.value
   return filtered.slice(start, start + pagesPageSize.value)
 })
 
 const filteredPagesTotal = computed(() => {
-  if (!pagesSearchQuery.value) return pages.value.length
-  return pages.value.filter((p) => p.url.toLowerCase().includes(pagesSearchQuery.value.toLowerCase())).length
+  if (!searchQuery.value) return pages.value.length
+  return pages.value.filter((p) => p.url.toLowerCase().includes(searchQuery.value)).length
 })
 
 const filteredPagesTotalPages = computed(() => Math.ceil(filteredPagesTotal.value / pagesPageSize.value))
@@ -237,7 +239,6 @@ onMounted(fetchPages)
 watch(commentsPage, () => {
   if (currentUrl.value) fetchComments(currentUrl.value)
 })
-watch(pagesPage, () => {}, { flush: 'post' })
 </script>
 
 <template>
@@ -255,7 +256,7 @@ watch(pagesPage, () => {}, { flush: 'post' })
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input v-model="pagesSearchQuery" placeholder="搜索页面..." class="pl-9 w-48" />
           </div>
-          <Button variant="outline" size="sm" @click="fetchPages">
+          <Button variant="outline" size="sm" aria-label="刷新页面列表" @click="fetchPages">
             <RefreshCw class="w-4 h-4" />
           </Button>
         </div>
@@ -320,16 +321,18 @@ watch(pagesPage, () => {}, { flush: 'post' })
           </div>
         </div>
         <div class="flex gap-2 items-center">
-          <Button variant="outline" size="sm" @click="fetchComments(currentUrl!)">
+          <Button variant="outline" size="sm" aria-label="刷新评论列表" @click="fetchComments(currentUrl!)">
             <RefreshCw class="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      <div class="flex gap-1 border-b">
+      <div class="flex gap-1 border-b" role="tablist" aria-label="评论状态筛选">
         <button
           v-for="tab in tabs"
           :key="tab.key"
+          role="tab"
+          :aria-selected="activeTab === tab.key"
           class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
           :class="
             activeTab === tab.key
@@ -375,19 +378,31 @@ watch(pagesPage, () => {}, { flush: 'post' })
               </div>
 
               <div class="flex gap-1 shrink-0">
-                <Button v-if="comment.isSpam" variant="ghost" size="sm" @click="moderate(comment.id, 'approve')">
+                <Button
+                  v-if="comment.isSpam"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="通过评论"
+                  @click="moderate(comment.id, 'approve')"
+                >
                   <Eye class="w-4 h-4" />
                 </Button>
-                <Button v-else variant="ghost" size="sm" @click="moderate(comment.id, 'spam')">
+                <Button v-else variant="ghost" size="sm" aria-label="移至待审核" @click="moderate(comment.id, 'spam')">
                   <EyeOff class="w-4 h-4" />
                 </Button>
-                <Button v-if="!comment.top" variant="ghost" size="sm" @click="toggleTop(comment.id, true)">
+                <Button
+                  v-if="!comment.top"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="置顶评论"
+                  @click="toggleTop(comment.id, true)"
+                >
                   <Pin class="w-4 h-4" />
                 </Button>
-                <Button v-else variant="ghost" size="sm" @click="toggleTop(comment.id, false)">
+                <Button v-else variant="ghost" size="sm" aria-label="取消置顶" @click="toggleTop(comment.id, false)">
                   <PinOff class="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" @click="moderate(comment.id, 'delete')">
+                <Button variant="ghost" size="sm" aria-label="删除评论" @click="moderate(comment.id, 'delete')">
                   <Trash2 class="w-4 h-4 text-destructive" />
                 </Button>
               </div>

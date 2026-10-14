@@ -223,12 +223,17 @@ const tabs = [
 
         <div
           class="w-24 shrink-0 cursor-pointer transition-all rounded-lg flex flex-col items-center justify-center gap-1"
+          role="button"
+          tabindex="0"
+          :aria-label="commentsClosed ? '一键开启评论' : '一键关停评论'"
           :class="
             commentsClosed
               ? 'bg-green-500 text-white hover:bg-green-600'
               : 'bg-destructive text-destructive-foreground hover:opacity-90'
           "
           @click="toggleCommentsClosed"
+          @keydown.enter.prevent="toggleCommentsClosed"
+          @keydown.space.prevent="toggleCommentsClosed"
         >
           <ShieldCheck v-if="commentsClosed" class="w-5 h-5" />
           <ShieldAlert v-else class="w-5 h-5" />

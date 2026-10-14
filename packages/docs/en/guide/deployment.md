@@ -32,6 +32,10 @@ CORS_ORIGIN=https://your-blog.com
 
 # Admin token lifetime in milliseconds. Default 7 days.
 TWIKEE_TOKEN_TTL=604800000
+
+# Demo mode: when set to any non-empty value, all admin write operations return 403
+# (GET stays readable). Useful for public demo sites to prevent tampering.
+# DEMO_MODE=1
 ```
 
 ::: warning About TWIKEE_SECRET
