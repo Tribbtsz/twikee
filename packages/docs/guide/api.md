@@ -67,7 +67,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
   连点合并成一个请求、请求串行不并发），服务端结果回来后按它校正；计数始终由库里的 `likes` 表决定，
   前端不自己记账。
 - 评论不存在（含已软删除）返回 404。
-- 限流：每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；登录/初始化密码每 IP 每 5 分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
+- 限流：点赞每 IP 每分钟 60 次；`POST /api/comment` 每分钟 10 次；`GET /api/comment` 与 `GET /api/config` 每 IP 每分钟 120 次；登录/初始化密码每 IP 每 5 分钟 10 次。超限返回 429 + `Retry-After`。serverless 多实例下限流按实例计数，如需全局精确定位请接外部存储。
 
 ### Webhook 通知 `WEBHOOK_URL`
 
@@ -78,5 +78,5 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 ### 导入 `POST /api/admin/import`
 
 - 接受评论数组，单次最多 1000 条，逐条按 schema 校验。
-- 保留原 `id`：只有保留 id，`rid` 指向的回复关系才能在导入后继续成立（否则所有回复都会变成顶层评论）。`createdAt`/`likes`/`isSpam`/`top`/`master` 等字段同样会保留。
+- 保留原 `id`：只有保留 id，`rid` 指向的回复关系才能在导入后继续成立（否则所有回复都会变成顶层评论）。`createdAt`/`isSpam`/`top`/`master` 等字段同样会保留。注意：`likes` 不保留——点赞计数以 `likes` 表为权威源，导入的 likes 会在首次点赞后被重算覆盖，因此导入时统一置 0。
 - id 与库中现有评论冲突的条会计入失败，响应中的 `failedItems` 给出每条失败原因。

@@ -12,6 +12,7 @@ import type {
 } from '../types'
 import {
   DatabaseAdapter,
+  type BulkCreateResult,
   type CommentRepository,
   type CommentStats,
   type LikeResult,
@@ -109,6 +110,90 @@ class TursoCommentRepository implements CommentRepository {
       createdAt: now,
       updatedAt: data.updatedAt,
     }
+  }
+
+  /**
+   * 批量创建（导入用）：分批多行 INSERT，把 1000 条的 1000 次 round-trip
+   * 压到约 10 次。某批整体失败（如某条 id 冲突）时退回逐条写入，
+   * 保证 failedItems 的失败明细与原来逐条时一致。
+   */
+  async createMany(items: CreateCommentInput[]): Promise<BulkCreateResult[]> {
+    const BATCH_SIZE = 100
+    const results: BulkCreateResult[] = []
+    for (let start = 0; start < items.length; start += BATCH_SIZE) {
+      const chunk = items.slice(start, start + BATCH_SIZE)
+      try {
+        const comments = await this.insertChunk(chunk)
+        for (const comment of comments) results.push({ comment })
+      } catch {
+        // 整批失败：退回逐条，保证每条的失败原因可定位
+        for (const item of chunk) {
+          try {
+            results.push({ comment: await this.create(item) })
+          } catch (e) {
+            results.push({ error: String((e as Error)?.message ?? e).slice(0, 200) })
+          }
+        }
+      }
+    }
+    return results
+  }
+
+  /** 单批多行 INSERT：一次 round-trip 写入一批（与 create() 同列、同语义） */
+  private async insertChunk(items: CreateCommentInput[]): Promise<Comment[]> {
+    const now = Date.now()
+    const placeholders: string[] = []
+    const args: (string | number | null)[] = []
+    const prepared = items.map((data) => {
+      const id = data.id ?? randomUUID()
+      const createdAt = data.createdAt ?? now
+      const likes = data.likes ?? 0
+      placeholders.push('(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      args.push(
+        id,
+        data.url,
+        data.nick,
+        data.mail ?? null,
+        data.link ?? null,
+        data.content,
+        data.ua ?? null,
+        data.ip ?? null,
+        data.rid ?? null,
+        data.pid ?? null,
+        data.master ? 1 : 0,
+        data.top ? 1 : 0,
+        data.isSpam ? 1 : 0,
+        likes,
+        data.deleted ? 1 : 0,
+        createdAt,
+        data.updatedAt ?? null,
+      )
+      return {
+        id,
+        url: data.url,
+        nick: data.nick,
+        mail: data.mail,
+        link: data.link,
+        content: data.content,
+        ua: data.ua,
+        ip: data.ip,
+        master: data.master ?? false,
+        top: data.top ?? false,
+        rid: data.rid,
+        pid: data.pid,
+        isSpam: data.isSpam ?? false,
+        deleted: data.deleted ?? false,
+        likes,
+        createdAt,
+        updatedAt: data.updatedAt,
+      }
+    })
+    await this.client.execute({
+      sql: `INSERT INTO comments (id, url, nick, mail, link, content, ua, ip, rid, pid, master, top, is_spam, likes, deleted, created_at, updated_at)
+            VALUES ${placeholders.join(', ')}`,
+      args,
+    })
+    return prepared
   }
 
   async getById(id: string): Promise<Comment | null> {

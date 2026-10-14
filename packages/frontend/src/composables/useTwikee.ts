@@ -28,7 +28,6 @@ export function useTwikee(options: TwikeeOptions) {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const comments = ref<TwikeeComment[]>([])
-  const config = ref<Record<string, any>>({})
 
   const baseUrl = computed(() => {
     if (!options.envId) return ''
@@ -101,7 +100,6 @@ export function useTwikee(options: TwikeeOptions) {
     loading,
     error,
     comments,
-    config,
     fetchComments,
     submitComment,
   }

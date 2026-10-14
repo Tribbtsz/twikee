@@ -21,8 +21,10 @@ type Env = {
   }
 }
 
+// 只做 trim：XSS 由前端 sanitizeHtml（白名单）兜底，通知渠道全部 escape。
+// 之前这里的 strip 会吃掉正文合法内容（"a < b > c" 入库变成 "a  c"）。
 function sanitize(str: string): string {
-  return str.replace(/<[^>]*>/g, '').trim()
+  return str.trim()
 }
 
 export function createAdminRoutes() {
@@ -96,8 +98,12 @@ export function createAdminRoutes() {
 
   app.delete('/comment/:id', async (c) => {
     const id = c.req.param('id')
-    await c.var.commentService.delete(id)
-    return c.json({ success: true })
+    try {
+      await c.var.commentService.delete(id)
+      return c.json({ success: true })
+    } catch {
+      return c.json({ error: 'Comment not found' }, 404)
+    }
   })
 
   app.post('/import', async (c) => {
@@ -115,38 +121,42 @@ export function createAdminRoutes() {
       return c.json({ error: 'Invalid import data', issues }, 400)
     }
 
+    // 注意：导入的 likes 不保留（schema 已剥离该字段，createMany 入库为 0）。
+    // 点赞计数以 likes 表为权威源，若把旧 likes 写进 comments.likes 列，
+    // 首次点赞后会被重算清零，造成静默数据丢失。
+    const inputs = parsed.data.map((item) => ({
+      id: item.id,
+      url: sanitize(item.url),
+      nick: sanitize(item.nick),
+      mail: item.mail ? sanitize(item.mail) : undefined,
+      link: item.link ? sanitize(item.link) : undefined,
+      content: sanitize(item.content),
+      ua: item.ua ? sanitize(item.ua) : undefined,
+      ip: item.ip ? sanitize(item.ip) : undefined,
+      rid: item.rid ?? undefined,
+      pid: item.pid ?? undefined,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt ?? undefined,
+      isSpam: item.isSpam,
+      master: item.master,
+      top: item.top,
+      deleted: item.deleted,
+    }))
+
+    // 分批多行 INSERT：1000 条约 10 次 round-trip，而不是 1000 次串行
+    const results = await c.var.commentService.createMany(inputs)
     let success = 0
     let failed = 0
     const failedItems: Array<{ index: number; reason: string }> = []
-
-    for (const [index, item] of parsed.data.entries()) {
-      try {
-        await c.var.commentService.create({
-          id: item.id,
-          url: sanitize(item.url),
-          nick: sanitize(item.nick),
-          mail: item.mail ? sanitize(item.mail) : undefined,
-          link: item.link ? sanitize(item.link) : undefined,
-          content: sanitize(item.content),
-          ua: item.ua ? sanitize(item.ua) : undefined,
-          ip: item.ip ? sanitize(item.ip) : undefined,
-          rid: item.rid ?? undefined,
-          pid: item.pid ?? undefined,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt ?? undefined,
-          likes: item.likes,
-          isSpam: item.isSpam,
-          master: item.master,
-          top: item.top,
-          deleted: item.deleted,
-        })
+    results.forEach((r, index) => {
+      if (r.comment) {
         success++
-      } catch (e) {
+      } else {
         failed++
         // id 冲突等：给出可定位的原因，而不是只报一个失败计数
-        failedItems.push({ index, reason: String((e as Error)?.message ?? e).slice(0, 200) })
+        failedItems.push({ index, reason: r.error ?? 'Unknown error' })
       }
-    }
+    })
     return c.json({ success, failed, failedItems })
   })
 
@@ -160,8 +170,12 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
-    await c.var.commentService.moderate(id, parsed.data.action)
-    return c.json({ success: true })
+    try {
+      await c.var.commentService.moderate(id, parsed.data.action)
+      return c.json({ success: true })
+    } catch {
+      return c.json({ error: 'Comment not found' }, 404)
+    }
   })
 
   app.post('/comment/:id/top', async (c) => {
@@ -174,8 +188,12 @@ export function createAdminRoutes() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
-    const comment = await c.var.commentService.setTop(id, parsed.data.top)
-    return c.json(comment)
+    try {
+      const comment = await c.var.commentService.setTop(id, parsed.data.top)
+      return c.json(comment)
+    } catch {
+      return c.json({ error: 'Comment not found' }, 404)
+    }
   })
 
   app.get('/config', async (c) => {

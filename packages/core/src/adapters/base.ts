@@ -13,8 +13,19 @@ export interface LikeResult {
   likes: number
 }
 
+/** 批量创建的单条结果：成功带 comment，失败带 error（与输入等长、一一对应） */
+export interface BulkCreateResult {
+  comment?: Comment
+  error?: string
+}
+
 export interface CommentRepository {
   create(data: CreateCommentInput): Promise<Comment>
+  /**
+   * 批量创建（导入用）。实现应分批写入以减少远程 round-trip；
+   * 某批整体失败时退回逐条，保证每条的失败原因可定位。
+   */
+  createMany(data: CreateCommentInput[]): Promise<BulkCreateResult[]>
   getById(id: string): Promise<Comment | null>
   getList(query: CommentQuery): Promise<PaginatedResult<Comment>>
   update(id: string, data: UpdateCommentInput): Promise<Comment>

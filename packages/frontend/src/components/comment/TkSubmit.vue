@@ -8,6 +8,10 @@ import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/utils'
 import type { ResolvedTwikeeAppearance } from '@/types'
 
+// marked 的 options 是全局副作用：TkComment 在模块顶层调过 setOptions，
+// TkSubmit 的预览不能依赖"恰好 TkComment 先被 import"，自己调一次。
+marked.setOptions({ breaks: true, gfm: true })
+
 const props = defineProps<{
   url: string
   rid?: string

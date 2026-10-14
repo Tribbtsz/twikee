@@ -56,7 +56,10 @@ const checkAuth = (res: Response) => {
   return true
 }
 
-const fetchCommentsClosed = async () => {
+// 管理后台挂载时只拉一次 /api/admin/config，同时取出关停状态与站点 URL，
+// 之前 fetchCommentsClosed / fetchSiteUrl 各拉一次，切到配置 tab 时 AdminConfig
+// 还会再拉一次。
+const fetchAdminConfig = async () => {
   if (!token.value) return
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
@@ -65,6 +68,14 @@ const fetchCommentsClosed = async () => {
     if (!checkAuth(res)) return
     const data = await res.json()
     commentsClosed.value = data.COMMENTS_CLOSED === 'true'
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ) {
+      siteUrl.value = window.location.origin
+    } else {
+      siteUrl.value = (data.SITE_URL || '').replace(/\/$/, '')
+    }
   } catch (e) {
     console.error('[Twikee] failed to load admin config:', e)
   }
@@ -114,31 +125,9 @@ const fetchStats = async () => {
   }
 }
 
-const fetchSiteUrl = async () => {
-  if (!token.value) return
-  if (
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ) {
-    siteUrl.value = window.location.origin
-    return
-  }
-  try {
-    const res = await fetch(`${props.apiUrl}/api/admin/config`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    })
-    if (!checkAuth(res)) return
-    const data = await res.json()
-    siteUrl.value = (data.SITE_URL || '').replace(/\/$/, '')
-  } catch (e) {
-    console.error('获取配置失败', e)
-  }
-}
-
 onMounted(() => {
   fetchStats()
-  fetchSiteUrl()
-  fetchCommentsClosed()
+  fetchAdminConfig()
 })
 
 const tabs = [

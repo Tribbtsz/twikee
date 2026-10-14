@@ -25,7 +25,7 @@ export const CommentQuerySchema = z.object({
 })
 
 export const CreateCommentSchema = z.object({
-  url: z.string().min(1),
+  url: z.string().min(1).max(2000),
   nick: z.string().min(1).max(100),
   mail: z.string().email().optional().or(z.literal('')),
   link: SafeUrlSchema.optional().or(z.literal('')),
@@ -52,7 +52,6 @@ export const ADMIN_CONFIG_KEYS = [
   // 基础
   'SITE_NAME',
   'SITE_URL',
-  'BLOGGER_NICK',
   'BLOGGER_EMAIL',
   'MASTER_TAG',
   'COMMENT_PAGE_SIZE',
@@ -137,12 +136,14 @@ export const ImportCommentSchema = z.object({
   nick: z.string().min(1).max(100),
   mail: z.string().email().optional().or(z.literal('')),
   link: z.string().url().optional().or(z.literal('')),
-  content: z.string().max(10000),
+  content: z.string().min(1).max(10000),
   rid: z.string().max(64).nullish(),
   pid: z.string().max(64).nullish(),
   createdAt: z.coerce.number().int().positive().optional(),
   updatedAt: z.coerce.number().int().positive().nullish(),
-  likes: z.coerce.number().int().min(0).optional(),
+  // 注意：导入的 likes 不保留。点赞计数以 likes 表为权威源（见 like()），
+  // 导入时若写入 comments.likes 列，首次点赞后会被重算清零，造成静默数据丢失。
+  // 因此 schema 里直接不收这个字段（非 strict 模式下会被剥离），入库统一为 0。
   isSpam: z.boolean().optional(),
   master: z.boolean().optional(),
   top: z.boolean().optional(),

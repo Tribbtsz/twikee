@@ -9,9 +9,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 /**
  * 取客户端 IP，仅用于限流与留痕。
  *
- * 不再信任请求头原样落库：x-forwarded-for 可能是 "1.2.3.4, 5.6.7.8" 形式，
- * 且首段完全由客户端伪造。Vercel/CF 等代理会把真实客户端 IP 追加在
- * x-forwarded-for 末尾，因此取最后一段；同时优先读取 x-real-ip。
+ * x-forwarded-for 形如 "client, proxy1, proxy2"：每经过一层代理就把上游 IP
+ * 追加在**末尾**（RFC 7239），所以真实客户端 IP 在**开头**，离服务端最近的
+ * 代理在末尾。取末尾会拿到固定代理 IP，导致限流 key 全站共用一个桶。
+ * 因此从前往后取第一段合法 IP；x-real-ip / cf-connecting-ip 由可信代理
+ * 直接给出客户端 IP，优先采用。
  */
 export function getClientIp(c: Context): string {
   const realIp = c.req.header('x-real-ip')?.trim()
@@ -23,7 +25,7 @@ export function getClientIp(c: Context): string {
   const forwarded = c.req.header('x-forwarded-for')
   if (forwarded) {
     const parts = forwarded.split(',')
-    for (let i = parts.length - 1; i >= 0; i--) {
+    for (let i = 0; i < parts.length; i++) {
       const candidate = parts[i].trim()
       if (isValidIp(candidate)) return candidate
     }

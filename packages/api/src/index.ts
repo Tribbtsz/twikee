@@ -8,6 +8,7 @@ import { createAuthRoutes } from './routes/auth'
 import { createAdminRoutes } from './routes/admin'
 import { requireAdmin } from './middleware/auth'
 import { demoGuard } from './middleware/demo'
+import { rateLimit } from './lib/rate-limit'
 import { getNotificationService } from './lib/notification'
 
 // CORS 白名单：逗号分隔。留空时保持默认放开（兼容旧行为），
@@ -106,7 +107,10 @@ app.use(
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: Date.now() }))
 
-app.get('/api/config', async (c) => {
+/** 公开配置：每 IP 每分钟 120 次。每次请求都是一次 DB 查询，无保护会被刷量打爆账单 */
+const configLimiter = rateLimit({ windowMs: 60_000, max: 120, key: 'config' })
+
+app.get('/api/config', configLimiter, async (c) => {
   // 一次 getAll 取代五次 config.get：每次 get 都是一个独立的远程查询
   const cfg = await db!.config.getAll()
   // 公开配置很少变，让 CDN 兜住，省掉每次打开评论区的这一趟
@@ -121,6 +125,20 @@ app.get('/api/config', async (c) => {
 })
 
 app.route('/api/comment', createCommentRoutes())
+
+// 演示模式下禁用管理端登录与初始化：demoGuard 只拦 /api/admin/*，
+// 但 /api/auth/setup 不在拦截路径内。公开 demo 若未设密码，任何人可调 setup
+// 自设密码拿到 admin token，越过 demoGuard 读出全部评论者的邮箱/IP/UA。
+app.use('/api/auth/*', async (c, next) => {
+  if (
+    process.env.DEMO_MODE &&
+    c.req.method === 'POST' &&
+    (c.req.path === '/api/auth/setup' || c.req.path === '/api/auth/login')
+  ) {
+    return c.json({ error: 'Not available in demo mode' }, 403)
+  }
+  await next()
+})
 app.route('/api/auth', createAuthRoutes())
 app.use('/api/admin/*', demoGuard())
 app.route('/api/admin', createAdminRoutes())

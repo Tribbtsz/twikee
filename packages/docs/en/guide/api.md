@@ -65,7 +65,7 @@ Keys marked as secret are never returned by `GET /api/admin/config`; sending an 
 - With a cross-origin deployment (comment page and API on different origins) the browser will not send cookies with fetch, so the frontend persists `x-user-id` to keep identity stable; the server also tries to persist the identity into a cookie.
 - The response is authoritative: `{ success, liked, likes }`. The client updates optimistically on click (local like state and count immediately, rapid clicks collapse into one request, requests run serially), and corrects itself once the server answers. The count always comes from the `likes` table in the database — the client never does its own bookkeeping.
 - A missing comment (including soft-deleted ones) returns 404.
-- Rate limits: 60 requests per IP per minute; `POST /api/comment` 10 per minute; login / setup 10 per IP per 5 minutes. Exceeding them returns 429 with `Retry-After`. On serverless, limits are counted per instance — use external storage if you need globally accurate limiting.
+- Rate limits: likes 60 requests per IP per minute; `POST /api/comment` 10 per minute; `GET /api/comment` and `GET /api/config` 120 per IP per minute; login / setup 10 per IP per 5 minutes. Exceeding them returns 429 with `Retry-After`. On serverless, limits are counted per instance — use external storage if you need globally accurate limiting.
 
 ### Webhook notifications `WEBHOOK_URL`
 
@@ -76,5 +76,5 @@ Keys marked as secret are never returned by `GET /api/admin/config`; sending an 
 ### Import `POST /api/admin/import`
 
 - Accepts an array of comments, up to 1000 per request, each validated against the schema.
-- Original `id`s are preserved: only by keeping `id`s can `rid` reply relationships survive the import (otherwise every reply becomes a top-level comment). Fields like `createdAt`/`likes`/`isSpam`/`top`/`master` are preserved too.
+- Original `id`s are preserved: only by keeping `id`s can `rid` reply relationships survive the import (otherwise every reply becomes a top-level comment). Fields like `createdAt`/`isSpam`/`top`/`master` are preserved too. Note: `likes` is not preserved — like counts are authoritative from the `likes` table, so imported likes would be overwritten on the first like; they are normalized to 0 on import.
 - Entries whose `id` collides with an existing comment are reported as failures, with a per-entry reason in `failedItems`.

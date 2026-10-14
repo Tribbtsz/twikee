@@ -97,7 +97,6 @@ const settings: ConfigGroup[] = [
     items: [
       { key: 'SITE_NAME', label: '站点名称', placeholder: '我的博客', desc: '用于通知邮件中显示', default: '' },
       { key: 'SITE_URL', label: '站点 URL', placeholder: 'https://example.com', desc: '用于生成评论链接', default: '' },
-      { key: 'BLOGGER_NICK', label: '博主昵称', placeholder: 'Admin', desc: '匹配后显示博主标识', default: '' },
       {
         key: 'BLOGGER_EMAIL',
         label: '博主邮箱',
@@ -269,8 +268,10 @@ const saveConfig = async () => {
 }
 
 const resetConfig = () => {
-  config.value = buildDefaults()
-  showToast('已重置为默认值', 'info')
+  // 恢复为已保存的配置（放弃未保存的修改），而不是写成默认值：
+  // 写成默认值后点保存会把全部配置清空，是个 footgun。
+  config.value = { ...savedConfig.value }
+  showToast('已恢复为已保存的配置', 'info')
 }
 
 onMounted(fetchConfig)
@@ -349,8 +350,8 @@ onMounted(fetchConfig)
     <Dialog
       v-model:open="showResetDialog"
       title="重置配置"
-      description="确定要重置所有配置为默认值吗？已保存的配置不会丢失，只是页面上显示为默认值。"
-      confirm-text="重置"
+      description="确定要放弃所有未保存的修改，恢复为已保存的配置吗？"
+      confirm-text="恢复"
       @confirm="resetConfig"
     />
 

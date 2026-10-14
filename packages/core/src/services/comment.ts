@@ -1,5 +1,5 @@
 import type { Comment, CreateCommentInput, UpdateCommentInput, CommentQuery, PaginatedResult } from '../types'
-import type { DatabaseAdapter, LikeResult } from '../adapters/base'
+import type { BulkCreateResult, DatabaseAdapter, LikeResult } from '../adapters/base'
 
 export class CommentService {
   private db: DatabaseAdapter
@@ -10,6 +10,11 @@ export class CommentService {
 
   async create(data: CreateCommentInput): Promise<Comment> {
     return await this.db.comments.create(data)
+  }
+
+  /** 批量创建（导入用）：结果与输入等长，成功带 comment、失败带 error */
+  async createMany(data: CreateCommentInput[]): Promise<BulkCreateResult[]> {
+    return await this.db.comments.createMany(data)
   }
 
   async getById(id: string): Promise<Comment | null> {

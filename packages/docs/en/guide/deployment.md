@@ -35,6 +35,8 @@ TWIKEE_TOKEN_TTL=604800000
 
 # Demo mode: when set to any non-empty value, all admin write operations return 403
 # (GET stays readable). Useful for public demo sites to prevent tampering.
+# In demo mode, admin login and initialization (POST /api/auth/setup, POST /api/auth/login)
+# also return 403 and are unavailable.
 # DEMO_MODE=1
 ```
 

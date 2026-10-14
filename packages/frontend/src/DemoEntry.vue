@@ -158,6 +158,7 @@ watch(page, loadComments)
                   :key="comment.id"
                   :comment="comment"
                   :all-comments="comments"
+                  :api-url="envId"
                   :master-tag="masterTag"
                   :show-divider="index < commentTree.length - 1"
                   @load="loadComments"

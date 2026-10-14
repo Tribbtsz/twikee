@@ -11,6 +11,8 @@ import { safeJson } from '../lib/safe-json'
 const commentLimiter = rateLimit({ windowMs: 60_000, max: 10, key: 'comment' })
 /** 点赞：每 IP 每分钟 60 次 */
 const likeLimiter = rateLimit({ windowMs: 60_000, max: 60, key: 'like' })
+/** 评论列表：每 IP 每分钟 120 次。每次请求触发 2 次 DB 查询，无保护会被刷量打爆账单 */
+const listLimiter = rateLimit({ windowMs: 60_000, max: 120, key: 'comment-list' })
 
 type Env = {
   Variables: {
@@ -23,7 +25,7 @@ type Env = {
 export function createCommentRoutes() {
   const app = new Hono<Env>()
 
-  app.get('/', async (c) => {
+  app.get('/', listLimiter, async (c) => {
     const parsed = CommentQuerySchema.safeParse(c.req.query())
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
@@ -60,8 +62,10 @@ export function createCommentRoutes() {
       }
     }
 
+    // 只做 trim：XSS 由前端 sanitizeHtml（白名单）兜底，通知渠道全部 escape。
+    // 之前这里的 strip 会吃掉正文合法内容（"a < b > c" 入库变成 "a  c"）。
     function sanitize(str: string): string {
-      return str.replace(/<[^>]*>/g, '').trim()
+      return str.trim()
     }
 
     const comment = await c.var.commentService.create({

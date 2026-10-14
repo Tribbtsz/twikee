@@ -34,6 +34,7 @@ CORS_ORIGIN=https://your-blog.com
 TWIKEE_TOKEN_TTL=604800000
 
 # 演示模式：设为非空值后，管理端写操作全部返回 403（仅 GET 可读），用于公开演示站防乱改
+# 演示模式下管理端登录/初始化（POST /api/auth/setup、POST /api/auth/login）也返回 403，不可用
 # DEMO_MODE=1
 ```
 
