@@ -4,14 +4,9 @@ import Input from '@/components/ui/Input.vue'
 import Textarea from '@/components/ui/Textarea.vue'
 import Button from '@/components/ui/Button.vue'
 import TkAvatar from './TkAvatar.vue'
-import { marked } from 'marked'
-import { sanitizeHtml } from '@/lib/utils'
+import { renderMarkdown } from '@/lib/markdown'
 import { ImagePlus } from 'lucide-vue-next'
 import type { ResolvedTwikeeAppearance } from '@/types'
-
-// marked 的 options 是全局副作用：TkComment 在模块顶层调过 setOptions，
-// TkSubmit 的预览不能依赖"恰好 TkComment 先被 import"，自己调一次。
-marked.setOptions({ breaks: true, gfm: true })
 
 const props = defineProps<{
   url: string
@@ -107,7 +102,7 @@ const canSend = computed(() => {
 })
 
 const previewHtml = computed(() => {
-  return sanitizeHtml(marked.parse(content.value) as string)
+  return renderMarkdown(content.value)
 })
 
 const submitClasses = computed(() => ({

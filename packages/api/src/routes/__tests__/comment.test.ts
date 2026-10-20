@@ -6,23 +6,37 @@ import { resetRateLimits } from '../../lib/rate-limit'
 function makeApp() {
   const config = new Map<string, string>()
   const likeCalls: Array<{ id: string; userId: string }> = []
+  const createCalls: any[] = []
+  const configGetCalls: string[] = []
+  const configGetAllCalls: number[] = []
   const db: any = {
     config: {
-      get: async (k: string) => config.get(k) || null,
+      get: async (k: string) => {
+        configGetCalls.push(k)
+        return config.get(k) || null
+      },
+      getAll: async () => {
+        configGetAllCalls.push(1)
+        return Object.fromEntries(config)
+      },
       set: async (k: string, v: string) => {
         config.set(k, v)
       },
     },
     comments: {
-      create: async (data: any) => ({
-        ...data,
-        id: '1',
-        createdAt: Date.now(),
-        master: false,
-        top: false,
-        isSpam: false,
-        likes: 0,
-      }),
+      create: async (data: any) => {
+        createCalls.push(data)
+        return {
+          ...data,
+          id: '1',
+          createdAt: Date.now(),
+          master: !!data.master,
+          top: false,
+          isSpam: !!data.isSpam,
+          deleted: false,
+          likes: 0,
+        }
+      },
       getById: async (id: string) =>
         id === '1'
           ? {
@@ -46,8 +60,14 @@ function makeApp() {
     },
   }
 
+  // 打标记改走 create 的入参后，路由不该再调 update；留个 spy 把这条钉死
+  const updateCalls: any[] = []
   const commentService: any = {
     create: async (d: any) => db.comments.create(d),
+    update: async (id: string, d: any) => {
+      updateCalls.push({ id, d })
+      return db.comments.getById(id)
+    },
     getById: async (id: string) => db.comments.getById(id),
     getList: async (q: any) => db.comments.getList(q),
     like: async (id: string, uid: string) => db.comments.like(id, uid),
@@ -67,23 +87,38 @@ function makeApp() {
     await next()
   })
   app.route('/', createCommentRoutes())
-  return { app, likeCalls }
+  return { app, likeCalls, createCalls, updateCalls, configGetCalls, configGetAllCalls, config }
 }
 
 describe('Comment routes', () => {
   let app: Hono
   let likeCalls: Array<{ id: string; userId: string }>
+  let createCalls: any[]
+  let updateCalls: any[]
+  let configGetCalls: string[]
+  let configGetAllCalls: number[]
+  let config: Map<string, string>
 
   beforeAll(() => {
     const made = makeApp()
     app = made.app
     likeCalls = made.likeCalls
+    createCalls = made.createCalls
+    updateCalls = made.updateCalls
+    configGetCalls = made.configGetCalls
+    configGetAllCalls = made.configGetAllCalls
+    config = made.config
   })
 
   // 限流计数是进程级的，用例之间必须隔离
   beforeEach(() => {
     resetRateLimits()
     likeCalls.length = 0
+    createCalls.length = 0
+    updateCalls.length = 0
+    configGetCalls.length = 0
+    configGetAllCalls.length = 0
+    config.clear()
   })
 
   it('GET / returns empty list', async () => {
@@ -109,6 +144,32 @@ describe('Comment routes', () => {
     expect(body.nick).toBe('Alice')
   })
 
+  it('POST / reads config once and never falls back to per-key gets', async () => {
+    // 核心回归：配置必须是「一次 getAll 快照」。每次 get 都是一次远程往返，
+    // 退回 5 次 get 不会弄坏任何功能断言，所以在这里把次数钉死。
+    await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(configGetAllCalls).toHaveLength(1)
+    expect(configGetCalls).toHaveLength(0)
+  })
+
+  it('POST / applies master/moderation flags on create without extra updates', async () => {
+    // 标记随 create 写入：创建后不再补 update（每次 update = UPDATE + 回查两趟往返）
+    config.set('AUTO_APPROVE', 'false')
+    config.set('BLOGGER_EMAIL', 'me@example.com')
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Guest', mail: 'guest@example.com', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(createCalls[0].isSpam).toBe(true)
+    expect(updateCalls).toHaveLength(0)
+  })
+
   it('POST / rejects invalid body', async () => {
     const res = await app.request('/', {
       method: 'POST',
@@ -116,6 +177,61 @@ describe('Comment routes', () => {
       headers: { 'Content-Type': 'application/json' },
     })
     expect(res.status).toBe(400)
+  })
+
+  it('POST / rejects when comments are closed', async () => {
+    config.set('COMMENTS_CLOSED', 'true')
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(403)
+    // 关停时不该有任何写入
+    expect(createCalls).toHaveLength(0)
+  })
+
+  it('POST / marks the blogger as master on create', async () => {
+    // 邮箱命中 BLOGGER_EMAIL → master。原来是创建后补一次 update，
+    // 现在随 create 一起写入，少两趟往返
+    config.set('BLOGGER_EMAIL', 'me@example.com')
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Me', mail: 'Me@Example.com', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(createCalls[0].master).toBe(true)
+    expect(createCalls[0].isSpam).toBe(false)
+    const body = await res.json()
+    expect(body.master).toBe(true)
+  })
+
+  it('POST / holds non-blogger comments for moderation when AUTO_APPROVE is false', async () => {
+    config.set('AUTO_APPROVE', 'false')
+    config.set('BLOGGER_EMAIL', 'me@example.com')
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Guest', mail: 'guest@example.com', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(createCalls[0].isSpam).toBe(true)
+    expect(createCalls[0].master).toBe(false)
+  })
+
+  it('POST / exempts the blogger from moderation', async () => {
+    // 博主评论免审核：即使 AUTO_APPROVE=false 也不该进待审核
+    config.set('AUTO_APPROVE', 'false')
+    config.set('BLOGGER_EMAIL', 'me@example.com')
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Me', mail: 'me@example.com', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(createCalls[0].master).toBe(true)
+    expect(createCalls[0].isSpam).toBe(false)
   })
 
   it('POST /:id/like returns server-authoritative state', async () => {

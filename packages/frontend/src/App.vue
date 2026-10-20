@@ -41,6 +41,38 @@ const commentPlaceholder = ref('')
 const imageCdnUrl = ref('')
 const imageMaxSizeMb = ref(5)
 
+/**
+ * 每页条数由服务端 COMMENT_PAGE_SIZE 决定，但列表请求不能排队等配置：
+ * 这里把上一次从配置里读到的值记住（按 API 域分桶，同页嵌多个 widget 时
+ * 互不干扰），首屏直接用记住的值发列表，配置回来后只有不一致才补一次。
+ * 非首访（绝大多数）只发一次列表请求，也不会出现「先渲染 10 条再被换成
+ * 配置条数」的闪烁。
+ */
+const PAGE_SIZE_KEY = 'twikee_page_size'
+
+function pageSizeKey(apiUrl: string): string {
+  return `${PAGE_SIZE_KEY}_${encodeURIComponent(apiUrl)}`
+}
+
+function readRememberedPageSize(apiUrl: string): number | null {
+  try {
+    const raw = localStorage.getItem(pageSizeKey(apiUrl))
+    if (!raw) return null
+    const n = Number(raw)
+    return Number.isFinite(n) && n >= 1 && n <= 100 ? Math.floor(n) : null
+  } catch {
+    return null // 隐私模式 / 禁用存储：退化成每次都按默认值请求
+  }
+}
+
+function rememberPageSize(apiUrl: string, size: number): void {
+  try {
+    localStorage.setItem(pageSizeKey(apiUrl), String(size))
+  } catch {
+    // 写不进去只是下次首屏多一次列表请求，不影响功能
+  }
+}
+
 const fetchConfig = async (): Promise<number | null> => {
   try {
     const res = await fetch(`${apiUrl.value}/api/config`)
@@ -52,8 +84,6 @@ const fetchConfig = async (): Promise<number | null> => {
     const maxSize = Number(cfg.MAX_IMAGE_SIZE)
     if (Number.isFinite(maxSize) && maxSize > 0) imageMaxSizeMb.value = Math.floor(maxSize)
     const configured = Number(cfg.COMMENT_PAGE_SIZE)
-    // 每页条数交给调用方去应用：列表请求是并发发出的，
-    // 这里直接改 pageSize 会被列表返回值的 pageSize 覆盖掉。
     if (Number.isFinite(configured) && configured > 0) return Math.min(100, Math.max(1, Math.floor(configured)))
     return null
   } catch (e) {
@@ -92,14 +122,17 @@ const handleSubmit = async (data: any): Promise<boolean> => {
 
 onMounted(async () => {
   currentUrl.value = window.location.pathname
-  // 配置只影响每页条数和占位文案，没必要让评论列表排队等它：
-  // 两个请求并发发出去，先到的那个触发函数冷启动，后一个基本吃现成。
+  // 先用本地记住的每页条数，配置和列表并发发出去，先到的那个触发函数冷启动
+  const remembered = readRememberedPageSize(apiUrl.value)
+  if (remembered) pageSize.value = remembered
   const configuredPageSize = fetchConfig()
   await loadComments()
-  // 配置里的每页条数跟列表用的不一致时补一次；COMMENT_PAGE_SIZE 没配就不会走到这
+  // 配置里的每页条数跟这次列表用的不一致（首访，或博主刚改过）才补一次；
+  // 记住之后同一访问者再来就只发一次列表请求
   const size = await configuredPageSize
   if (size && size !== pageSize.value) {
     pageSize.value = size
+    rememberPageSize(apiUrl.value, size)
     await loadComments()
   }
   // Highlight specific comment when navigating from admin
@@ -123,129 +156,73 @@ watch(page, loadComments)
 </script>
 
 <template>
+  <!-- 根节点只挂 .twikee-container（主题变量 + 外观 data-* 的载体）。
+       布局类放在里面这层 div 上：widget.css 把工具类输出成
+       .twikee-container .xxx 的前缀选择器（避免覆盖宿主页面的同名类），
+       作用不到根元素自己身上。 -->
   <div
     id="twikee-comment"
-    class="twikee-container max-w-3xl mx-auto"
+    class="twikee-container"
     :data-appearance="appearance.preset"
     :data-submit-style="appearance.submit"
     :data-fields-layout="appearance.fieldsLayout"
     :data-header-divider="appearance.headerDivider"
     :data-input-focus-ring="appearance.inputFocusRing"
   >
-    <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">评论已关闭</div>
-    <div v-else class="mb-6">
-      <TkSubmit
-        :url="currentUrl"
-        :appearance="appearance"
-        :placeholder="commentPlaceholder"
-        :image-upload="{ url: imageCdnUrl, maxSizeMb: imageMaxSizeMb }"
-        :on-submit="handleSubmit"
-      />
-      <p v-if="submitError" class="tk-comments-submit-error">{{ submitError }}</p>
-    </div>
+    <div class="max-w-3xl mx-auto">
+      <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">评论已关闭</div>
+      <div v-else class="mb-6">
+        <TkSubmit
+          :url="currentUrl"
+          :appearance="appearance"
+          :placeholder="commentPlaceholder"
+          :image-upload="{ url: imageCdnUrl, maxSizeMb: imageMaxSizeMb }"
+          :on-submit="handleSubmit"
+        />
+        <p v-if="submitError" class="tk-comments-submit-error">{{ submitError }}</p>
+      </div>
 
-    <div class="tk-comments-header">
-      <h3 class="tk-comments-title">
-        评论
-        <span v-if="total > 0" class="tk-comments-count">{{ total }}</span>
-      </h3>
-    </div>
+      <div class="tk-comments-header">
+        <h3 class="tk-comments-title">
+          评论
+          <span v-if="total > 0" class="tk-comments-count">{{ total }}</span>
+        </h3>
+      </div>
 
-    <div class="tk-comments">
-      <TkComment
-        v-for="(comment, index) in commentTree"
-        :key="comment.id"
-        :comment="comment"
-        :all-comments="comments"
-        :api-url="apiUrl"
-        :master-tag="masterTag"
-        :show-divider="index < commentTree.length - 1"
-        :appearance="appearance"
-        @load="loadComments"
-      />
-    </div>
+      <div class="tk-comments">
+        <TkComment
+          v-for="(comment, index) in commentTree"
+          :key="comment.id"
+          :comment="comment"
+          :all-comments="comments"
+          :api-url="apiUrl"
+          :master-tag="masterTag"
+          :show-divider="index < commentTree.length - 1"
+          :appearance="appearance"
+          @load="loadComments"
+        />
+      </div>
 
-    <div v-if="!loading && !error && commentTree.length === 0" class="tk-comments-empty">
-      暂无评论，来发表第一条评论吧~
-    </div>
+      <div v-if="!loading && !error && commentTree.length === 0" class="tk-comments-empty">
+        暂无评论，来发表第一条评论吧~
+      </div>
 
-    <div v-if="totalPages > 1" class="tk-comments-pagination">
-      <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--"> 上一页 </Button>
-      <span class="tk-comments-page"> {{ page }} / {{ totalPages }} </span>
-      <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="page++"> 下一页 </Button>
-    </div>
+      <div v-if="totalPages > 1" class="tk-comments-pagination">
+        <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--"> 上一页 </Button>
+        <span class="tk-comments-page"> {{ page }} / {{ totalPages }} </span>
+        <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="page++"> 下一页 </Button>
+      </div>
 
-    <div v-if="loading" class="tk-comments-loading" aria-live="polite" role="status">加载中...</div>
+      <div v-if="loading" class="tk-comments-loading" aria-live="polite" role="status">加载中...</div>
 
-    <div v-if="error" class="tk-comments-error">
-      {{ error }}
+      <div v-if="error" class="tk-comments-error">
+        {{ error }}
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.twikee-container {
-  --twikee-background: oklch(0.9818 0.0054 95.0986);
-  --twikee-foreground: oklch(0.3438 0.0269 95.7226);
-  --twikee-card: oklch(0.9665 0.0067 97.3521);
-  --twikee-card-foreground: oklch(0.1908 0.002 106.5859);
-  --twikee-popover: oklch(1 0 0);
-  --twikee-popover-foreground: oklch(0.2671 0.0196 98.939);
-  --twikee-primary: oklch(0.6171 0.1375 39.0427);
-  --twikee-primary-foreground: oklch(1 0 0);
-  --twikee-secondary: oklch(0.9245 0.0138 92.9892);
-  --twikee-secondary-foreground: oklch(0.4334 0.0177 98.6048);
-  --twikee-muted: oklch(0.9341 0.0153 90.239);
-  --twikee-muted-foreground: oklch(0.5341 0.0078 97.4503);
-  --twikee-accent: oklch(0.9245 0.0138 92.9892);
-  --twikee-accent-foreground: oklch(0.2671 0.0196 98.939);
-  --twikee-destructive: oklch(0.1908 0.002 106.5859);
-  --twikee-destructive-foreground: oklch(1 0 0);
-  --twikee-border: oklch(0.8847 0.0069 97.3627);
-  --twikee-input: oklch(0.7621 0.0156 98.3528);
-  --twikee-ring: oklch(0.6171 0.1375 39.0427);
-  --twikee-radius: 0.75rem;
-  --background: var(--twikee-background);
-  --foreground: var(--twikee-foreground);
-  --card: var(--twikee-card);
-  --card-foreground: var(--twikee-card-foreground);
-  --popover: var(--twikee-popover);
-  --popover-foreground: var(--twikee-popover-foreground);
-  --primary: var(--twikee-primary);
-  --primary-foreground: var(--twikee-primary-foreground);
-  --secondary: var(--twikee-secondary);
-  --secondary-foreground: var(--twikee-secondary-foreground);
-  --muted: var(--twikee-muted);
-  --muted-foreground: var(--twikee-muted-foreground);
-  --accent: var(--twikee-accent);
-  --accent-foreground: var(--twikee-accent-foreground);
-  --destructive: var(--twikee-destructive);
-  --destructive-foreground: var(--twikee-destructive-foreground);
-  --border: var(--twikee-border);
-  --input: var(--twikee-input);
-  --ring: var(--twikee-ring);
-  --radius: var(--twikee-radius);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-}
-
 .tk-comments-header {
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;

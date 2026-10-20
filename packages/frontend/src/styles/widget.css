@@ -1,4 +1,116 @@
+/*
+ * 嵌入版样式（第三方页面通过 <link> 引入的 style.css）。
+ *
+ * 这份文件的写法受四个约束决定，改动前先读：
+ *
+ * 1. 不能带 preflight。它是全局 reset（* { margin:0; padding:0 }），
+ *    一进来就把宿主页面所有元素的间距和边框清掉。
+ * 2. 主题变量只能挂在 .twikee-container 上。发到 :root 会覆盖宿主自己的
+ *    --background/--primary 等变量，把宿主站点的样式一起改掉。
+ * 3. 只扫 widget 自己的源码。站点（index.css）和管理后台是另一份构建，
+ *    不扫全仓库，否则文档站、demo 页的类都会被塞进这份文件。
+ * 4. 工具类必须圈在 .twikee-container 里。.flex/.hidden 这类不带值的类名
+ *    一旦全局生效，宿主页面自己写的同名类就会被我们改掉（浏览器里实测过：
+ *    宿主的 .flex{display:block} 被我们的 .flex{display:flex} 覆盖）。
+ *    所以 @tailwind utilities 写在 .twikee-container 规则内部 —— Tailwind 4
+ *    会把它输出成 .twikee-container .mb-6 这样的前缀选择器，纯 CSS、
+ *    不依赖 @scope（Baseline 2026，老浏览器会整块丢弃）。
+ *
+ * 因此这里用 @reference 只「加载」设计系统用于生成工具类（不产出任何变量），
+ * 用 @theme reference 补上默认主题里没有的语义色，变量本身由下面
+ * .twikee-container 里的手写块提供。
+ *
+ * 曾经的坑：这个文件长期用着 v3 的写法且从未加载主题 —— @tailwind utilities
+ * 确实会生成工具类（作为嵌套规则落在 .twikee-container 内），但所有引用
+ * --spacing / --text-* / --color-* / --radius-* 的类因为取不到值而消失，
+ * 只剩 .flex/.hidden 这类静态值的活着。症状就是「嵌入版评论区丢掉全部
+ * 间距、字号、颜色、圆角」，而 demo/管理后台走 index.css 所以一直没暴露。
+ * 修复的关键是 @reference（把 at-rule 挪出规则只是为了可读性）。
+ */
+@reference "tailwindcss";
+
+/* 语义色：Tailwind 默认主题里没有，站点侧定义在 src/styles/index.css 的
+   @theme inline。这里只让设计系统「知道」这些名字存在（reference 不产出
+   变量），值指向 .twikee-container 提供的同名变量。 */
+@theme reference {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* 只扫 widget 自己的源码：App/Admin/DemoEntry、components、composables、lib */
+@source "../**/*.vue";
+@source "../**/*.ts";
+
+/*
+ * 下面的变量是手抄的 Tailwind 默认主题（只留 widget 用到的部分）。
+ * 升级 Tailwind 时记得跟 node_modules/tailwindcss/theme.css 比对一遍，
+ * 否则这里会和默认主题静默漂移。字体类不提供变量：嵌入组件应该继承
+ * 宿主页面的字体，而不是硬套一套。
+ */
 .twikee-container {
+  /*
+   * 主题 token：评论区和管理后台共用一份。原来这套值只写在 App.vue 的 scoped
+   * 样式里，嵌入版后台（initAdmin 挂的裸 div）取不到，bg-background 之类
+   * 全部落空。搬到这里统一供给——widget.css 是两个入口共用的样式。
+   * 值跟站点 src/styles/index.css 的 :root 保持一致。
+   */
+  --twikee-background: oklch(0.9818 0.0054 95.0986);
+  --twikee-foreground: oklch(0.3438 0.0269 95.7226);
+  --twikee-card: oklch(0.9665 0.0067 97.3521);
+  --twikee-card-foreground: oklch(0.1908 0.002 106.5859);
+  --twikee-popover: oklch(1 0 0);
+  --twikee-popover-foreground: oklch(0.2671 0.0196 98.939);
+  --twikee-primary: oklch(0.6171 0.1375 39.0427);
+  --twikee-primary-foreground: oklch(1 0 0);
+  --twikee-secondary: oklch(0.9245 0.0138 92.9892);
+  --twikee-secondary-foreground: oklch(0.4334 0.0177 98.6048);
+  --twikee-muted: oklch(0.9341 0.0153 90.239);
+  --twikee-muted-foreground: oklch(0.5341 0.0078 97.4503);
+  --twikee-accent: oklch(0.9245 0.0138 92.9892);
+  --twikee-accent-foreground: oklch(0.2671 0.0196 98.939);
+  --twikee-destructive: oklch(0.1908 0.002 106.5859);
+  --twikee-destructive-foreground: oklch(1 0 0);
+  --twikee-border: oklch(0.8847 0.0069 97.3627);
+  --twikee-input: oklch(0.7621 0.0156 98.3528);
+  --twikee-ring: oklch(0.6171 0.1375 39.0427);
+  --twikee-radius: 0.75rem;
+  --background: var(--twikee-background);
+  --foreground: var(--twikee-foreground);
+  --card: var(--twikee-card);
+  --card-foreground: var(--twikee-card-foreground);
+  --popover: var(--twikee-popover);
+  --popover-foreground: var(--twikee-popover-foreground);
+  --primary: var(--twikee-primary);
+  --primary-foreground: var(--twikee-primary-foreground);
+  --secondary: var(--twikee-secondary);
+  --secondary-foreground: var(--twikee-secondary-foreground);
+  --muted: var(--twikee-muted);
+  --muted-foreground: var(--twikee-muted-foreground);
+  --accent: var(--twikee-accent);
+  --accent-foreground: var(--twikee-accent-foreground);
+  --destructive: var(--twikee-destructive);
+  --destructive-foreground: var(--twikee-destructive-foreground);
+  --border: var(--twikee-border);
+  --input: var(--twikee-input);
+  --ring: var(--twikee-ring);
+  --radius: var(--twikee-radius);
   --color-red-200: oklch(88.5% .062 18.334);
   --color-red-500: oklch(63.7% .237 25.331);
   --color-yellow-500: oklch(79.5% .184 86.047);
@@ -44,9 +156,6 @@
   --text-xl--line-height: calc(1.75 / 1.25);
   --text-2xl: 1.5rem;
   --text-2xl--line-height: calc(2 / 1.5);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-serif: var(--font-serif);
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
@@ -65,6 +174,9 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --default-transition-duration: 0.15s;
   --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 工具类整体圈在 .twikee-container 里：编译器输出成
+     .twikee-container .xxx 的前缀选择器，宿主页面的同名类不受影响 */
   @tailwind utilities;
 }
 

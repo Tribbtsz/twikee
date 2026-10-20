@@ -138,136 +138,143 @@ const tabs = [
 </script>
 
 <template>
-  <div v-if="!isLoggedIn" class="min-h-screen bg-background">
-    <AdminLogin :api-url="apiUrl" @login="handleLogin" />
-  </div>
+  <!-- 外层只挂 .twikee-container：嵌入版样式（style.css）的主题变量和工具类都圈在
+       这个类里面（见 styles/widget.css），initAdmin 挂载的裸 div 也不例外，
+       否则后台拿到的是没有变量、没有工具类的裸骨架。内层的 min-h-screen /
+       bg-background 必须在容器内部才生效——工具类输出成 .twikee-container .xxx
+       的前缀选择器，作用不到容器元素自己身上。 -->
+  <div class="twikee-container">
+    <div v-if="!isLoggedIn" class="min-h-screen bg-background">
+      <AdminLogin :api-url="apiUrl" @login="handleLogin" />
+    </div>
 
-  <div v-else class="min-h-screen bg-background">
-    <header class="border-b bg-card sticky top-0 z-10">
-      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold">
-          Twikee 管理后台
-          <span v-if="commentsClosed" class="text-base font-bold text-red-500 ml-6 bg-red-200 py-2 px-4 rounded-full"
-            >已关停</span
+    <div v-else class="min-h-screen bg-background">
+      <header class="border-b bg-card sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 class="text-xl font-bold">
+            Twikee 管理后台
+            <span v-if="commentsClosed" class="text-base font-bold text-red-500 ml-6 bg-red-200 py-2 px-4 rounded-full"
+              >已关停</span
+            >
+          </h1>
+          <div class="flex items-center gap-4">
+            <a href="/demo.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
+              <ArrowLeft class="w-4 h-4" />
+              返回演示
+            </a>
+            <span class="text-sm text-muted-foreground">{{ stats.total }} 条评论</span>
+            <Button variant="ghost" size="sm" @click="handleLogout">
+              <LogOut class="w-4 h-4 mr-2" />
+              退出
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main class="max-w-6xl mx-auto px-4 py-6">
+        <!-- 统计卡片 -->
+        <div class="flex gap-4 mb-6 items-stretch">
+          <Card class="flex-1">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-primary/10 rounded-lg">
+                  <MessageSquare class="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <div class="text-2xl font-bold">{{ stats.total }}</div>
+                  <div class="text-sm text-muted-foreground">总评论数</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card class="flex-1">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-green-500/10 rounded-lg">
+                  <BarChart3 class="w-5 h-5 text-green-500" />
+                </div>
+                <div>
+                  <div class="text-2xl font-bold">{{ stats.approved }}</div>
+                  <div class="text-sm text-muted-foreground">已通过</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card class="flex-1">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-yellow-500/10 rounded-lg">
+                  <BarChart3 class="w-5 h-5 text-yellow-500" />
+                </div>
+                <div>
+                  <div class="text-2xl font-bold">{{ stats.pending }}</div>
+                  <div class="text-sm text-muted-foreground">待审核</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div
+            class="w-24 shrink-0 cursor-pointer transition-all rounded-lg flex flex-col items-center justify-center gap-1"
+            role="button"
+            tabindex="0"
+            :aria-label="commentsClosed ? '一键开启评论' : '一键关停评论'"
+            :class="
+              commentsClosed
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-destructive text-destructive-foreground hover:opacity-90'
+            "
+            @click="toggleCommentsClosed"
+            @keydown.enter.prevent="toggleCommentsClosed"
+            @keydown.space.prevent="toggleCommentsClosed"
           >
-        </h1>
-        <div class="flex items-center gap-4">
-          <a href="/demo.html" class="text-sm text-muted-foreground hover:text-primary flex items-center gap-1">
-            <ArrowLeft class="w-4 h-4" />
-            返回演示
-          </a>
-          <span class="text-sm text-muted-foreground">{{ stats.total }} 条评论</span>
-          <Button variant="ghost" size="sm" @click="handleLogout">
-            <LogOut class="w-4 h-4 mr-2" />
-            退出
+            <ShieldCheck v-if="commentsClosed" class="w-5 h-5" />
+            <ShieldAlert v-else class="w-5 h-5" />
+            <div class="text-xs font-medium">{{ commentsClosed ? '一键开启' : '一键关停' }}</div>
+          </div>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="flex gap-2 mb-4 border-b pb-4">
+          <Button
+            v-for="tab in tabs"
+            :key="tab.key"
+            :variant="activeTab === tab.key ? 'default' : 'ghost'"
+            size="sm"
+            @click="activeTab = tab.key"
+          >
+            <component :is="tab.icon" class="w-4 h-4 mr-2" />
+            {{ tab.label }}
           </Button>
         </div>
-      </div>
-    </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-6">
-      <!-- 统计卡片 -->
-      <div class="flex gap-4 mb-6 items-stretch">
-        <Card class="flex-1">
-          <CardContent class="p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-primary/10 rounded-lg">
-                <MessageSquare class="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <div class="text-2xl font-bold">{{ stats.total }}</div>
-                <div class="text-sm text-muted-foreground">总评论数</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <!-- 内容区域 -->
+        <AdminComments
+          v-if="activeTab === 'comments'"
+          :api-url="apiUrl"
+          :token="token"
+          :site-url="siteUrl"
+          @refresh="fetchStats"
+          @logout="handleLogout"
+        />
 
-        <Card class="flex-1">
-          <CardContent class="p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-green-500/10 rounded-lg">
-                <BarChart3 class="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <div class="text-2xl font-bold">{{ stats.approved }}</div>
-                <div class="text-sm text-muted-foreground">已通过</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AdminConfig v-if="activeTab === 'config'" :api-url="apiUrl" :token="token" @logout="handleLogout" />
 
-        <Card class="flex-1">
-          <CardContent class="p-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-yellow-500/10 rounded-lg">
-                <BarChart3 class="w-5 h-5 text-yellow-500" />
-              </div>
-              <div>
-                <div class="text-2xl font-bold">{{ stats.pending }}</div>
-                <div class="text-sm text-muted-foreground">待审核</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AdminImportExport v-if="activeTab === 'data'" :api-url="apiUrl" :token="token" @logout="handleLogout" />
+      </main>
 
-        <div
-          class="w-24 shrink-0 cursor-pointer transition-all rounded-lg flex flex-col items-center justify-center gap-1"
-          role="button"
-          tabindex="0"
-          :aria-label="commentsClosed ? '一键开启评论' : '一键关停评论'"
-          :class="
-            commentsClosed
-              ? 'bg-green-500 text-white hover:bg-green-600'
-              : 'bg-destructive text-destructive-foreground hover:opacity-90'
-          "
-          @click="toggleCommentsClosed"
-          @keydown.enter.prevent="toggleCommentsClosed"
-          @keydown.space.prevent="toggleCommentsClosed"
-        >
-          <ShieldCheck v-if="commentsClosed" class="w-5 h-5" />
-          <ShieldAlert v-else class="w-5 h-5" />
-          <div class="text-xs font-medium">{{ commentsClosed ? '一键开启' : '一键关停' }}</div>
-        </div>
-      </div>
-
-      <!-- 标签页 -->
-      <div class="flex gap-2 mb-4 border-b pb-4">
-        <Button
-          v-for="tab in tabs"
-          :key="tab.key"
-          :variant="activeTab === tab.key ? 'default' : 'ghost'"
-          size="sm"
-          @click="activeTab = tab.key"
-        >
-          <component :is="tab.icon" class="w-4 h-4 mr-2" />
-          {{ tab.label }}
-        </Button>
-      </div>
-
-      <!-- 内容区域 -->
-      <AdminComments
-        v-if="activeTab === 'comments'"
-        :api-url="apiUrl"
-        :token="token"
-        :site-url="siteUrl"
-        @refresh="fetchStats"
-        @logout="handleLogout"
+      <Dialog
+        v-model:open="showCloseDialog"
+        title="关停评论"
+        description="确定要关闭评论吗？所有新评论将被拒绝，直到重新开启。"
+        confirm-text="关停"
+        variant="destructive"
+        @confirm="confirmCloseComments"
       />
 
-      <AdminConfig v-if="activeTab === 'config'" :api-url="apiUrl" :token="token" @logout="handleLogout" />
-
-      <AdminImportExport v-if="activeTab === 'data'" :api-url="apiUrl" :token="token" @logout="handleLogout" />
-    </main>
-
-    <Dialog
-      v-model:open="showCloseDialog"
-      title="关停评论"
-      description="确定要关闭评论吗？所有新评论将被拒绝，直到重新开启。"
-      confirm-text="关停"
-      variant="destructive"
-      @confirm="confirmCloseComments"
-    />
-
-    <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />
+      <Toast v-model:open="toast.open" :message="toast.message" :type="toast.type" />
+    </div>
   </div>
 </template>

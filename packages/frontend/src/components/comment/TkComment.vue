@@ -5,15 +5,12 @@ import Badge from '@/components/ui/Badge.vue'
 import TkAvatar from './TkAvatar.vue'
 import TkAction from './TkAction.vue'
 import TkSubmit from './TkSubmit.vue'
-import { marked } from 'marked'
-import { sanitizeHtml } from '@/lib/utils'
+import { renderMarkdown } from '@/lib/markdown'
 import { createLikeController } from '@/lib/like'
 import type { LikeController } from '@/lib/like'
 import type { Comment } from '@twikee/core'
 import type { ResolvedTwikeeAppearance } from '@/types'
 import { getEditToken, saveEditToken, clearEditToken } from '@/lib/edit-token'
-
-marked.setOptions({ breaks: true, gfm: true })
 
 type CommentNode = Comment & { children?: CommentNode[]; replyToNick?: string }
 
@@ -179,12 +176,12 @@ const convertLink = (link?: string): string | undefined => {
 const convertedLink = computed(() => convertLink(props.comment.link))
 
 const renderedContent = computed(() => {
-  return sanitizeHtml(marked.parse(props.comment.content) as string)
+  return renderMarkdown(props.comment.content)
 })
 
-const renderChildContent = (content: string) => {
-  return sanitizeHtml(marked.parse(content) as string)
-}
+// 子评论内容也走 renderMarkdown：它内部按内容做有界 memo，
+// 重复渲染只是查表，不需要在这里再包一层 computed map
+const renderChildContent = (content: string) => renderMarkdown(content)
 
 // 点击只改本地（乐观）；请求由控制器合并后发出
 const onLike = () => likeController.toggle()

@@ -234,18 +234,33 @@ class TursoCommentRepository implements CommentRepository {
     else if (!includeDeleted) conditions.push('deleted = 0')
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
-    const countSql = `SELECT COUNT(*) as count FROM comments ${where}`
-    const countResult = await this.client.execute({
-      sql: countSql,
-      args,
-    })
-    const total = Number(countResult.rows[0].count)
-
-    const listSql = `SELECT * FROM comments ${where} ORDER BY top DESC, created_at DESC LIMIT ? OFFSET ?`
+    // 总数用窗口函数随列表一起返回：原来 COUNT 与 SELECT 是两次独立往返，
+    // 而列表是全站最热的读路径（每次打开评论区都打它）。
+    // 窗口函数在 WHERE 之后、LIMIT 之前计算，拿到的就是满足条件的总行数。
+    // 别名加 tw_ 前缀：SELECT * 之后同名列会互相覆盖，避开未来加列时撞名。
+    const listSql = `SELECT *, COUNT(*) OVER () AS tw_total FROM comments ${where} ORDER BY top DESC, created_at DESC LIMIT ? OFFSET ?`
     const listResult = await this.client.execute({
       sql: listSql,
       args: [...args, pageSize, offset],
     })
+
+    let total: number
+    if (listResult.rows.length > 0) {
+      total = Number(listResult.rows[0].tw_total)
+    } else if (offset === 0) {
+      // 第一页就空 = 总数为 0（零评论的新博客、或 status=spam 但没有垃圾评论），
+      // 不必再补一次 COUNT
+      total = 0
+    } else {
+      // 分页越界时列表为空，窗口函数给不出总数，补一次 COUNT，
+      // 否则 total 会变成 0、totalPages 变 1，前端分页器直接失灵。
+      // 只有客户端拿着旧总数翻页才会走到这。
+      const countResult = await this.client.execute({
+        sql: `SELECT COUNT(*) as count FROM comments ${where}`,
+        args,
+      })
+      total = Number(countResult.rows[0].count)
+    }
 
     return {
       data: listResult.rows.map((row) => this.rowToComment(row)),

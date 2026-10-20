@@ -62,14 +62,28 @@ export function createCommentRoutes() {
       return c.json({ error: parsed.error.flatten().fieldErrors }, 400)
     }
 
-    const commentsClosed = await db.config.get('COMMENTS_CLOSED')
+    // 配置读一次就够：远程 Turso 每次 get 都是一趟网络往返，原来这里
+    // COMMENTS_CLOSED / AUTO_APPROVE / BLOGGER_EMAIL 分三次读，通知分支
+    // 里 SITE_NAME / SITE_URL 又是两次，最坏 6 趟。快照还能消掉
+    // 「检查完又被管理员改掉」的竞态。
+    const cfg = await db.config.getAll()
+    // 只取出用到的几个 key：整表配置里含 ADMIN_PASSWORD 哈希等密钥，
+    // 不让它们在这个未认证路由里继续被引用（参考 admin.ts 的显式解构）
+    const {
+      COMMENTS_CLOSED: commentsClosed,
+      AUTO_APPROVE: autoApprove,
+      BLOGGER_EMAIL: bloggerEmail,
+      BLOCKED_IPS: blockedIps,
+      SITE_NAME: siteName,
+      SITE_URL: siteUrl,
+    } = cfg
+
     if (commentsClosed === 'true') {
       return c.json({ error: '评论已关闭' }, 403)
     }
 
     // IP 黑名单：命中则拒绝发表（A4 修完后 getClientIp 已取正确客户端 IP）
     const clientIp = getClientIp(c)
-    const blockedIps = await db.config.get('BLOCKED_IPS')
     if (blockedIps) {
       const blocked = new Set(
         blockedIps
@@ -81,17 +95,9 @@ export function createCommentRoutes() {
         return c.json({ error: 'Forbidden' }, 403)
       }
     }
-
-    const autoApprove = await db.config.get('AUTO_APPROVE')
     const needsModeration = autoApprove === 'false'
-
-    let isMaster = false
-    if (parsed.data.mail) {
-      const bloggerEmail = await db.config.get('BLOGGER_EMAIL')
-      if (bloggerEmail && parsed.data.mail.toLowerCase() === bloggerEmail.toLowerCase()) {
-        isMaster = true
-      }
-    }
+    const isMaster =
+      !!parsed.data.mail && !!bloggerEmail && parsed.data.mail.toLowerCase() === bloggerEmail.toLowerCase()
 
     // 只做 trim：XSS 由前端 sanitizeHtml（白名单）兜底，通知渠道全部 escape。
     // 之前这里的 strip 会吃掉正文合法内容（"a < b > c" 入库变成 "a  c"）。
@@ -99,6 +105,10 @@ export function createCommentRoutes() {
       return str.trim()
     }
 
+    // master / isSpam 直接随创建写入：这两个标记原来靠创建后补两次
+    // update 打上，每次 update 是 UPDATE + 回查 SELECT 两趟往返，
+    // 而且评论已落库而补标记失败时会留下「标记丢了」的半成品状态。
+    // create() 本身就支持这两个入参（导入端点一直在这么用）。
     const comment = await c.var.commentService.create({
       url: sanitize(parsed.data.url),
       nick: sanitize(parsed.data.nick),
@@ -109,22 +119,13 @@ export function createCommentRoutes() {
       ip: clientIp,
       rid: parsed.data.rid,
       pid: parsed.data.pid,
+      master: isMaster,
+      // 博主的评论免审核
+      isSpam: needsModeration && !isMaster,
     })
-
-    if (isMaster) {
-      await c.var.commentService.update(comment.id, { master: true })
-      comment.master = true
-    }
-
-    if (needsModeration && !isMaster) {
-      await c.var.commentService.update(comment.id, { isSpam: true })
-      comment.isSpam = true
-    }
 
     const ns = c.var.notificationService
     if (ns && ns.channelCount > 0) {
-      const siteName = await db.config.get('SITE_NAME')
-      const siteUrl = await db.config.get('SITE_URL')
       const pageUrl = siteUrl ? `${siteUrl}${parsed.data.url}` : parsed.data.url
       defer(
         c,

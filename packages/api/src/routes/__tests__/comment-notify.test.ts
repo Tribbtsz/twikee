@@ -4,9 +4,18 @@ import { createCommentRoutes } from '../comment'
 
 function makeApp(notificationService: any) {
   const config = new Map<string, string>()
+  const configGetCalls: string[] = []
+  const configGetAllCalls: number[] = []
   const db: any = {
     config: {
-      get: async (k: string) => config.get(k) || null,
+      get: async (k: string) => {
+        configGetCalls.push(k)
+        return config.get(k) || null
+      },
+      getAll: async () => {
+        configGetAllCalls.push(1)
+        return Object.fromEntries(config)
+      },
       set: async (k: string, v: string) => {
         config.set(k, v)
       },
@@ -16,9 +25,10 @@ function makeApp(notificationService: any) {
         ...data,
         id: '1',
         createdAt: Date.now(),
-        master: false,
+        master: !!data.master,
         top: false,
-        isSpam: false,
+        isSpam: !!data.isSpam,
+        deleted: false,
         likes: 0,
       }),
     },
@@ -33,7 +43,7 @@ function makeApp(notificationService: any) {
     await next()
   })
   app.route('/', createCommentRoutes())
-  return app
+  return { app, config, configGetCalls, configGetAllCalls }
 }
 
 const flush = () => new Promise<void>((r) => setImmediate(r))
@@ -45,7 +55,7 @@ afterEach(() => vi.restoreAllMocks())
 describe('Comment routes with notifications', () => {
   it('POST / triggers notification but still returns 201', async () => {
     const send = vi.fn(async () => {})
-    const app = makeApp({ send, channelCount: 1 })
+    const { app } = makeApp({ send, channelCount: 1 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
@@ -56,9 +66,51 @@ describe('Comment routes with notifications', () => {
     expect(send.mock.calls[0][0].type).toBe('comment.new')
   })
 
+  it('POST / builds the notification url from the same config snapshot', async () => {
+    // SITE_NAME / SITE_URL 与 COMMENTS_CLOSED 等共用一次 getAll 快照，
+    // 不再各发一次远程查询
+    const send = vi.fn(async () => {})
+    const { app, config } = makeApp({ send, channelCount: 1 })
+    config.set('SITE_URL', 'https://blog.example.com')
+    config.set('SITE_NAME', 'My Blog')
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/post/1', nick: 'Alice', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(send.mock.calls[0][0].payload.url).toBe('https://blog.example.com/post/1')
+    expect(send.mock.calls[0][0].payload.siteName).toBe('My Blog')
+  })
+
+  it('POST / falls back to the raw url when SITE_URL is not configured', async () => {
+    const send = vi.fn(async () => {})
+    const { app } = makeApp({ send, channelCount: 1 })
+    const res = await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/post/1', nick: 'Alice', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(res.status).toBe(201)
+    expect(send.mock.calls[0][0].payload.url).toBe('/post/1')
+    expect(send.mock.calls[0][0].payload.siteName).toBeUndefined()
+  })
+
+  it('POST / reads config once for both the flags and the notification payload', async () => {
+    const send = vi.fn(async () => {})
+    const { app, configGetAllCalls, configGetCalls } = makeApp({ send, channelCount: 1 })
+    await app.request('/', {
+      method: 'POST',
+      body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    expect(configGetAllCalls).toHaveLength(1)
+    expect(configGetCalls).toHaveLength(0)
+  })
+
   it('POST / reply triggers comment.reply event', async () => {
     const send = vi.fn(async () => {})
-    const app = makeApp({ send, channelCount: 1 })
+    const { app } = makeApp({ send, channelCount: 1 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Bob', content: '+1', rid: '1' }),
@@ -70,7 +122,7 @@ describe('Comment routes with notifications', () => {
 
   it('POST / skips notification when no channels registered', async () => {
     const send = vi.fn(async () => {})
-    const app = makeApp({ send, channelCount: 0 })
+    const { app } = makeApp({ send, channelCount: 0 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
@@ -85,7 +137,7 @@ describe('Comment routes with notifications', () => {
     const send = vi.fn(async () => {
       throw new Error('channel down')
     })
-    const app = makeApp({ send, channelCount: 1 })
+    const { app } = makeApp({ send, channelCount: 1 })
     const res = await app.request('/', {
       method: 'POST',
       body: JSON.stringify({ url: '/p', nick: 'Alice', content: 'Hi' }),
