@@ -41,7 +41,7 @@ const config = ref<Record<string, string>>({})
 const savedConfig = ref<Record<string, string>>({})
 const loading = ref(false)
 const showResetDialog = ref(false)
-const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'info' })
+const toast = ref({ open: false, message: '', type: 'info' as 'success' | 'error' | 'warning' | 'info' })
 
 const isDirty = computed(() => {
   const keys = new Set([...Object.keys(config.value), ...Object.keys(savedConfig.value)])
@@ -51,7 +51,7 @@ const isDirty = computed(() => {
   return false
 })
 
-const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
   toast.value = { open: true, message, type }
 }
 
@@ -305,6 +305,13 @@ const fetchConfig = async () => {
 }
 
 const saveConfig = async () => {
+  const missing = missingForChannel()
+  if (missing.length > 0) {
+    showToast(
+      `通知渠道未配全：缺少 ${missing.map((key) => LABEL_BY_KEY[key] || key).join('、')}，保存后通知不会发出`,
+      'warning',
+    )
+  }
   loading.value = true
   try {
     const res = await fetch(`${props.apiUrl}/api/admin/config`, {
@@ -337,6 +344,32 @@ const resetConfig = () => {
   // 写成默认值后点保存会把全部配置清空，是个 footgun。
   config.value = { ...savedConfig.value }
   showToast('已恢复为已保存的配置', 'info')
+}
+
+// 与 api/src/lib/notification.ts buildFromConfig 的构建条件一一对应：
+// 渠道启用但必填键缺失时，服务端只会 console.warn 并静默不发通知，
+// 这里在保存前给出 warning，避免"看起来配好了、实际一条都发不出"。
+const NOTIFICATION_REQUIRED: Record<string, string[]> = {
+  telegram: ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'],
+  webhook: ['WEBHOOK_URL'],
+  email: ['SMTP_PASS', 'SMTP_FROM', 'SMTP_TO'],
+  wxpusher: ['WXPUSHER_APP_TOKEN', 'WXPUSHER_UIDS'],
+  wecom: ['WECOM_KEY'],
+}
+
+const LABEL_BY_KEY: Record<string, string> = {}
+for (const group of settings) {
+  for (const item of group.items) {
+    LABEL_BY_KEY[item.key] = item.label
+  }
+}
+
+const missingForChannel = (): string[] => {
+  if ((config.value['NOTIFICATION_ENABLE'] || '') !== 'true') return []
+  const type = (config.value['NOTIFICATION_TYPE'] || '').trim()
+  const required = NOTIFICATION_REQUIRED[type]
+  if (!required) return []
+  return required.filter((key) => !(config.value[key] || '').trim())
 }
 
 onMounted(fetchConfig)
