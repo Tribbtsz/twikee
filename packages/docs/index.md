@@ -8,7 +8,7 @@ hero:
   text: 轻量、现代化的自建评论系统
   tagline: 基于 Vue 3 + Hono + Turso/libSQL，一行脚本嵌入任意网站
   image:
-    src: /logo.svg
+    src: /logo.png
     alt: Twikee
   actions:
     - theme: brand

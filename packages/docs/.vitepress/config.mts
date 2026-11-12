@@ -102,7 +102,8 @@ export default defineConfig({
     hostname: SITE_URL,
   },
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/logo.png' }],
+    ['link', { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }],
     ['meta', { name: 'theme-color', content: '#3b82f6' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'Twikee' }],
@@ -143,7 +144,7 @@ export default defineConfig({
     return head
   },
   themeConfig: {
-    logo: '/logo.svg',
+    logo: '/logo.png',
     outline: { level: [2, 3] },
     socialLinks: [{ icon: 'github', link: GITHUB_URL }],
     editLink: {

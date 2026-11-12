@@ -1,11 +1,24 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
+// 与 vercel.json 的 rewrite 对齐：本地也能用 /admin、/demo 访问对应页面
+const servePrettyUrls: Plugin = {
+  name: 'serve-pretty-urls',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.url === '/admin') req.url = '/admin.html'
+      else if (req.url === '/demo') req.url = '/demo.html'
+      next()
+    })
+  },
+}
+
 export default defineConfig({
-  plugins: [vue(), tailwindcss(), dts({ include: ['src/**/*.ts', 'src/**/*.vue'] })],
+  plugins: [vue(), tailwindcss(), dts({ include: ['src/**/*.ts', 'src/**/*.vue'] }), servePrettyUrls],
   define: {
     'process.env': {},
   },

@@ -16,7 +16,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-本地访问 `http://localhost:5173`，管理后台访问 `http://localhost:5173/admin`；启动时会自动打开组件演示页 `/demo.html`。
+本地访问 `http://localhost:5173`（启动时会自动打开组件演示页），在线演示 `http://localhost:5173/demo`，管理后台 `http://localhost:5173/admin`。后端 API 跑在 `http://localhost:3000`，前端 dev server 已代理 `/api`。
 
 ## 前端接入
 
@@ -30,6 +30,8 @@ pnpm dev
   })
 </script>
 ```
+
+`init` 还支持可选的 `appearance` 外观配置（预设、提交按钮、字段布局等）；管理后台通过 `twikee.initAdmin({ el, envId })` 单独挂载。完整参数见[前端接入](https://twikee.vercel.app/guide/integration.html)。
 
 ## 文档
 
@@ -52,12 +54,18 @@ pnpm dev:docs
 ## 项目结构
 
 ```
+api/                    # Vercel Serverless 入口：把 /api 请求转发给 Hono 应用
 packages/
-├── api/         # Hono 后端
-├── core/        # 领域逻辑、Turso 适配器、数据库迁移
-├── frontend/    # Vue 组件、管理后台、可嵌入产物
-└── docs/        # VitePress 文档站
+├── api/                # Hono 后端
+├── core/               # 领域逻辑、Turso 适配器、数据库迁移
+├── frontend/           # Vue 组件、管理后台、可嵌入产物
+└── docs/               # VitePress 文档站
+scripts/
+├── dev.ts              # 本地开发入口：同时启动 API 与前端
+└── build-site.mjs      # Vercel 构建时组装文档站、演示页与可嵌入产物
 ```
+
+生产部署由 `vercel.json` 把 `/api/*` 重写到 `api/[...slug].ts`、`/demo` 与 `/admin` 重写到对应页面；`scripts/build-site.mjs` 再把文档站、演示页和 `twikee.umd.js` / `style.css` 组装进同一个站点目录。
 
 ## 致谢
 

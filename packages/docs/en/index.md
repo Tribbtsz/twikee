@@ -8,7 +8,7 @@ hero:
   text: A lightweight, modern comment system
   tagline: Built with Vue 3 + Hono + Turso/libSQL — embed it anywhere with one script tag
   image:
-    src: /logo.svg
+    src: /logo.png
     alt: Twikee
   actions:
     - theme: brand
