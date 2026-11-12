@@ -18,6 +18,8 @@ export interface TwikeeInitOptions {
   el: string | Element
   envId: string
   appearance?: TwikeeAppearanceOptions
+  /** 评论组件界面语言：'zh-CN'（默认）| 'en'；未知值回落中文 */
+  lang?: string
 }
 
 export function resolveAppearance(appearance?: TwikeeAppearanceOptions): ResolvedTwikeeAppearance {

@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { createTranslator, resolveLang } from '../lib/i18n'
 
 export interface TwikeeComment {
   id: string
@@ -22,9 +23,12 @@ export interface TwikeeComment {
 export interface TwikeeOptions {
   envId: string
   el: string | Element
+  /** 界面语言，默认 zh-CN */
+  lang?: string
 }
 
 export function useTwikee(options: TwikeeOptions) {
+  const t = createTranslator(resolveLang(options.lang))
   const loading = ref(true)
   const error = ref<string | null>(null)
   const comments = ref<TwikeeComment[]>([])
@@ -58,7 +62,7 @@ export function useTwikee(options: TwikeeOptions) {
         pageSize: data.pageSize || pageSize,
       }
     } catch (e) {
-      error.value = '加载评论失败'
+      error.value = t('loadFailed')
       console.error('[Twikee] Failed to fetch comments:', e)
       return {
         data: [],

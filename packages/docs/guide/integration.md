@@ -34,6 +34,7 @@ Twikee 提供一个与框架无关的 UMD 产物，任何站点（纯 HTML、Vue
 | `el` | `string \| Element` | 是 | 评论挂载容器 |
 | `envId` | `string` | 是 | Twikee 后端地址 |
 | `appearance` | `object` | 否 | 外观配置，见[外观配置](/guide/appearance) |
+| `lang` | `'zh-CN' \| 'en'` | 否 | 评论组件界面语言，默认 `zh-CN`；未知值回落中文 |
 
 ## 管理端入口（initAdmin）
 

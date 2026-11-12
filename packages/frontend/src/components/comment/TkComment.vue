@@ -11,6 +11,7 @@ import type { LikeController } from '@/lib/like'
 import type { Comment } from '@twikee/core'
 import type { ResolvedTwikeeAppearance } from '@/types'
 import { getEditToken, saveEditToken, clearEditToken } from '@/lib/edit-token'
+import { useT } from '@/composables/useT'
 
 type CommentNode = Comment & { children?: CommentNode[]; replyToNick?: string }
 
@@ -30,6 +31,8 @@ const props = defineProps({
 const emit = defineEmits<{
   load: []
 }>()
+
+const t = useT()
 
 const isContentExpanded = ref(false)
 const likeCount = ref(props.comment.likes || 0)
@@ -158,10 +161,10 @@ const formatTime = (timestamp: number) => {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
 
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes} 分钟前`
-  if (hours < 24) return `${hours} 小时前`
-  if (days < 30) return `${days} 天前`
+  if (minutes < 1) return t('justNow')
+  if (minutes < 60) return t('minutesAgo', { n: minutes })
+  if (hours < 24) return t('hoursAgo', { n: hours })
+  if (days < 30) return t('daysAgo', { n: days })
   return new Date(timestamp).toLocaleDateString()
 }
 
@@ -234,11 +237,11 @@ const handleReplySubmit = async (data: any): Promise<boolean> => {
       return true
     }
     const err = await res.json().catch(() => null)
-    replyError.value = err?.error || '回复失败，请重试'
+    replyError.value = err?.error || t('replyFailed')
     return false
   } catch (e) {
     console.error('[Twikee] reply failed:', e)
-    replyError.value = '网络错误，请重试'
+    replyError.value = t('networkError')
     return false
   }
 }
@@ -263,11 +266,11 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
       return true
     }
     const err = await res.json().catch(() => null)
-    replyError.value = err?.error || '回复失败，请重试'
+    replyError.value = err?.error || t('replyFailed')
     return false
   } catch (e) {
     console.error('[Twikee] child reply failed:', e)
-    replyError.value = '网络错误，请重试'
+    replyError.value = t('networkError')
     return false
   }
 }
@@ -295,13 +298,13 @@ const submitReport = async () => {
       body: JSON.stringify({ reason: reportReason.value.trim().slice(0, 200) || undefined }),
     })
     if (res.ok) {
-      reportFeedback.value = '已举报，管理员会尽快处理'
+      reportFeedback.value = t('reportSubmitted')
       setTimeout(closeReport, 1500)
     } else {
-      reportFeedback.value = '举报失败，请稍后重试'
+      reportFeedback.value = t('reportFailed')
     }
   } catch {
-    reportFeedback.value = '网络错误，请稍后重试'
+    reportFeedback.value = t('reportNetworkError')
   } finally {
     reportSending.value = false
   }
@@ -325,12 +328,12 @@ const saveEdit = async () => {
   if (!id || editSaving.value) return
   const token = getEditToken(id)
   if (!token) {
-    editError.value = '编辑凭证已过期（仅创建后 30 分钟内可编辑）'
+    editError.value = t('editTokenExpired')
     return
   }
   const content = editContent.value.trim()
   if (!content) {
-    editError.value = '内容不能为空'
+    editError.value = t('contentRequired')
     return
   }
   editSaving.value = true
@@ -346,10 +349,10 @@ const saveEdit = async () => {
       emit('load')
     } else {
       const err = await res.json().catch(() => null)
-      editError.value = err?.error || '保存失败，请重试'
+      editError.value = err?.error || t('saveFailed')
     }
   } catch {
-    editError.value = '网络错误，请重试'
+    editError.value = t('networkError')
   } finally {
     editSaving.value = false
   }
@@ -359,7 +362,7 @@ const saveEdit = async () => {
 const deleteOwn = async (id: string) => {
   const token = getEditToken(id)
   if (!token) return
-  if (!window.confirm('确定要删除这条评论吗？')) return
+  if (!window.confirm(t('deleteConfirm'))) return
   try {
     const res = await fetch(`${props.apiUrl}/api/comment/${id}`, {
       method: 'DELETE',
@@ -407,20 +410,20 @@ const deleteOwn = async (id: string) => {
             <span v-else class="tk-comment__nick">{{ comment.nick }}</span>
 
             <span v-if="comment.replyToNick" class="tk-comment__reply-to">
-              回复 <span class="tk-comment__reply-to-name">@{{ comment.replyToNick }}</span>
+              {{ t('replyTo') }} <span class="tk-comment__reply-to-name">@{{ comment.replyToNick }}</span>
             </span>
 
             <Badge v-if="comment.master" variant="default" class="tk-badge">{{ masterTag }}</Badge>
-            <Badge v-if="comment.top" variant="secondary" class="tk-badge">置顶</Badge>
+            <Badge v-if="comment.top" variant="secondary" class="tk-badge">{{ t('pinned') }}</Badge>
             <a
               v-if="comment.pinnedFromId && pinnedFromInfo"
               :href="`#comment-${pinnedFromInfo.targetId}`"
               class="tk-comment__pinned-from"
               @click.prevent="scrollToComment(pinnedFromInfo.targetId)"
             >
-              {{ pinnedFromInfo.isReply ? '回复自' : '来自' }} @{{ pinnedFromInfo.nick }}
+              {{ pinnedFromInfo.isReply ? t('pinnedFromReply') : t('pinnedFrom') }} @{{ pinnedFromInfo.nick }}
             </a>
-            <Badge v-if="comment.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
+            <Badge v-if="comment.isSpam" variant="destructive" class="tk-badge">{{ t('pendingBadge') }}</Badge>
           </div>
 
           <time class="tk-comment__time">{{ displayTime }}</time>
@@ -432,16 +435,16 @@ const deleteOwn = async (id: string) => {
             class="tk-comment__edit-input"
             rows="4"
             maxlength="10000"
-            aria-label="编辑评论内容"
+            :aria-label="t('editContent')"
           />
           <div v-if="editError" class="tk-comment__error">{{ editError }}</div>
           <div class="tk-comment__edit-actions">
             <button class="tk-comment__edit-btn tk-comment__edit-btn--primary" :disabled="editSaving" @click="saveEdit">
-              {{ editSaving ? '保存中...' : '保存' }}
+              {{ editSaving ? t('saving') : t('save') }}
             </button>
-            <button class="tk-comment__edit-btn" @click="cancelEdit">取消</button>
+            <button class="tk-comment__edit-btn" @click="cancelEdit">{{ t('cancel') }}</button>
             <button class="tk-comment__edit-btn tk-comment__edit-btn--danger" @click="deleteOwn(comment.id)">
-              删除这条评论
+              {{ t('deleteThisComment') }}
             </button>
           </div>
         </div>
@@ -457,9 +460,9 @@ const deleteOwn = async (id: string) => {
           @click="isContentExpanded = true"
           class="tk-comment__expand"
           aria-expanded="false"
-          aria-label="展开完整评论内容"
+          :aria-label="t('expandFull')"
         >
-          展开全文
+          {{ t('expandFull') }}
         </button>
 
         <div v-if="showReplyBox" class="tk-comment__reply-box">
@@ -479,12 +482,14 @@ const deleteOwn = async (id: string) => {
             <button
               v-if="canEdit(comment.id)"
               class="tk-action__btn"
-              aria-label="编辑评论"
+              :aria-label="t('editComment')"
               @click="startEdit(comment.id, comment.content)"
             >
-              编辑
+              {{ t('edit') }}
             </button>
-            <button class="tk-action__btn" aria-label="举报评论" @click="openReport(comment.id)">举报</button>
+            <button class="tk-action__btn" :aria-label="t('report')" @click="openReport(comment.id)">
+              {{ t('report') }}
+            </button>
           </div>
         </div>
       </div>
@@ -517,11 +522,11 @@ const deleteOwn = async (id: string) => {
                 <span v-else class="tk-comment__nick">{{ child.nick }}</span>
 
                 <span v-if="child.replyToNick" class="tk-comment__reply-to">
-                  回复 <span class="tk-comment__reply-to-name">@{{ child.replyToNick }}</span>
+                  {{ t('replyTo') }} <span class="tk-comment__reply-to-name">@{{ child.replyToNick }}</span>
                 </span>
 
                 <Badge v-if="child.master" variant="default" class="tk-badge">{{ masterTag }}</Badge>
-                <Badge v-if="child.isSpam" variant="destructive" class="tk-badge">待审核</Badge>
+                <Badge v-if="child.isSpam" variant="destructive" class="tk-badge">{{ t('pendingBadge') }}</Badge>
               </div>
 
               <time class="tk-comment__time">{{ formatTime(child.createdAt) }}</time>
@@ -533,7 +538,7 @@ const deleteOwn = async (id: string) => {
                 class="tk-comment__edit-input"
                 rows="4"
                 maxlength="10000"
-                aria-label="编辑评论内容"
+                :aria-label="t('editContent')"
               />
               <div v-if="editError" class="tk-comment__error">{{ editError }}</div>
               <div class="tk-comment__edit-actions">
@@ -542,11 +547,11 @@ const deleteOwn = async (id: string) => {
                   :disabled="editSaving"
                   @click="saveEdit"
                 >
-                  {{ editSaving ? '保存中...' : '保存' }}
+                  {{ editSaving ? t('saving') : t('save') }}
                 </button>
-                <button class="tk-comment__edit-btn" @click="cancelEdit">取消</button>
+                <button class="tk-comment__edit-btn" @click="cancelEdit">{{ t('cancel') }}</button>
                 <button class="tk-comment__edit-btn tk-comment__edit-btn--danger" @click="deleteOwn(child.id)">
-                  删除这条评论
+                  {{ t('deleteThisComment') }}
                 </button>
               </div>
             </div>
@@ -574,12 +579,14 @@ const deleteOwn = async (id: string) => {
                 <button
                   v-if="canEdit(child.id)"
                   class="tk-action__btn"
-                  aria-label="编辑评论"
+                  :aria-label="t('editComment')"
                   @click="startEdit(child.id, child.content)"
                 >
-                  编辑
+                  {{ t('edit') }}
                 </button>
-                <button class="tk-action__btn" aria-label="举报评论" @click="openReport(child.id)">举报</button>
+                <button class="tk-action__btn" :aria-label="t('report')" @click="openReport(child.id)">
+                  {{ t('report') }}
+                </button>
               </div>
             </div>
           </div>
@@ -589,26 +596,26 @@ const deleteOwn = async (id: string) => {
 
     <!-- 举报弹窗 -->
     <div v-if="reportTargetId" class="tk-report__overlay" @click.self="closeReport">
-      <div class="tk-report__dialog" role="dialog" aria-modal="true" aria-label="举报评论">
-        <h4 class="tk-report__title">举报评论</h4>
-        <p class="tk-report__desc">请填写举报原因，管理员会尽快处理。</p>
+      <div class="tk-report__dialog" role="dialog" aria-modal="true" :aria-label="t('reportComment')">
+        <h4 class="tk-report__title">{{ t('reportComment') }}</h4>
+        <p class="tk-report__desc">{{ t('reportDesc') }}</p>
         <textarea
           v-model="reportReason"
           class="tk-report__input"
           rows="3"
           maxlength="200"
-          placeholder="举报原因（可选，最多 200 字）"
-          aria-label="举报原因"
+          :placeholder="t('reportReasonPlaceholder')"
+          :aria-label="t('reportReasonLabel')"
         />
         <div v-if="reportFeedback" class="tk-report__feedback">{{ reportFeedback }}</div>
         <div class="tk-report__actions">
-          <button class="tk-comment__edit-btn" @click="closeReport">取消</button>
+          <button class="tk-comment__edit-btn" @click="closeReport">{{ t('cancel') }}</button>
           <button
             class="tk-comment__edit-btn tk-comment__edit-btn--primary"
             :disabled="reportSending"
             @click="submitReport"
           >
-            {{ reportSending ? '提交中...' : '提交举报' }}
+            {{ reportSending ? t('reportSubmitting') : t('reportSubmit') }}
           </button>
         </div>
       </div>

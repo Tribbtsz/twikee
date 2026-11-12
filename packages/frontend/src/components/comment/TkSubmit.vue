@@ -7,6 +7,7 @@ import TkAvatar from './TkAvatar.vue'
 import { renderMarkdown } from '@/lib/markdown'
 import { ImagePlus } from 'lucide-vue-next'
 import type { ResolvedTwikeeAppearance } from '@/types'
+import { useT } from '@/composables/useT'
 
 const props = defineProps<{
   url: string
@@ -58,13 +59,15 @@ const uploadError = ref('')
 const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const urlReg = /^https?:\/\/.+\..+/
 
+const t = useT()
+
 const validateMail = () => {
   if (!mail.value.trim()) {
     mailError.value = ''
     return true
   }
   if (!emailReg.test(mail.value.trim())) {
-    mailError.value = '邮箱格式不正确'
+    mailError.value = t('mailInvalid')
     return false
   }
   mailError.value = ''
@@ -77,7 +80,7 @@ const validateLink = () => {
     return true
   }
   if (!urlReg.test(link.value.trim())) {
-    linkError.value = '网址格式不正确，需以 http:// 或 https:// 开头'
+    linkError.value = t('linkInvalid')
     return false
   }
   linkError.value = ''
@@ -170,11 +173,11 @@ const onImageSelected = async (e: Event) => {
 
   const maxBytes = Math.max(1, props.imageUpload.maxSizeMb || 5) * 1024 * 1024
   if (file.size > maxBytes) {
-    uploadError.value = `图片超过大小限制（${props.imageUpload.maxSizeMb || 5}MB）`
+    uploadError.value = t('imageTooLarge', { n: props.imageUpload.maxSizeMb || 5 })
     return
   }
   if (!file.type.startsWith('image/')) {
-    uploadError.value = '请选择图片文件'
+    uploadError.value = t('imageInvalid')
     return
   }
 
@@ -192,7 +195,7 @@ const onImageSelected = async (e: Event) => {
     insertImageMarkdown(imageUrl)
   } catch (err) {
     console.error('[Twikee] image upload failed:', err)
-    uploadError.value = '图片上传失败，请重试'
+    uploadError.value = t('imageUploadFailed')
   } finally {
     isUploading.value = false
   }
@@ -202,17 +205,29 @@ const onImageSelected = async (e: Event) => {
 <template>
   <div class="tk-submit" :class="submitClasses">
     <div class="flex gap-3">
-      <TkAvatar :nick="nick || '用户'" :mail="mail" size="md" />
+      <TkAvatar :nick="nick || t('nickLabel')" :mail="mail" size="md" />
 
       <div class="flex-1 space-y-3">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <Input v-model="nick" placeholder="昵称 *" aria-label="昵称" />
+          <Input v-model="nick" :placeholder="t('nickPlaceholder')" :aria-label="t('nickLabel')" />
           <div class="tk-submit__field">
-            <Input v-model="mail" type="email" placeholder="邮箱 (可选)" aria-label="邮箱" @blur="onMailBlur" />
+            <Input
+              v-model="mail"
+              type="email"
+              :placeholder="t('mailPlaceholder')"
+              :aria-label="t('mailLabel')"
+              @blur="onMailBlur"
+            />
             <span v-if="mailTouched && mailError" class="tk-submit__error">{{ mailError }}</span>
           </div>
           <div class="tk-submit__field">
-            <Input v-model="link" type="url" placeholder="网址 (可选)" aria-label="网址" @blur="onLinkBlur" />
+            <Input
+              v-model="link"
+              type="url"
+              :placeholder="t('linkPlaceholder')"
+              :aria-label="t('linkLabel')"
+              @blur="onLinkBlur"
+            />
             <span v-if="linkTouched && linkError" class="tk-submit__error">{{ linkError }}</span>
           </div>
         </div>
@@ -222,8 +237,8 @@ const onImageSelected = async (e: Event) => {
           v-else
           ref="contentInput"
           v-model="content"
-          :placeholder="placeholder || '说点什么吧... (支持 Markdown)'"
-          aria-label="评论内容"
+          :placeholder="placeholder || t('contentPlaceholder')"
+          :aria-label="t('contentLabel')"
           :rows="4"
         />
         <span v-if="uploadError" class="tk-submit__error">{{ uploadError }}</span>
@@ -231,19 +246,19 @@ const onImageSelected = async (e: Event) => {
         <div class="flex items-center justify-between gap-2">
           <div class="flex gap-2 items-center">
             <Button variant="ghost" size="sm" @click="isPreview = !isPreview">
-              {{ isPreview ? '编辑' : '预览' }}
+              {{ isPreview ? t('edit') : t('preview') }}
             </Button>
             <Button
               v-if="imageUploadEnabled"
               variant="ghost"
               size="sm"
               :disabled="isUploading"
-              aria-label="上传图片"
-              title="上传图片"
+              :aria-label="t('uploadImage')"
+              :title="t('uploadImage')"
               @click="onPickImage"
             >
               <ImagePlus class="w-4 h-4 mr-1" />
-              {{ isUploading ? '上传中...' : '图片' }}
+              {{ isUploading ? t('uploading') : t('image') }}
             </Button>
             <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="onImageSelected" />
             <a
@@ -252,14 +267,14 @@ const onImageSelected = async (e: Event) => {
               rel="noopener noreferrer"
               class="text-xs text-muted-foreground hover:text-primary flex items-center"
             >
-              支持 Markdown
+              {{ t('markdownSupported') }}
             </a>
           </div>
 
           <div class="flex gap-2">
-            <Button v-if="rid" variant="ghost" size="sm" @click="emit('cancel')"> 取消 </Button>
+            <Button v-if="rid" variant="ghost" size="sm" @click="emit('cancel')">{{ t('cancel') }}</Button>
             <Button size="sm" :disabled="!canSend || isSending" @click="handleSubmit">
-              {{ isSending ? '发送中...' : '发送' }}
+              {{ isSending ? t('submitting') : t('submit') }}
             </Button>
           </div>
         </div>

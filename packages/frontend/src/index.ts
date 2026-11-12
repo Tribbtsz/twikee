@@ -3,6 +3,7 @@ import Admin from './Admin.vue'
 import { createApp } from 'vue'
 import './styles/widget.css'
 import type { TwikeeInitOptions } from './types'
+import { resolveLang } from './lib/i18n'
 
 export { App, Admin }
 export { useTwikee } from './composables/useTwikee'
@@ -10,7 +11,7 @@ export type { TwikeeOptions } from './composables/useTwikee'
 export type { TwikeeAppearanceOptions, TwikeeInitOptions } from './types'
 
 export function init(options: TwikeeInitOptions) {
-  const { el, envId, appearance } = options
+  const { el, envId, appearance, lang } = options
   const container = typeof el === 'string' ? document.querySelector(el) : el
 
   if (!container) {
@@ -18,7 +19,7 @@ export function init(options: TwikeeInitOptions) {
     return
   }
 
-  const app = createApp(App, { envId, appearance })
+  const app = createApp(App, { envId, appearance, lang: resolveLang(lang) })
   app.mount(container)
 
   return app

@@ -31,7 +31,7 @@ pnpm dev
 </script>
 ```
 
-`init` 还支持可选的 `appearance` 外观配置（预设、提交按钮、字段布局等）；管理后台通过 `twikee.initAdmin({ el, envId })` 单独挂载。完整参数见[前端接入](https://twikee.vercel.app/guide/integration.html)。
+`init` 还支持可选的 `appearance` 外观配置（预设、提交按钮、字段布局等）与 `lang` 界面语言（`'zh-CN'`（默认）| `'en'`）；管理后台通过 `twikee.initAdmin({ el, envId })` 单独挂载。完整参数见[前端接入](https://twikee.vercel.app/guide/integration.html)。
 
 ## 文档
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useT } from '@/composables/useT'
+
 defineProps({
   liked: { type: Boolean, default: false },
   likeCount: { type: Number, default: 0 },
@@ -9,6 +11,8 @@ const emit = defineEmits<{
   like: []
   reply: []
 }>()
+
+const t = useT()
 </script>
 
 <template>
@@ -16,16 +20,16 @@ const emit = defineEmits<{
     <button
       class="tk-action__btn"
       :class="{ 'tk-action__btn--liked': liked }"
-      :aria-label="liked ? '取消点赞' : '点赞'"
+      :aria-label="liked ? t('unlike') : t('like')"
       :aria-pressed="liked"
       @click="emit('like')"
     >
-      {{ liked ? '已赞' : '赞' }}
+      {{ liked ? t('liked') : t('like') }}
       <span v-if="likeCount > 0" class="tk-action__count">{{ likeCount }}</span>
     </button>
 
-    <button class="tk-action__btn" aria-label="回复评论" @click="emit('reply')">
-      回复
+    <button class="tk-action__btn" :aria-label="t('reply')" @click="emit('reply')">
+      {{ t('reply') }}
       <span v-if="repliesCount > 0" class="tk-action__count">{{ repliesCount }}</span>
     </button>
   </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, provide } from 'vue'
 import { useTwikee } from './composables/useTwikee'
 import TkComment from './components/comment/TkComment.vue'
 import TkSubmit from './components/comment/TkSubmit.vue'
@@ -8,16 +8,22 @@ import { resolveAppearance } from './types'
 import type { TwikeeAppearanceOptions } from './types'
 import { buildCommentTree } from './lib/comment-tree'
 import { saveEditToken } from './lib/edit-token'
-
+import { createTranslator, resolveLang, type TwikeeLang } from './lib/i18n'
 const props = withDefaults(
   defineProps<{
     envId: string
     appearance?: TwikeeAppearanceOptions
+    lang?: TwikeeLang
   }>(),
   {},
 )
 
 const appearance = computed(() => resolveAppearance(props.appearance))
+const lang = computed(() => resolveLang(props.lang))
+// provide 只对后代可见，App 自己 inject 不到自己的值：
+// 这里直接造 translator 给自身用，provide 同一个给子组件
+const t = createTranslator(lang.value)
+provide('twikeeT', t)
 
 const apiUrl = computed(() => {
   if (!props.envId) return ''
@@ -33,10 +39,11 @@ const submitError = ref<string | null>(null)
 const { loading, error, comments, fetchComments, submitComment } = useTwikee({
   envId: props.envId,
   el: '#twikee-comment',
+  lang: props.lang,
 })
 
 const commentsClosed = ref(false)
-const masterTag = ref('博主')
+const masterTag = ref('')
 const commentPlaceholder = ref('')
 const imageCdnUrl = ref('')
 const imageMaxSizeMb = ref(5)
@@ -110,12 +117,12 @@ const handleSubmit = async (data: any): Promise<boolean> => {
     // 服务端随创建响应返回 editToken：30 分钟内可凭它编辑/删除这条评论
     if (result?.id && result?.editToken) saveEditToken(result.id, result.editToken)
     if (result?.isSpam) {
-      submitError.value = '评论已提交，等待博主审核后显示'
+      submitError.value = t('pendingReview')
     }
     await loadComments()
     return true
   } catch {
-    submitError.value = '评论发表失败，请稍后重试（内容已为你保留）'
+    submitError.value = t('submitFailedKeep')
     return false
   }
 }
@@ -170,7 +177,9 @@ watch(page, loadComments)
     :data-input-focus-ring="appearance.inputFocusRing"
   >
     <div class="max-w-3xl mx-auto">
-      <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">评论已关闭</div>
+      <div v-if="commentsClosed" class="mb-6 p-4 rounded-lg bg-muted text-center text-muted-foreground">
+        {{ t('commentsClosed') }}
+      </div>
       <div v-else class="mb-6">
         <TkSubmit
           :url="currentUrl"
@@ -184,7 +193,7 @@ watch(page, loadComments)
 
       <div class="tk-comments-header">
         <h3 class="tk-comments-title">
-          评论
+          {{ t('commentsTitle') }}
           <span v-if="total > 0" class="tk-comments-count">{{ total }}</span>
         </h3>
       </div>
@@ -196,7 +205,7 @@ watch(page, loadComments)
           :comment="comment"
           :all-comments="comments"
           :api-url="apiUrl"
-          :master-tag="masterTag"
+          :master-tag="masterTag || t('masterBadgeDefault')"
           :show-divider="index < commentTree.length - 1"
           :appearance="appearance"
           @load="loadComments"
@@ -204,16 +213,16 @@ watch(page, loadComments)
       </div>
 
       <div v-if="!loading && !error && commentTree.length === 0" class="tk-comments-empty">
-        暂无评论，来发表第一条评论吧~
+        {{ t('noComments') }}
       </div>
 
       <div v-if="totalPages > 1" class="tk-comments-pagination">
-        <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--"> 上一页 </Button>
+        <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--">{{ t('previousPage') }}</Button>
         <span class="tk-comments-page"> {{ page }} / {{ totalPages }} </span>
-        <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="page++"> 下一页 </Button>
+        <Button variant="outline" size="sm" :disabled="page >= totalPages" @click="page++">{{ t('nextPage') }}</Button>
       </div>
 
-      <div v-if="loading" class="tk-comments-loading" aria-live="polite" role="status">加载中...</div>
+      <div v-if="loading" class="tk-comments-loading" aria-live="polite" role="status">{{ t('loading') }}</div>
 
       <div v-if="error" class="tk-comments-error">
         {{ error }}

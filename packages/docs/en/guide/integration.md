@@ -34,6 +34,7 @@ Twikee ships a framework-agnostic UMD build, so any site — plain HTML, Vue, Re
 | `el` | `string \| Element` | Yes | Mount container for the widget |
 | `envId` | `string` | Yes | Twikee backend URL |
 | `appearance` | `object` | No | Appearance options, see [Appearance](/en/guide/appearance) |
+| `lang` | `'zh-CN' \| 'en'` | No | Widget UI language, defaults to `zh-CN`; unknown values fall back to Chinese |
 
 ## Admin entry point (initAdmin)
 

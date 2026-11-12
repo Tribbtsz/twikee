@@ -111,12 +111,12 @@
   --input: var(--twikee-input);
   --ring: var(--twikee-ring);
   --radius: var(--twikee-radius);
-  --color-red-200: oklch(88.5% .062 18.334);
-  --color-red-500: oklch(63.7% .237 25.331);
-  --color-yellow-500: oklch(79.5% .184 86.047);
-  --color-green-500: oklch(72.3% .219 149.579);
-  --color-green-600: oklch(62.7% .194 149.214);
-  --color-blue-500: oklch(62.3% .214 259.815);
+  --color-red-200: oklch(88.5% 0.062 18.334);
+  --color-red-500: oklch(63.7% 0.237 25.331);
+  --color-yellow-500: oklch(79.5% 0.184 86.047);
+  --color-green-500: oklch(72.3% 0.219 149.579);
+  --color-green-600: oklch(62.7% 0.194 149.214);
+  --color-blue-500: oklch(62.3% 0.214 259.815);
   --color-black: #000;
   --color-white: #fff;
   --color-background: var(--background);
@@ -186,6 +186,11 @@
 }
 
 @keyframes twikee-highlight-flash {
-  0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 0 3px var(--primary); }
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--primary);
+  }
 }
