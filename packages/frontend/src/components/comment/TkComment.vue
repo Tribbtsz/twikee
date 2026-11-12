@@ -276,15 +276,24 @@ const handleChildReplySubmit = async (data: any, childId: string): Promise<boole
 }
 
 // 举报：打开弹窗
+const reportReasonInput = ref<HTMLTextAreaElement | null>(null)
+
 const openReport = (id: string) => {
   reportTargetId.value = id
   reportReason.value = ''
   reportFeedback.value = null
+  // 弹窗渲染后聚焦到原因输入框，键盘用户不用 Tab 穿透整棵评论树
+  requestAnimationFrame(() => reportReasonInput.value?.focus())
 }
 
 const closeReport = () => {
   reportTargetId.value = null
   reportReason.value = ''
+}
+
+// Esc 关闭弹窗；焦点困在 overlay 里时给键盘用户留出口
+const onReportKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') closeReport()
 }
 
 const submitReport = async () => {
@@ -595,11 +604,12 @@ const deleteOwn = async (id: string) => {
     </div>
 
     <!-- 举报弹窗 -->
-    <div v-if="reportTargetId" class="tk-report__overlay" @click.self="closeReport">
+    <div v-if="reportTargetId" class="tk-report__overlay" @click.self="closeReport" @keydown.esc="onReportKeydown">
       <div class="tk-report__dialog" role="dialog" aria-modal="true" :aria-label="t('reportComment')">
         <h4 class="tk-report__title">{{ t('reportComment') }}</h4>
         <p class="tk-report__desc">{{ t('reportDesc') }}</p>
         <textarea
+          ref="reportReasonInput"
           v-model="reportReason"
           class="tk-report__input"
           rows="3"

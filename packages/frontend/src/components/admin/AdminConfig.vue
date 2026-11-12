@@ -326,10 +326,15 @@ const saveConfig = async () => {
     })
     if (!checkAuth(res)) return
     showToast('配置已保存', 'success')
-    // 密钥类不会经 GET 返回，后端空值表示不修改：保存后清零，避免明文驻留内存
+    // 密钥类不会经 GET 返回，后端空值表示不修改：保存后清零，避免明文驻留内存。
+    // 本次真实填写的密钥把 <KEY>_SET 标记同步置位（本地与已保存态），"已配置"徽章即时生效，
+    // 否则要等刷新页面才看得到状态。
     for (const group of settings) {
       for (const item of group.items) {
-        if (item.secret) config.value[item.key] = ''
+        if (item.secret) {
+          if ((config.value[item.key] || '').trim()) config.value[`${item.key}_SET`] = 'true'
+          config.value[item.key] = ''
+        }
       }
     }
     savedConfig.value = { ...config.value }
