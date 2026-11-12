@@ -35,7 +35,7 @@ Local development uses a SQLite file database by default — no cloud accounts n
 
 The first time you open `/admin`, Twikee guides you through `POST /api/auth/setup` to set an admin password. It is stored in the database as the `ADMIN_PASSWORD` setting — **not** in an environment variable.
 
-After that you can moderate comments and configure appearance and notifications from the panel.
+After that you can moderate comments and configure notifications from the panel. Comment appearance is customized via `twikee.init({ appearance })` — see [Appearance](/en/guide/appearance).
 
 ## Project layout
 

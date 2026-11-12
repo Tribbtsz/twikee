@@ -59,8 +59,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 | `WXPUSHER_APP_TOKEN`（密钥） / `WXPUSHER_UIDS` | WxPusher，UID 多个用逗号分隔 |
 | `WECOM_KEY`（密钥） | 企业微信群机器人 Webhook 地址中的 key |
 | `SMTP_FROM` / `SMTP_TO` | 邮件（Resend）发件人 / 收件人 |
-| `SMTP_PASS`（密钥） | 邮件（Resend）API Key |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | 预留字段，当前邮件通道未使用 |
+| `SMTP_PASS`（密钥） | Resend API Key，在 [resend.com/api-keys](https://resend.com/api-keys) 创建；邮件渠道仅支持 Resend API，不支持 SMTP 协议 |
 
 标记为密钥的键不会经 `GET /api/admin/config` 返回；保存时留空表示不修改。
 

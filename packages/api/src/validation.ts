@@ -55,8 +55,6 @@ export const ADMIN_CONFIG_KEYS = [
   'BLOGGER_EMAIL',
   'MASTER_TAG',
   'COMMENT_PAGE_SIZE',
-  'GRAVATAR_CDN',
-  'DEFAULT_GRAVATAR',
   'COMMENT_PLACEHOLDER',
   'AUTO_APPROVE',
   'DEMO_ENABLED',
@@ -72,10 +70,7 @@ export const ADMIN_CONFIG_KEYS = [
   'WXPUSHER_APP_TOKEN',
   'WXPUSHER_UIDS',
   'WECOM_KEY',
-  // 邮件
-  'SMTP_HOST',
-  'SMTP_PORT',
-  'SMTP_USER',
+  // 邮件（Resend）：SMTP_PASS 存的是 Resend API Key，历史命名保留以免迁移数据
   'SMTP_PASS',
   'SMTP_FROM',
   'SMTP_TO',

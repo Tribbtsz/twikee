@@ -59,8 +59,7 @@ Set through `POST /api/admin/config`:
 | `WXPUSHER_APP_TOKEN` (secret) / `WXPUSHER_UIDS` | WxPusher; multiple UIDs comma separated |
 | `WECOM_KEY` (secret) | Key from a WeCom group bot webhook URL |
 | `SMTP_FROM` / `SMTP_TO` | Email (Resend) sender / recipient |
-| `SMTP_PASS` (secret) | Email (Resend) API key |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | Reserved; unused by the email channel today |
+| `SMTP_PASS` (secret) | Resend API key, create one at [resend.com/api-keys](https://resend.com/api-keys); the email channel uses the Resend API only, SMTP is not supported |
 
 Keys marked as secret are never returned by `GET /api/admin/config`; sending an empty value on save means "keep unchanged".
 

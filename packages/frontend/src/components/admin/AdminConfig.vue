@@ -90,6 +90,17 @@ const buildDefaults = (): Record<string, string> => {
   return defaults
 }
 
+// 保存时只回传本界面声明的字段：DB 里可能残留已下线的旧配置键
+// （如已移除的 SMTP_HOST/GRAVATAR_CDN），原样回传会被后端白名单拒绝
+const knownKeys = new Set(allItems.value.map((item) => item.key))
+const filterKnown = (source: Record<string, string>): Record<string, string> => {
+  const filtered: Record<string, string> = {}
+  for (const [key, value] of Object.entries(source)) {
+    if (knownKeys.has(key)) filtered[key] = value
+  }
+  return filtered
+}
+
 const settings: ConfigGroup[] = [
   {
     icon: Globe,
@@ -211,20 +222,23 @@ const settings: ConfigGroup[] = [
   },
   {
     icon: Mail,
-    name: '邮件设置',
+    name: '邮件设置（Resend）',
     items: [
-      { key: 'SMTP_HOST', label: 'SMTP 服务器', placeholder: 'smtp.example.com', desc: '邮件服务器地址', default: '' },
-      { key: 'SMTP_PORT', label: 'SMTP 端口', placeholder: '587', desc: '邮件服务器端口', default: '587' },
-      { key: 'SMTP_USER', label: 'SMTP 用户名', placeholder: 'user@example.com', desc: '邮箱账号', default: '' },
       {
         key: 'SMTP_PASS',
-        label: 'SMTP 密码',
-        placeholder: '',
-        desc: '邮箱密码或授权码，留空不修改',
+        label: 'Resend API Key',
+        placeholder: 're_xxxxxxxxxx',
+        desc: '在 resend.com/api-keys 创建；仅支持 Resend，不支持 SMTP 密码。留空不修改',
         secret: true,
         default: '',
       },
-      { key: 'SMTP_FROM', label: '发件人地址', placeholder: 'noreply@example.com', desc: '发件人邮箱', default: '' },
+      {
+        key: 'SMTP_FROM',
+        label: '发件人地址',
+        placeholder: 'noreply@your-domain.com',
+        desc: '须为 Resend 已验证的域名下的地址',
+        default: '',
+      },
       { key: 'SMTP_TO', label: '收件人地址', placeholder: 'admin@example.com', desc: '接收通知的邮箱', default: '' },
     ],
   },
@@ -299,7 +313,7 @@ const saveConfig = async () => {
         Authorization: `Bearer ${props.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(config.value),
+      body: JSON.stringify(filterKnown(config.value)),
     })
     if (!checkAuth(res)) return
     showToast('配置已保存', 'success')

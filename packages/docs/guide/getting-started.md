@@ -35,7 +35,7 @@ pnpm dev
 
 首次打开 `/admin` 会引导你通过 `POST /api/auth/setup` 设置管理员密码。密码保存在数据库的 `ADMIN_PASSWORD` 配置项中，**不在环境变量里**。
 
-设置完成后即可在后台管理评论、配置外观、配置通知渠道。
+设置完成后即可在后台管理评论、配置通知渠道；评论外观通过 `twikee.init({ appearance })` 定制，见[定制外观](/guide/appearance)。
 
 ## 目录结构
 

@@ -63,7 +63,7 @@ As long as your blog gives each article a distinct URL path, Twikee stores their
 
 ## Admin panel
 
-Open `/admin` on your deployment to reach the admin panel. The first visit walks you through setting the password. From there you can moderate and pin comments, configure appearance and notifications, and import from other comment systems.
+Open `/admin` on your deployment to reach the admin panel. The first visit walks you through setting the password. From there you can moderate and pin comments and configure notifications, and import from other comment systems. Comment appearance is configured on the host page via `twikee.init({ appearance })` — see [Appearance](/en/guide/appearance).
 
 ## Self-hosted assets
 
