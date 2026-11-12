@@ -1,0 +1,13 @@
+/* 首页 hero 图贴右对齐：默认主题把图片在右列绝对居中，还带 translate(-32px) 左移补偿
+   （为官方光晕背景设计）。我们的方块 logo 没有背景光晕，会显得离内容区右边缘差一截。 */
+@media (min-width: 960px) {
+  .VPHomeHero .image-container {
+    transform: none;
+  }
+
+  .VPHomeHero .image-container .image-src {
+    left: auto;
+    right: 0;
+    transform: translate(0, -50%);
+  }
+}
