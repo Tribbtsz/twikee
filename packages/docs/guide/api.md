@@ -38,7 +38,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 | `POST` | `/api/admin/comment/:id/moderate` | 审核：按 `action` 通过 / 标记垃圾 |
 | `POST` | `/api/admin/comment/:id/top` | 置顶 / 取消置顶（`{ top: boolean }`） |
 | `POST` | `/api/admin/import` | 导入评论（逐条校验，单次最多 1000 条） |
-| `GET` | `/api/admin/config` | 读取全部配置（密钥类字段不回传） |
+| `GET` | `/api/admin/config` | 读取全部配置（密钥类字段不回传值，附带 `<KEY>_SET` 是否已配置标记） |
 | `POST` | `/api/admin/config` | 更新配置（密钥留空表示不修改） |
 | `GET` | `/api/admin/stats` | 评论统计（总数 / 已通过 / 待审核） |
 
@@ -61,7 +61,7 @@ description: Twikee 的公开与管理端 HTTP 接口，以及点赞、Webhook �
 | `SMTP_FROM` / `SMTP_TO` | 邮件（Resend）发件人 / 收件人 |
 | `SMTP_PASS`（密钥） | Resend API Key，在 [resend.com/api-keys](https://resend.com/api-keys) 创建；邮件渠道仅支持 Resend API，不支持 SMTP 协议 |
 
-标记为密钥的键不会经 `GET /api/admin/config` 返回；保存时留空表示不修改。
+标记为密钥的键不会经 `GET /api/admin/config` 返回值，但会附带 `<键名>_SET` 标记（`true`/无该键）表示是否已配置，供管理界面显示状态；保存时留空表示不修改。
 
 ## 行为约定
 

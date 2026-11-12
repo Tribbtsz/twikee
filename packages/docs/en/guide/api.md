@@ -38,7 +38,7 @@ description: Twikee's public and admin HTTP endpoints, plus the behavior of like
 | `POST` | `/api/admin/comment/:id/moderate` | Moderate: approve / flag as spam via `action` |
 | `POST` | `/api/admin/comment/:id/top` | Pin / unpin (`{ top: boolean }`) |
 | `POST` | `/api/admin/import` | Import comments (validated one by one, max 1000 per request) |
-| `GET` | `/api/admin/config` | Read all config (secret fields are not returned) |
+| `GET` | `/api/admin/config` | Read all config (secret fields return no value, but include a `<KEY>_SET` flag saying whether each is configured) |
 | `POST` | `/api/admin/config` | Update config (a blank secret means "keep unchanged") |
 | `GET` | `/api/admin/stats` | Comment stats (total / approved / pending review) |
 
@@ -61,7 +61,7 @@ Set through `POST /api/admin/config`:
 | `SMTP_FROM` / `SMTP_TO` | Email (Resend) sender / recipient |
 | `SMTP_PASS` (secret) | Resend API key, create one at [resend.com/api-keys](https://resend.com/api-keys); the email channel uses the Resend API only, SMTP is not supported |
 
-Keys marked as secret are never returned by `GET /api/admin/config`; sending an empty value on save means "keep unchanged".
+Keys marked as secret never return their value from `GET /api/admin/config`; instead a `<KEY>_SET` flag (`true` or absent) says whether each one is configured, so the admin UI can show status. Sending an empty value on save means "keep unchanged".
 
 ## Behavior
 
