@@ -212,21 +212,8 @@ export function createAdminRoutes() {
     }
   })
 
-  app.get('/config', async (c) => {
-    const config = await c.var.db.config.getAll()
-    const {
-      ADMIN_PASSWORD,
-      SMTP_PASS,
-      TELEGRAM_BOT_TOKEN,
-      WXPUSHER_APP_TOKEN,
-      WECOM_KEY,
-      IMAGE_CDN_TOKEN,
-      ...safeConfig
-    } = config
-    return c.json(safeConfig)
-  })
-
-  // 密钥类配置：前端拿到的是空值，回保存时空值表示"不修改"，避免被清零
+  // 密钥类配置：值不回传（前端拿到空值，回保存时空值表示"不修改"，避免被清零），
+  // 只回传 <KEY>_SET 标记（是否已配置），供前端显示状态与做必填校验
   const SECRET_KEYS = new Set([
     'ADMIN_PASSWORD',
     'SMTP_PASS',
@@ -235,6 +222,20 @@ export function createAdminRoutes() {
     'WECOM_KEY',
     'IMAGE_CDN_TOKEN',
   ])
+
+  app.get('/config', async (c) => {
+    const config = await c.var.db.config.getAll()
+    const safeConfig: Record<string, string> = {}
+    const setFlags: Record<string, string> = {}
+    for (const [key, value] of Object.entries(config)) {
+      if ((SECRET_KEYS as Set<string>).has(key)) {
+        if (typeof value === 'string' && value.trim()) setFlags[`${key}_SET`] = 'true'
+      } else {
+        safeConfig[key] = value
+      }
+    }
+    return c.json({ ...safeConfig, ...setFlags })
+  })
 
   app.post('/config', async (c) => {
     const body = await safeJson(c)

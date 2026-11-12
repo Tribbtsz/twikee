@@ -231,7 +231,7 @@ const toggleTop = async (id: string, top: boolean) => {
 }
 
 const displayTime = (timestamp: number) => {
-  return new Date(timestamp).toLocaleString('zh-CN')
+  return new Date(timestamp).toLocaleString()
 }
 
 const displayUrl = (url: string) => {

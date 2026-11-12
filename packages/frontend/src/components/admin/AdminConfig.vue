@@ -80,6 +80,8 @@ const isItemDirty = (item: ConfigItem): boolean => {
 
 const allItems = computed(() => settings.flatMap((g) => g.items))
 
+const itemByKey = computed(() => new Map(allItems.value.map((item) => [item.key, item])))
+
 const buildDefaults = (): Record<string, string> => {
   const defaults: Record<string, string> = {}
   for (const item of allItems.value) {
@@ -369,7 +371,17 @@ const missingForChannel = (): string[] => {
   const type = (config.value['NOTIFICATION_TYPE'] || '').trim()
   const required = NOTIFICATION_REQUIRED[type]
   if (!required) return []
-  return required.filter((key) => !(config.value[key] || '').trim())
+  return required.filter((key) => !isFilled(key))
+}
+
+/** secret 键的值不回传，只下发 <KEY>_SET 标记：已配置过即视为已填，否则会误报"缺 token" */
+const isFilled = (key: string): boolean => {
+  if ((config.value[key] || '').trim()) return true
+  return config.value[`${key}_SET`] === 'true'
+}
+
+const isSecretSet = (key: string): boolean => {
+  return !!itemByKey.value.get(key)?.secret && config.value[`${key}_SET`] === 'true'
 }
 
 onMounted(fetchConfig)
@@ -411,6 +423,12 @@ onMounted(fetchConfig)
                 class="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 mt-0.5"
                 style="color: #ef4444; background: #fef2f2"
                 >未保存</span
+              >
+              <span
+                v-if="isSecretSet(item.key)"
+                class="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 mt-0.5"
+                style="color: #16a34a; background: #f0fdf4"
+                >已配置</span
               >
             </div>
             <div v-if="item.type === 'boolean'" class="md:col-span-2 flex items-center gap-3">

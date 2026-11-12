@@ -10,8 +10,12 @@ const servePrettyUrls: Plugin = {
   apply: 'serve',
   configureServer(server) {
     server.middlewares.use((req, _res, next) => {
-      if (req.url === '/admin') req.url = '/admin.html'
-      else if (req.url === '/demo') req.url = '/demo.html'
+      const raw = req.url ?? ''
+      const queryAt = raw.indexOf('?')
+      const path = queryAt === -1 ? raw : raw.slice(0, queryAt)
+      const query = queryAt === -1 ? '' : raw.slice(queryAt)
+      if (path === '/admin') req.url = `/admin.html${query}`
+      else if (path === '/demo') req.url = `/demo.html${query}`
       next()
     })
   },
